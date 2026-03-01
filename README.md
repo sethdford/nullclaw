@@ -40,15 +40,15 @@ The smallest fully autonomous AI assistant infrastructure — a static Zig binar
 
 Local machine benchmark (macOS arm64, Feb 2026), normalized for 0.8 GHz edge hardware.
 
-| | [OpenClaw](https://github.com/openclaw/openclaw) | [NanoBot](https://github.com/HKUDS/nanobot) | [PicoClaw](https://github.com/sipeed/picoclaw) | [ZeroClaw](https://github.com/zeroclaw-labs/zeroclaw) | **[🦞 NullClaw](https://github.com/nullclaw/nullclaw)** |
-|---|---|---|---|---|---|
-| **Language** | TypeScript | Python | Go | Rust | **Zig** |
-| **RAM** | > 1 GB | > 100 MB | < 10 MB | < 5 MB | **~1 MB** |
-| **Startup (0.8 GHz)** | > 500 s | > 30 s | < 1 s | < 10 ms | **< 8 ms** |
-| **Binary Size** | ~28 MB (dist) | N/A (Scripts) | ~8 MB | 3.4 MB | **678 KB** |
-| **Tests** | — | — | — | 1,017 | **3,230+** |
-| **Source Files** | ~400+ | — | — | ~120 | **~110** |
-| **Cost** | Mac Mini $599 | Linux SBC ~$50 | Linux Board $10 | Any $10 hardware | **Any $5 hardware** |
+|                       | [OpenClaw](https://github.com/openclaw/openclaw) | [NanoBot](https://github.com/HKUDS/nanobot) | [PicoClaw](https://github.com/sipeed/picoclaw) | [ZeroClaw](https://github.com/zeroclaw-labs/zeroclaw) | **[🦞 NullClaw](https://github.com/nullclaw/nullclaw)** |
+| --------------------- | ------------------------------------------------ | ------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------- |
+| **Language**          | TypeScript                                       | Python                                      | Go                                             | Rust                                                  | **Zig**                                                 |
+| **RAM**               | > 1 GB                                           | > 100 MB                                    | < 10 MB                                        | < 5 MB                                                | **~1 MB**                                               |
+| **Startup (0.8 GHz)** | > 500 s                                          | > 30 s                                      | < 1 s                                          | < 10 ms                                               | **< 8 ms**                                              |
+| **Binary Size**       | ~28 MB (dist)                                    | N/A (Scripts)                               | ~8 MB                                          | 3.4 MB                                                | **678 KB**                                              |
+| **Tests**             | —                                                | —                                           | —                                              | 1,017                                                 | **3,230+**                                              |
+| **Source Files**      | ~400+                                            | —                                           | —                                              | ~120                                                  | **~110**                                                |
+| **Cost**              | Mac Mini $599                                    | Linux SBC ~$50                              | Linux Board $10                                | Any $10 hardware                                      | **Any $5 hardware**                                     |
 
 > Measured with `/usr/bin/time -l` on ReleaseSmall builds. nullclaw is a static binary with zero runtime dependencies.
 
@@ -114,6 +114,32 @@ nullclaw migrate openclaw
 
 > **Dev fallback (no global install):** prefix commands with `zig-out/bin/` (example: `zig-out/bin/nullclaw status`).
 
+### SeaClaw (C/CMake) — alternative build
+
+The C port (SeaClaw) can be built from the repo root:
+
+```bash
+# macOS: install sqlite3 (brew install sqlite3)
+# Linux: install libsqlite3-dev, libcurl4-openssl-dev
+
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DSC_ENABLE_ALL_CHANNELS=ON
+make -j
+
+# Run tests
+./seaclaw/seaclaw_tests
+
+# Run binary
+./seaclaw/seaclaw --help
+```
+
+Release build (optimized size):
+
+```bash
+cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel -DSC_ENABLE_LTO=ON
+make -j
+```
+
 ## Edge MVP (Hybrid Host + WASM Logic)
 
 If you want edge deployment (Cloudflare Worker) with Telegram + OpenAI while keeping agent policy in WASM, see:
@@ -126,34 +152,34 @@ This pattern keeps networking/secrets in the edge host and lets you swap/update 
 
 Every subsystem is a **vtable interface** — swap implementations with a config change, zero code changes.
 
-| Subsystem | Interface | Ships with | Extend |
-|-----------|-----------|------------|--------|
-| **AI Models** | `Provider` | 22+ providers (OpenRouter, Anthropic, OpenAI, Ollama, Venice, Groq, Mistral, xAI, DeepSeek, Together, Fireworks, Perplexity, Cohere, Bedrock, etc.) | `custom:https://your-api.com` — any OpenAI-compatible API |
-| **Channels** | `Channel` | CLI, Telegram, Signal, Discord, Slack, iMessage, Matrix, WhatsApp, Webhook, IRC, Lark/Feishu, OneBot, Line, DingTalk, Email, Nostr, QQ, MaixCam, Mattermost | Any messaging API |
-| **Memory** | `Memory` | SQLite with hybrid search (FTS5 + vector cosine similarity), Markdown | Any persistence backend |
-| **Tools** | `Tool` | shell, file_read, file_write, file_edit, memory_store, memory_recall, memory_forget, browser_open, screenshot, composio, http_request, hardware_info, hardware_memory, and more | Any capability |
-| **Observability** | `Observer` | Noop, Log, File, Multi | Prometheus, OTel |
-| **Runtime** | `RuntimeAdapter` | Native, Docker (sandboxed), WASM (wasmtime) | Any runtime |
-| **Security** | `Sandbox` | Landlock, Firejail, Bubblewrap, Docker, auto-detect | Any sandbox backend |
-| **Identity** | `IdentityConfig` | OpenClaw (markdown), AIEOS v1.1 (JSON) | Any identity format |
-| **Tunnel** | `Tunnel` | None, Cloudflare, Tailscale, ngrok, Custom | Any tunnel binary |
-| **Heartbeat** | Engine | HEARTBEAT.md periodic tasks | — |
-| **Skills** | Loader | TOML manifests + SKILL.md instructions | Community skill packs |
-| **Peripherals** | `Peripheral` | Serial, Arduino, Raspberry Pi GPIO, STM32/Nucleo | Any hardware interface |
-| **Cron** | Scheduler | Cron expressions + one-shot timers with JSON persistence | — |
+| Subsystem         | Interface        | Ships with                                                                                                                                                                      | Extend                                                    |
+| ----------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| **AI Models**     | `Provider`       | 22+ providers (OpenRouter, Anthropic, OpenAI, Ollama, Venice, Groq, Mistral, xAI, DeepSeek, Together, Fireworks, Perplexity, Cohere, Bedrock, etc.)                             | `custom:https://your-api.com` — any OpenAI-compatible API |
+| **Channels**      | `Channel`        | CLI, Telegram, Signal, Discord, Slack, iMessage, Matrix, WhatsApp, Webhook, IRC, Lark/Feishu, OneBot, Line, DingTalk, Email, Nostr, QQ, MaixCam, Mattermost                     | Any messaging API                                         |
+| **Memory**        | `Memory`         | SQLite with hybrid search (FTS5 + vector cosine similarity), Markdown                                                                                                           | Any persistence backend                                   |
+| **Tools**         | `Tool`           | shell, file_read, file_write, file_edit, memory_store, memory_recall, memory_forget, browser_open, screenshot, composio, http_request, hardware_info, hardware_memory, and more | Any capability                                            |
+| **Observability** | `Observer`       | Noop, Log, File, Multi                                                                                                                                                          | Prometheus, OTel                                          |
+| **Runtime**       | `RuntimeAdapter` | Native, Docker (sandboxed), WASM (wasmtime)                                                                                                                                     | Any runtime                                               |
+| **Security**      | `Sandbox`        | Landlock, Firejail, Bubblewrap, Docker, auto-detect                                                                                                                             | Any sandbox backend                                       |
+| **Identity**      | `IdentityConfig` | OpenClaw (markdown), AIEOS v1.1 (JSON)                                                                                                                                          | Any identity format                                       |
+| **Tunnel**        | `Tunnel`         | None, Cloudflare, Tailscale, ngrok, Custom                                                                                                                                      | Any tunnel binary                                         |
+| **Heartbeat**     | Engine           | HEARTBEAT.md periodic tasks                                                                                                                                                     | —                                                         |
+| **Skills**        | Loader           | TOML manifests + SKILL.md instructions                                                                                                                                          | Community skill packs                                     |
+| **Peripherals**   | `Peripheral`     | Serial, Arduino, Raspberry Pi GPIO, STM32/Nucleo                                                                                                                                | Any hardware interface                                    |
+| **Cron**          | Scheduler        | Cron expressions + one-shot timers with JSON persistence                                                                                                                        | —                                                         |
 
 ### Memory System
 
 All custom, zero external dependencies:
 
-| Layer | Implementation |
-|-------|---------------|
-| **Vector DB** | Embeddings stored as BLOB in SQLite, cosine similarity search |
-| **Keyword Search** | FTS5 virtual tables with BM25 scoring |
-| **Hybrid Merge** | Weighted merge (configurable vector/keyword weights) |
-| **Embeddings** | `EmbeddingProvider` vtable — OpenAI, custom URL, or noop |
-| **Hygiene** | Automatic archival + purge of stale memories |
-| **Snapshots** | Export/import full memory state for migration |
+| Layer              | Implementation                                                |
+| ------------------ | ------------------------------------------------------------- |
+| **Vector DB**      | Embeddings stored as BLOB in SQLite, cosine similarity search |
+| **Keyword Search** | FTS5 virtual tables with BM25 scoring                         |
+| **Hybrid Merge**   | Weighted merge (configurable vector/keyword weights)          |
+| **Embeddings**     | `EmbeddingProvider` vtable — OpenAI, custom URL, or noop      |
+| **Hygiene**        | Automatic archival + purge of stale memories                  |
+| **Snapshots**      | Export/import full memory state for migration                 |
 
 ```json
 {
@@ -173,16 +199,16 @@ All custom, zero external dependencies:
 
 nullclaw enforces security at **every layer**.
 
-| # | Item | Status | How |
-|---|------|--------|-----|
-| 1 | **Gateway not publicly exposed** | Done | Binds `127.0.0.1` by default. Refuses `0.0.0.0` without tunnel or explicit `allow_public_bind`. |
-| 2 | **Pairing required** | Done | 6-digit one-time code on startup. Exchange via `POST /pair` for bearer token. |
-| 3 | **Filesystem scoped** | Done | `workspace_only = true` by default. Null byte injection blocked. Symlink escape detection. |
-| 4 | **Access via tunnel only** | Done | Gateway refuses public bind without active tunnel. Supports Tailscale, Cloudflare, ngrok, or custom. |
-| 5 | **Sandbox isolation** | Done | Auto-detects best backend: Landlock, Firejail, Bubblewrap, or Docker. |
-| 6 | **Encrypted secrets** | Done | API keys encrypted with ChaCha20-Poly1305 using local key file. |
-| 7 | **Resource limits** | Done | Configurable memory, CPU, disk, and subprocess limits. |
-| 8 | **Audit logging** | Done | Signed event trail with configurable retention. |
+| #   | Item                             | Status | How                                                                                                  |
+| --- | -------------------------------- | ------ | ---------------------------------------------------------------------------------------------------- |
+| 1   | **Gateway not publicly exposed** | Done   | Binds `127.0.0.1` by default. Refuses `0.0.0.0` without tunnel or explicit `allow_public_bind`.      |
+| 2   | **Pairing required**             | Done   | 6-digit one-time code on startup. Exchange via `POST /pair` for bearer token.                        |
+| 3   | **Filesystem scoped**            | Done   | `workspace_only = true` by default. Null byte injection blocked. Symlink escape detection.           |
+| 4   | **Access via tunnel only**       | Done   | Gateway refuses public bind without active tunnel. Supports Tailscale, Cloudflare, ngrok, or custom. |
+| 5   | **Sandbox isolation**            | Done   | Auto-detects best backend: Landlock, Firejail, Bubblewrap, or Docker.                                |
+| 6   | **Encrypted secrets**            | Done   | API keys encrypted with ChaCha20-Poly1305 using local key file.                                      |
+| 7   | **Resource limits**              | Done   | Configurable memory, CPU, disk, and subprocess limits.                                               |
+| 8   | **Audit logging**                | Done   | Signed event trail with configurable retention.                                                      |
 
 ### Channel Allowlists
 
@@ -205,6 +231,7 @@ nullclaw onboard --interactive   # Step 7 configures Nostr
 ```
 
 The wizard will:
+
 1. Generate a new keypair for your bot or import a key & encrypt it with ChaCha20-Poly1305
 2. Ask for your (owner) pubkey (npub or hex) — always allowed through DM policy
 3. Configure relays and DM relays (kind:10050 inbox)
@@ -229,7 +256,10 @@ Config: `~/.nullclaw/config.json` (created by `onboard`)
     "providers": {
       "openrouter": { "api_key": "sk-or-..." },
       "groq": { "api_key": "gsk_..." },
-      "anthropic": { "api_key": "sk-ant-...", "base_url": "https://api.anthropic.com" }
+      "anthropic": {
+        "api_key": "sk-ant-...",
+        "base_url": "https://api.anthropic.com"
+      }
     }
   },
 
@@ -239,7 +269,11 @@ Config: `~/.nullclaw/config.json` (created by `onboard`)
       "heartbeat": { "every": "30m" }
     },
     "list": [
-      { "id": "researcher", "model": { "primary": "openrouter/anthropic/claude-opus-4" }, "system_prompt": "..." }
+      {
+        "id": "researcher",
+        "model": { "primary": "openrouter/anthropic/claude-opus-4" },
+        "system_prompt": "..."
+      }
     ]
   },
 
@@ -288,7 +322,11 @@ Config: `~/.nullclaw/config.json` (created by `onboard`)
     "nostr": {
       "private_key": "enc2:...",
       "owner_pubkey": "hex-pubkey-of-owner",
-      "relays": ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"],
+      "relays": [
+        "wss://relay.damus.io",
+        "wss://nos.lol",
+        "wss://relay.nostr.band"
+      ],
       "dm_allowed_pubkeys": ["*"],
       "display_name": "NullClaw",
       "about": "AI assistant on Nostr",
@@ -308,7 +346,10 @@ Config: `~/.nullclaw/config.json` (created by `onboard`)
   },
 
   "mcp_servers": {
-    "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem"] }
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem"]
+    }
   },
 
   "memory": {
@@ -340,7 +381,6 @@ Config: `~/.nullclaw/config.json` (created by `onboard`)
       "read_only_rootfs": true
     }
   },
-
 
   "tunnel": { "provider": "none" },
   "secrets": { "encrypt": true },
@@ -399,7 +439,10 @@ Use `channels.web` for browser UI events (WebChannel v1):
           "port": 32123,
           "path": "/ws",
           "auth_token": "replace-with-long-random-token",
-          "allowed_origins": ["http://localhost:5173", "chrome-extension://your-extension-id"]
+          "allowed_origins": [
+            "http://localhost:5173",
+            "chrome-extension://your-extension-id"
+          ]
         }
       }
     }
@@ -443,33 +486,33 @@ Use `channels.web` for browser UI events (WebChannel v1):
 
 ## Gateway API
 
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/health` | GET | None | Health check (always public) |
-| `/pair` | POST | `X-Pairing-Code` header | Exchange one-time code for bearer token |
-| `/webhook` | POST | `Authorization: Bearer <token>` | Send message: `{"message": "your prompt"}` |
-| `/whatsapp` | GET | Query params | Meta webhook verification |
-| `/whatsapp` | POST | None (Meta signature) | WhatsApp incoming message webhook |
+| Endpoint    | Method | Auth                            | Description                                |
+| ----------- | ------ | ------------------------------- | ------------------------------------------ |
+| `/health`   | GET    | None                            | Health check (always public)               |
+| `/pair`     | POST   | `X-Pairing-Code` header         | Exchange one-time code for bearer token    |
+| `/webhook`  | POST   | `Authorization: Bearer <token>` | Send message: `{"message": "your prompt"}` |
+| `/whatsapp` | GET    | Query params                    | Meta webhook verification                  |
+| `/whatsapp` | POST   | None (Meta signature)           | WhatsApp incoming message webhook          |
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `onboard --api-key sk-... --provider openrouter` | Quick setup with API key and provider |
-| `onboard --interactive` | Full interactive wizard |
-| `onboard --channels-only` | Reconfigure channels/allowlists only |
-| `agent -m "..."` | Single message mode |
-| `agent` | Interactive chat mode |
-| `gateway` | Start long-running runtime (default: `127.0.0.1:3000`) |
-| `service install\|start\|stop\|status\|uninstall` | Manage background service |
-| `doctor` | Diagnose system health |
-| `status` | Show full system status |
-| `channel status` | Show channel health/status |
-| `cron list\|add\|remove\|pause\|resume\|run` | Manage scheduled tasks |
-| `skills list\|install\|remove\|info` | Manage skill packs |
-| `hardware scan\|flash\|monitor` | Hardware device management |
-| `models list\|info\|benchmark` | Model catalog |
-| `migrate openclaw [--dry-run] [--source PATH]` | Import memory + migrate config from OpenClaw |
+| Command                                           | Description                                            |
+| ------------------------------------------------- | ------------------------------------------------------ |
+| `onboard --api-key sk-... --provider openrouter`  | Quick setup with API key and provider                  |
+| `onboard --interactive`                           | Full interactive wizard                                |
+| `onboard --channels-only`                         | Reconfigure channels/allowlists only                   |
+| `agent -m "..."`                                  | Single message mode                                    |
+| `agent`                                           | Interactive chat mode                                  |
+| `gateway`                                         | Start long-running runtime (default: `127.0.0.1:3000`) |
+| `service install\|start\|stop\|status\|uninstall` | Manage background service                              |
+| `doctor`                                          | Diagnose system health                                 |
+| `status`                                          | Show full system status                                |
+| `channel status`                                  | Show channel health/status                             |
+| `cron list\|add\|remove\|pause\|resume\|run`      | Manage scheduled tasks                                 |
+| `skills list\|install\|remove\|info`              | Manage skill packs                                     |
+| `hardware scan\|flash\|monitor`                   | Hardware device management                             |
+| `models list\|info\|benchmark`                    | Model catalog                                          |
+| `migrate openclaw [--dry-run] [--source PATH]`    | Import memory + migrate config from OpenClaw           |
 
 ## Development
 

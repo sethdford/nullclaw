@@ -1,10 +1,12 @@
 #!/bin/sh
-# pre-commit: enforce zig fmt on all source files.
+# pre-commit: enforce formatting on source files.
 # Activate: git config core.hooksPath .githooks
 
-output=$(zig fmt --check src/ 2>&1)
-if [ $? -ne 0 ]; then
-    echo "zig fmt check failed. Run: zig fmt src/"
-    echo "$output"
-    exit 1
+if [ -d "src" ] && command -v zig >/dev/null 2>&1; then
+    output=$(zig fmt --check src/ 2>&1)
+    if [ $? -ne 0 ]; then
+        echo "zig fmt check failed. Run: zig fmt src/"
+        echo "$output"
+        exit 1
+    fi
 fi

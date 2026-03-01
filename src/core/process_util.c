@@ -1,0 +1,170 @@
+#include "seaclaw/core/process_util.h"
+#include "seaclaw/core/allocator.h"
+#include "seaclaw/core/error.h"
+#include <string.h>
+#include <stdlib.h>
+
+#ifdef SC_GATEWAY_POSIX
+#include <unistd.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <errno.h>
+#endif
+
+void sc_run_result_free(sc_allocator_t *alloc, sc_run_result_t *r) {
+    if (!alloc || !r) return;
+    if (r->stdout_buf) {
+        alloc->free(alloc->ctx, r->stdout_buf, r->stdout_len + 1);
+        r->stdout_buf = NULL;
+    }
+    if (r->stderr_buf) {
+        alloc->free(alloc->ctx, r->stderr_buf, r->stderr_len + 1);
+        r->stderr_buf = NULL;
+    }
+    r->stdout_len = 0;
+    r->stderr_len = 0;
+}
+
+#if defined(SC_GATEWAY_POSIX) && !defined(SC_IS_TEST)
+sc_error_t sc_process_run(sc_allocator_t *alloc,
+    const char *const *argv,
+    const char *cwd,
+    size_t max_output_bytes,
+    sc_run_result_t *out)
+{
+    if (!alloc || !argv || !argv[0] || !out) return SC_ERR_INVALID_ARGUMENT;
+    if (max_output_bytes == 0) max_output_bytes = 1048576;
+
+    memset(out, 0, sizeof(*out));
+    out->exit_code = -1;
+
+    int stdout_pipe[2];
+    int stderr_pipe[2];
+    if (pipe(stdout_pipe) != 0 || pipe(stderr_pipe) != 0)
+        return SC_ERR_IO;
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        close(stdout_pipe[0]); close(stdout_pipe[1]);
+        close(stderr_pipe[0]); close(stderr_pipe[1]);
+        return SC_ERR_IO;
+    }
+
+    if (pid == 0) {
+        close(stdout_pipe[0]);
+        close(stderr_pipe[0]);
+        dup2(stdout_pipe[1], STDOUT_FILENO);
+        dup2(stderr_pipe[1], STDERR_FILENO);
+        close(stdout_pipe[1]);
+        close(stderr_pipe[1]);
+
+        if (cwd && cwd[0]) {
+            if (chdir(cwd) != 0) {
+                _exit(126);
+            }
+        }
+
+        execvp(argv[0], (char *const *)argv);
+        _exit(127);
+    }
+
+    close(stdout_pipe[1]);
+    close(stderr_pipe[1]);
+
+    size_t cap = max_output_bytes + 1;
+    if (cap > 65536) cap = 65536;
+
+    char *out_buf = (char *)alloc->alloc(alloc->ctx, cap);
+    char *err_buf = (char *)alloc->alloc(alloc->ctx, cap);
+    if (!out_buf || !err_buf) {
+        if (out_buf) alloc->free(alloc->ctx, out_buf, cap);
+        if (err_buf) alloc->free(alloc->ctx, err_buf, cap);
+        close(stdout_pipe[0]);
+        close(stderr_pipe[0]);
+        waitpid(pid, NULL, 0);
+        return SC_ERR_OUT_OF_MEMORY;
+    }
+
+    size_t out_len = 0, err_len = 0;
+    fd_set rfds;
+    int nfds = (stdout_pipe[0] > stderr_pipe[0]) ? stdout_pipe[0] + 1 : stderr_pipe[0] + 1;
+
+    while (out_len < max_output_bytes || err_len < max_output_bytes) {
+        FD_ZERO(&rfds);
+        if (out_len < max_output_bytes) FD_SET(stdout_pipe[0], &rfds);
+        if (err_len < max_output_bytes) FD_SET(stderr_pipe[0], &rfds);
+
+        struct timeval tv = { .tv_sec = 1, .tv_usec = 0 };
+        int r = select(nfds, &rfds, NULL, NULL, &tv);
+        if (r < 0) {
+            if (errno == EINTR) continue;
+            break;
+        }
+        if (r == 0) {
+            int status;
+            if (waitpid(pid, &status, WNOHANG) == pid) break;
+            continue;
+        }
+
+        if (FD_ISSET(stdout_pipe[0], &rfds) && out_len < max_output_bytes) {
+            ssize_t n = read(stdout_pipe[0], out_buf + out_len, cap - out_len - 1);
+            if (n > 0) out_len += (size_t)n;
+            if (n <= 0) FD_CLR(stdout_pipe[0], &rfds);
+        }
+        if (FD_ISSET(stderr_pipe[0], &rfds) && err_len < max_output_bytes) {
+            ssize_t n = read(stderr_pipe[0], err_buf + err_len, cap - err_len - 1);
+            if (n > 0) err_len += (size_t)n;
+            if (n <= 0) FD_CLR(stderr_pipe[0], &rfds);
+        }
+    }
+
+    close(stdout_pipe[0]);
+    close(stderr_pipe[0]);
+
+    int status;
+    waitpid(pid, &status, 0);
+
+    out_buf[out_len] = '\0';
+    err_buf[err_len] = '\0';
+    out->stdout_buf = out_buf;
+    out->stdout_len = out_len;
+    out->stderr_buf = err_buf;
+    out->stderr_len = err_len;
+
+    if (WIFEXITED(status)) {
+        out->exit_code = WEXITSTATUS(status);
+        out->success = (out->exit_code == 0);
+    } else {
+        out->exit_code = -1;
+        out->success = false;
+    }
+
+    return SC_OK;
+}
+#else
+/* Non-POSIX or SC_IS_TEST: stub that returns empty success */
+sc_error_t sc_process_run(sc_allocator_t *alloc,
+    const char *const *argv,
+    const char *cwd,
+    size_t max_output_bytes,
+    sc_run_result_t *out)
+{
+    (void)cwd;
+    (void)max_output_bytes;
+    if (!alloc || !out) return SC_ERR_INVALID_ARGUMENT;
+    if (!argv || !argv[0]) return SC_ERR_INVALID_ARGUMENT;
+    memset(out, 0, sizeof(*out));
+    out->stdout_buf = (char *)alloc->alloc(alloc->ctx, 1);
+    if (!out->stdout_buf) return SC_ERR_OUT_OF_MEMORY;
+    out->stdout_buf[0] = '\0';
+    out->stderr_buf = (char *)alloc->alloc(alloc->ctx, 1);
+    if (!out->stderr_buf) {
+        alloc->free(alloc->ctx, out->stdout_buf, 1);
+        return SC_ERR_OUT_OF_MEMORY;
+    }
+    out->stderr_buf[0] = '\0';
+    out->success = true;
+    out->exit_code = 0;
+    return SC_OK;
+}
+#endif

@@ -1,0 +1,28 @@
+name: nullclaw CI
+
+on: [push, pull_request]
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install sqlite3
+      - run: mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DSC_ENABLE_ALL_CHANNELS=ON && make -j$(sysctl -n hw.ncpu)
+      - run: cd build && ./nullclaw_tests
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev libcurl4-openssl-dev
+      - run: mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug -DSC_ENABLE_ALL_CHANNELS=ON -DSC_ENABLE_CURL=ON && make -j$(nproc)
+      - run: cd build && ./nullclaw_tests
+
+  release-size:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install sqlite3
+      - run: mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel -DSC_ENABLE_LTO=ON && make -j$(sysctl -n hw.ncpu)
+      - run: ls -lh build/nullclaw
