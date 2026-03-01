@@ -1,3 +1,8 @@
+/* Browser tool: open URL, read page content via HTTP.
+ * CDP (Chrome DevTools Protocol) integration — required for click, type, scroll —
+ * needs a WebSocket connection to a Chrome instance and is not yet implemented.
+ * Those actions return "CDP browser automation not available".
+ * Currently supported: open (system browser), read (HTTP fetch). */
 #include "seaclaw/tool.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"

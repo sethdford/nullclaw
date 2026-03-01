@@ -1,5 +1,7 @@
 /* Redis memory backend — TCP RESP when SC_ENABLE_REDIS_ENGINE.
- * In SC_IS_TEST: in-memory mock. */
+ * In SC_IS_TEST: in-memory mock.
+ * When SC_ENABLE_REDIS_ENGINE is not set, all operations return SC_ERR_NOT_SUPPORTED.
+ * This is intentional, documented stub behavior. */
 
 #include "seaclaw/memory/engines.h"
 #include "seaclaw/memory.h"

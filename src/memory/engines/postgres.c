@@ -1,5 +1,7 @@
 /* PostgreSQL memory backend — full interface with libpq when SC_ENABLE_POSTGRES.
- * In SC_IS_TEST: in-memory mock. Otherwise uses libpq SQL. */
+ * In SC_IS_TEST: in-memory mock.
+ * When SC_ENABLE_POSTGRES is not set, all operations return SC_ERR_NOT_SUPPORTED.
+ * This is intentional, documented stub behavior. */
 
 #include "seaclaw/memory/engines.h"
 #include "seaclaw/memory.h"

@@ -32,6 +32,7 @@
 
 typedef enum { INSTALL_NIX, INSTALL_HOMEBREW, INSTALL_DOCKER, INSTALL_BINARY, INSTALL_DEV } install_method_t;
 
+/* Detect install method from executable path. build/ = dev build (cmake out-of-tree). */
 static install_method_t detect_install_method(const char *exe_path) {
     if (!exe_path) return INSTALL_BINARY;
     if (strstr(exe_path, "/nix/store/")) return INSTALL_NIX;

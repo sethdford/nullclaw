@@ -1,5 +1,7 @@
 /* Lucid memory backend — SQLite + lucid CLI for cross-project sync.
- * SC_IS_TEST: in-memory mock. Otherwise: SQLite + optional lucid CLI. */
+ * SC_IS_TEST: in-memory mock.
+ * When SC_ENABLE_SQLITE is not set (production build), all operations return
+ * SC_ERR_NOT_SUPPORTED. This is intentional, documented stub behavior. */
 
 #include "seaclaw/memory/engines.h"
 #include "seaclaw/memory.h"

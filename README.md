@@ -503,8 +503,19 @@ cmake .. -DCMAKE_BUILD_TYPE=Debug -DSC_ENABLE_ALL_CHANNELS=ON
 make -j                                    # Dev build
 ./seaclaw_tests                            # 1,697 tests
 cd ..
+```
 
-# Release build (239 KB)
+**ASan (AddressSanitizer)** for leak/overflow detection during development:
+
+```bash
+cmake -B build -DSC_ENABLE_ASAN=ON
+cmake --build build
+./build/seaclaw_tests
+```
+
+Release build (239 KB):
+
+```bash
 mkdir -p build-release && cd build-release
 cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel -DSC_ENABLE_LTO=ON
 make -j
@@ -523,37 +534,41 @@ Channel CJM coverage (ingress parsing/filtering, session key routing, account pr
 ### Project Stats
 
 ```
-Language:     C11 + ASM (aarch64, x86_64)
+
+Language: C11 + ASM (aarch64, x86_64)
 Source files: ~415
 Lines of code: ~52,000
-Tests:        1,697
-Binary:       239 KB (MinSizeRel + LTO)
-Peak RSS:     < 5 MB
-Startup:      <2 ms (Apple Silicon)
+Tests: 1,697
+Binary: 239 KB (MinSizeRel + LTO)
+Peak RSS: < 5 MB
+Startup: <2 ms (Apple Silicon)
 Dependencies: libc + optional SQLite, libcurl
+
 ```
 
 ### Source Layout
 
 ```
-src/
-  main.c               CLI entry point + command routing
-  agent/               Agent loop, context, planner, compaction, dispatcher
-  channels/            20 channel implementations (cli, telegram, discord, ...)
-  providers/           22+ AI provider implementations
-  memory/              SQLite + markdown + LRU backends, embeddings, vector search
-  tools/               30+ tool implementations
-  security/            Policy, pairing, secrets, sandbox backends
-  runtime/             Runtime adapters (native, docker, wasm, cloudflare)
-  core/                Allocator, arena, error, json, http, string, slice
-  observability/       Log + metrics observers
-  gateway/             HTTP gateway server
-  config.c             Config loading/merging (~/.seaclaw/config.json)
-  ...
 
-include/seaclaw/      Public C headers
-tests/                66 test files, 1,697 tests
-asm/                  Platform-specific assembly (aarch64, x86_64, generic C)
+src/
+main.c CLI entry point + command routing
+agent/ Agent loop, context, planner, compaction, dispatcher
+channels/ 20 channel implementations (cli, telegram, discord, ...)
+providers/ 22+ AI provider implementations
+memory/ SQLite + markdown + LRU backends, embeddings, vector search
+tools/ 30+ tool implementations
+security/ Policy, pairing, secrets, sandbox backends
+runtime/ Runtime adapters (native, docker, wasm, cloudflare)
+core/ Allocator, arena, error, json, http, string, slice
+observability/ Log + metrics observers
+gateway/ HTTP gateway server
+config.c Config loading/merging (~/.seaclaw/config.json)
+...
+
+include/seaclaw/ Public C headers
+tests/ 66 test files, 1,697 tests
+asm/ Platform-specific assembly (aarch64, x86_64, generic C)
+
 ```
 
 ## Versioning
@@ -592,3 +607,7 @@ MIT — see [LICENSE](LICENSE)
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=seaclaw/seaclaw&type=date&legend=top-left)](https://www.star-history.com/#seaclaw/seaclaw&type=date&legend=top-left)
+
+```
+
+```

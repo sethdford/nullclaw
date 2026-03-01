@@ -77,15 +77,18 @@ Last updated: 2026-03-01
 - **Event bus**: Pub/sub for cross-module communication
 - **Identity**: Bot identity, permission resolution
 - **WASM**: Build target, WASI bindings, bump allocator, wasm provider/channel
+- **WebSocket client**: Basic ws:// support (connect, send, recv, close). WSS (TLS) is not yet supported.
+- **Channel adapters**: Polling descriptors for 5 channels (telegram, matrix, irc, signal, nostr). Partially implemented.
 
 ## What's Stubbed (Interface Defined, Returns SC_ERR_NOT_SUPPORTED)
 
-- **postgres.c, redis.c, lancedb.c, lucid.c, api.c**: Memory engines (need external libs)
+- **postgres.c, redis.c, lancedb.c, lucid.c, api.c**: Memory engines (need external libs; see header comments)
 - **store_pgvector.c**: Vector store (needs libpq + pgvector)
 - **MCP client**: Protocol defined, transport not implemented
 - **Sub-agent spawning**: Interface defined, not wired to process management
 - **Voice I/O, multimodal**: Interfaces defined, no TTS/STT integration yet
-- **Self-update**: Interface defined, no download/replace mechanism
+- **WebSocket WSS (TLS)**: ws:// works; wss:// connections not supported
+- **Browser tool CDP**: click, type, scroll require Chrome DevTools Protocol; currently only open/read via shell/HTTP
 
 ## External Dependencies
 
