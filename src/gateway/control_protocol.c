@@ -983,13 +983,21 @@ void sc_control_on_message(sc_ws_conn_t *conn, const char *data, size_t data_len
         return;
     }
 
-    const char *id = sc_json_get_string(root, "id");
+    const char *id_raw = sc_json_get_string(root, "id");
     const char *method = sc_json_get_string(root, "method");
 
-    if (!id || !method) {
+    if (!id_raw || !method) {
         sc_json_free(proto->alloc, root);
         return;
     }
+
+    size_t id_slen = strlen(id_raw);
+    char *id = (char *)proto->alloc->alloc(proto->alloc->ctx, id_slen + 1);
+    if (!id) {
+        sc_json_free(proto->alloc, root);
+        return;
+    }
+    memcpy(id, id_raw, id_slen + 1);
 
     char *payload = NULL;
     size_t payload_len = 0;
@@ -1069,6 +1077,7 @@ void sc_control_on_message(sc_ws_conn_t *conn, const char *data, size_t data_len
             proto->alloc->free(proto->alloc->ctx, payload, 64);
         }
     }
+    proto->alloc->free(proto->alloc->ctx, id, id_slen + 1);
 #endif
 }
 
