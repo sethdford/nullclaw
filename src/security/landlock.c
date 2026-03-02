@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "seaclaw/security/sandbox.h"
 #include <stdint.h>
 #include "seaclaw/security/sandbox_internal.h"
@@ -88,7 +89,7 @@ static sc_error_t landlock_apply(void *ctx) {
     };
     int ruleset_fd = (int)syscall(SYS_landlock_create_ruleset,
         &ruleset_attr, sizeof(ruleset_attr), 0);
-    if (ruleset_fd < 0) return SC_ERR_SYSTEM;
+    if (ruleset_fd < 0) return SC_ERR_IO;
 
     /* Helper: add a path rule with given access mask */
     struct {
@@ -123,19 +124,19 @@ static sc_error_t landlock_apply(void *ctx) {
         close(path_fd);
         if (ret < 0 && i < 2) {
             close(ruleset_fd);
-            return SC_ERR_SYSTEM;
+            return SC_ERR_IO;
         }
     }
 
     /* Drop ambient privileges so Landlock can restrict us */
     if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) < 0) {
         close(ruleset_fd);
-        return SC_ERR_SYSTEM;
+        return SC_ERR_IO;
     }
 
     if (syscall(SYS_landlock_restrict_self, ruleset_fd, 0) < 0) {
         close(ruleset_fd);
-        return SC_ERR_SYSTEM;
+        return SC_ERR_IO;
     }
 
     close(ruleset_fd);

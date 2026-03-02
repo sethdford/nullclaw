@@ -67,14 +67,12 @@ static sc_error_t wasi_wrap(void *ctx, const char *const *argv, size_t argc,
     buf[0] = wc->runtime_path;
     buf[1] = "run";
     /* Use workspace_dir for the --dir= arg; pre-formatted in init */
-    static char dir_arg[1040];
-    static char tmp_arg[] = "--dir=/tmp";
-    int n = snprintf(dir_arg, sizeof(dir_arg), "--dir=%s", wc->workspace_dir);
-    if (n <= 0 || (size_t)n >= sizeof(dir_arg))
+    int n = snprintf(wc->dir_arg, sizeof(wc->dir_arg), "--dir=%s", wc->workspace_dir);
+    if (n <= 0 || (size_t)n >= sizeof(wc->dir_arg))
         return SC_ERR_INVALID_ARGUMENT;
 
-    buf[2] = dir_arg;
-    buf[3] = tmp_arg;
+    buf[2] = wc->dir_arg;
+    buf[3] = "--dir=/tmp";
     for (size_t i = 0; i < argc; i++)
         buf[prefix_len + i] = argv[i];
     *out_count = prefix_len + argc;

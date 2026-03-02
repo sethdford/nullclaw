@@ -134,7 +134,7 @@ static sc_error_t seccomp_apply(void *ctx) {
     const size_t max_insns = 3 + n_blocked * 2 + n_network * 2 + 1;
     struct sock_filter filter[128];
     if (max_insns > sizeof(filter) / sizeof(filter[0]))
-        return SC_ERR_OVERFLOW;
+        return SC_ERR_INTERNAL;
 
     size_t idx = 0;
 
@@ -175,10 +175,10 @@ static sc_error_t seccomp_apply(void *ctx) {
     };
 
     if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) < 0)
-        return SC_ERR_SYSTEM;
+        return SC_ERR_IO;
 
     if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog, 0, 0) < 0)
-        return SC_ERR_SYSTEM;
+        return SC_ERR_IO;
 
     return SC_OK;
 #endif /* SC_IS_TEST */

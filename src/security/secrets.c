@@ -7,8 +7,22 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #define SC_KEY_LEN 32
+
+static void sc_secure_zero(void *p, size_t n) {
+#if defined(__STDC_LIB_EXT1__)
+    memset_s(p, n, 0, n);
+#elif defined(__GNUC__) || defined(__clang__)
+    memset(p, 0, n);
+    __asm__ __volatile__("" : : "r"(p) : "memory");
+#else
+    volatile unsigned char *vp = (volatile unsigned char *)p;
+    while (n--) *vp++ = 0;
+#endif
+}
 #define SC_NONCE_LEN 12
 #define SC_HMAC_LEN 32
 #define SC_ENC2_PREFIX "enc2:"
@@ -81,7 +95,10 @@ static sc_error_t load_or_create_key(sc_secret_store_t *store, uint8_t key[SC_KE
         hex_buf[n] = '\0';
         size_t dlen;
         sc_error_t err = sc_hex_decode(hex_buf, strlen(hex_buf), key, SC_KEY_LEN, &dlen);
-        if (err != SC_OK || dlen != SC_KEY_LEN) return SC_ERR_CRYPTO_DECRYPT;
+        if (err != SC_OK || dlen != SC_KEY_LEN) {
+            sc_secure_zero(key, SC_KEY_LEN);
+            return SC_ERR_CRYPTO_DECRYPT;
+        }
         return SC_OK;
     }
 
@@ -101,12 +118,22 @@ static sc_error_t load_or_create_key(sc_secret_store_t *store, uint8_t key[SC_KE
         }
     }
 
-    f = fopen(path, "wb");
-    if (!f) return SC_ERR_IO;
+    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    if (fd < 0) {
+        sc_secure_zero(key, SC_KEY_LEN);
+        return SC_ERR_IO;
+    }
+    f = fdopen(fd, "wb");
+    if (!f) {
+        close(fd);
+        sc_secure_zero(key, SC_KEY_LEN);
+        return SC_ERR_IO;
+    }
     char hex_out[SC_KEY_LEN * 2 + 1];
     sc_hex_encode(key, SC_KEY_LEN, hex_out);
     fwrite(hex_out, 1, SC_KEY_LEN * 2, f);
     fclose(f);
+    sc_secure_zero(key, SC_KEY_LEN);
     return SC_OK;
 }
 
@@ -154,8 +181,10 @@ sc_error_t sc_secret_store_encrypt(sc_secret_store_t *store,
     if (err != SC_OK) return err;
 
     uint8_t nonce[SC_NONCE_LEN];
-    if (dev_urandom_bytes(nonce, SC_NONCE_LEN) != 0)
+    if (dev_urandom_bytes(nonce, SC_NONCE_LEN) != 0) {
+        sc_secure_zero(key, SC_KEY_LEN);
         return SC_ERR_CRYPTO_ENCRYPT;
+    }
 
     size_t plen = strlen(plaintext);
     uint8_t *ciphertext = (uint8_t *)alloc->alloc(alloc->ctx, plen + SC_HMAC_LEN);
@@ -170,6 +199,8 @@ sc_error_t sc_secret_store_encrypt(sc_secret_store_t *store,
     uint8_t *blob = (uint8_t *)alloc->alloc(alloc->ctx, blob_len);
     if (!blob) {
         alloc->free(alloc->ctx, ciphertext, plen + SC_HMAC_LEN);
+        sc_secure_zero(key, SC_KEY_LEN);
+        sc_secure_zero(nonce, SC_NONCE_LEN);
         return SC_ERR_OUT_OF_MEMORY;
     }
     memcpy(blob, nonce, SC_NONCE_LEN);
@@ -181,12 +212,16 @@ sc_error_t sc_secret_store_encrypt(sc_secret_store_t *store,
     char *hex_out = (char *)alloc->alloc(alloc->ctx, hex_len);
     if (!hex_out) {
         alloc->free(alloc->ctx, blob, blob_len);
+        sc_secure_zero(key, SC_KEY_LEN);
+        sc_secure_zero(nonce, SC_NONCE_LEN);
         return SC_ERR_OUT_OF_MEMORY;
     }
     memcpy(hex_out, SC_ENC2_PREFIX, SC_ENC2_PREFIX_LEN);
     sc_hex_encode(blob, blob_len, hex_out + SC_ENC2_PREFIX_LEN);
     alloc->free(alloc->ctx, blob, blob_len);
 
+    sc_secure_zero(key, SC_KEY_LEN);
+    sc_secure_zero(nonce, SC_NONCE_LEN);
     *out_ciphertext_hex = hex_out;
     return SC_OK;
 }
@@ -234,7 +269,10 @@ sc_error_t sc_secret_store_decrypt(sc_secret_store_t *store,
     unsigned char diff = 0;
     for (int i = 0; i < 32; i++)
         diff |= computed_hmac[i] ^ blob[SC_NONCE_LEN + ct_len + i];
-    if (diff != 0) return SC_ERR_CRYPTO_DECRYPT;
+    if (diff != 0) {
+        sc_secure_zero(key, SC_KEY_LEN);
+        return SC_ERR_CRYPTO_DECRYPT;
+    }
 
     uint8_t plain_buf[8192];
     if (ct_len > sizeof(plain_buf)) return SC_ERR_CRYPTO_DECRYPT;
@@ -242,9 +280,15 @@ sc_error_t sc_secret_store_decrypt(sc_secret_store_t *store,
     sc_chacha20_decrypt(key, blob, 1, blob + SC_NONCE_LEN, plain_buf, ct_len);
 
     char *plain = (char *)alloc->alloc(alloc->ctx, ct_len + 1);
-    if (!plain) return SC_ERR_OUT_OF_MEMORY;
+    if (!plain) {
+        sc_secure_zero(key, SC_KEY_LEN);
+        sc_secure_zero(plain_buf, ct_len);
+        return SC_ERR_OUT_OF_MEMORY;
+    }
     memcpy(plain, plain_buf, ct_len);
     plain[ct_len] = '\0';
+    sc_secure_zero(key, SC_KEY_LEN);
+    sc_secure_zero(plain_buf, ct_len);
     *out_plaintext = plain;
     return SC_OK;
 }

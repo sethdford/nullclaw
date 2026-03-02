@@ -12,8 +12,10 @@ struct sc_sandbox_storage {
     sc_docker_ctx_t docker;
     sc_seatbelt_ctx_t seatbelt;
     sc_seccomp_ctx_t seccomp;
+    sc_landlock_seccomp_ctx_t landlock_seccomp;
     sc_wasi_sandbox_ctx_t wasi;
     sc_firecracker_ctx_t firecracker;
+    sc_appcontainer_ctx_t appcontainer;
 };
 
 sc_sandbox_storage_t *sc_sandbox_storage_create(const sc_sandbox_alloc_t *alloc) {
@@ -95,9 +97,23 @@ sc_sandbox_t sc_sandbox_create(sc_sandbox_backend_t backend,
                 result = sc_noop_sandbox_get(&st->noop);
             break;
         }
+        case SC_SANDBOX_LANDLOCK_SECCOMP: {
+            sc_landlock_seccomp_sandbox_init(&st->landlock_seccomp, ws, false);
+            result = sc_landlock_seccomp_sandbox_get(&st->landlock_seccomp);
+            if (!result.vtable->is_available(result.ctx))
+                result = sc_noop_sandbox_get(&st->noop);
+            break;
+        }
         case SC_SANDBOX_FIRECRACKER: {
             sc_firecracker_sandbox_init(&st->firecracker, ws);
             result = sc_firecracker_sandbox_get(&st->firecracker);
+            if (!result.vtable->is_available(result.ctx))
+                result = sc_noop_sandbox_get(&st->noop);
+            break;
+        }
+        case SC_SANDBOX_APPCONTAINER: {
+            sc_appcontainer_sandbox_init(&st->appcontainer, ws);
+            result = sc_appcontainer_sandbox_get(&st->appcontainer);
             if (!result.vtable->is_available(result.ctx))
                 result = sc_noop_sandbox_get(&st->noop);
             break;
@@ -106,9 +122,10 @@ sc_sandbox_t sc_sandbox_create(sc_sandbox_backend_t backend,
             /*
              * Tiered auto-detection:
              *
-             * macOS:  Seatbelt (kernel) -> Docker -> WASI -> noop
-             * Linux:  Landlock+seccomp (kernel) -> Bubblewrap -> Firejail
-             *         -> Firecracker (KVM) -> Docker -> WASI -> noop
+             * macOS:   Seatbelt (kernel) -> Docker -> WASI -> noop
+             * Linux:   Landlock+seccomp (combined) -> Bubblewrap -> Firejail
+             *          -> Firecracker (KVM) -> Docker -> WASI -> noop
+             * Windows: AppContainer -> WASI -> noop
              */
 #ifdef __APPLE__
             sc_seatbelt_sandbox_init(&st->seatbelt, ws);
@@ -117,9 +134,9 @@ sc_sandbox_t sc_sandbox_create(sc_sandbox_backend_t backend,
 #endif
 
 #ifdef __linux__
-            /* Tier 1: Kernel-level (Landlock) */
-            sc_landlock_sandbox_init(&st->landlock, ws);
-            result = sc_landlock_sandbox_get(&st->landlock);
+            /* Tier 1: Kernel-level combined (Landlock FS ACLs + seccomp syscall filter) */
+            sc_landlock_seccomp_sandbox_init(&st->landlock_seccomp, ws, false);
+            result = sc_landlock_seccomp_sandbox_get(&st->landlock_seccomp);
             if (result.vtable->is_available(result.ctx)) break;
 
             /* Tier 2: User-space namespace isolation */
@@ -131,11 +148,18 @@ sc_sandbox_t sc_sandbox_create(sc_sandbox_backend_t backend,
             result = sc_firejail_sandbox_get(&st->firejail);
             if (result.vtable->is_available(result.ctx)) break;
 
-            /* Tier 4: MicroVM (requires KVM) */
+            /* Tier 3: MicroVM (requires KVM) */
             sc_firecracker_sandbox_init(&st->firecracker, ws);
             result = sc_firecracker_sandbox_get(&st->firecracker);
             if (result.vtable->is_available(result.ctx)) break;
 #endif
+
+#ifdef _WIN32
+            sc_appcontainer_sandbox_init(&st->appcontainer, ws);
+            result = sc_appcontainer_sandbox_get(&st->appcontainer);
+            if (result.vtable->is_available(result.ctx)) break;
+#endif
+
             /* Cross-platform fallbacks */
             if (alloc && alloc->alloc && alloc->free) {
                 sc_docker_sandbox_init(&st->docker, ws, "alpine:latest",
@@ -157,9 +181,7 @@ sc_sandbox_t sc_sandbox_create(sc_sandbox_backend_t backend,
 
 sc_available_backends_t sc_sandbox_detect_available(const char *workspace_dir,
     const sc_sandbox_alloc_t *alloc) {
-    sc_available_backends_t out = {
-        false, false, false, false, false, false, false, false
-    };
+    sc_available_backends_t out = {0};
     sc_sandbox_storage_t *st = alloc && alloc->alloc
         ? sc_sandbox_storage_create(alloc) : NULL;
     if (!st) return out;
@@ -187,6 +209,16 @@ sc_available_backends_t sc_sandbox_detect_available(const char *workspace_dir,
     sc_firecracker_sandbox_init(&((struct sc_sandbox_storage *)st)->firecracker, ws);
     sb = sc_firecracker_sandbox_get(&((struct sc_sandbox_storage *)st)->firecracker);
     out.firecracker = sb.vtable->is_available(sb.ctx);
+
+    sc_landlock_seccomp_sandbox_init(&((struct sc_sandbox_storage *)st)->landlock_seccomp, ws, false);
+    sb = sc_landlock_seccomp_sandbox_get(&((struct sc_sandbox_storage *)st)->landlock_seccomp);
+    out.landlock_seccomp = sb.vtable->is_available(sb.ctx);
+#endif
+
+#ifdef _WIN32
+    sc_appcontainer_sandbox_init(&((struct sc_sandbox_storage *)st)->appcontainer, ws);
+    sb = sc_appcontainer_sandbox_get(&((struct sc_sandbox_storage *)st)->appcontainer);
+    out.appcontainer = sb.vtable->is_available(sb.ctx);
 #endif
 
 #ifdef __APPLE__

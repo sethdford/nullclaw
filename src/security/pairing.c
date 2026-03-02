@@ -9,17 +9,29 @@
 #include <time.h>
 
 #define SC_MAX_PAIR_ATTEMPTS 5
-#define SC_PAIR_LOCKOUT_SECS 300
+#define SC_PAIR_LOCKOUT_SECS 600
+
+static void sc_secure_zero(void *p, size_t n) {
+#if defined(__STDC_LIB_EXT1__)
+    memset_s(p, n, 0, n);
+#elif defined(__GNUC__) || defined(__clang__)
+    memset(p, 0, n);
+    __asm__ __volatile__("" : : "r"(p) : "memory");
+#else
+    volatile unsigned char *vp = (volatile unsigned char *)p;
+    while (n--) *vp++ = 0;
+#endif
+}
 #define SC_TOKEN_PREFIX "zc_"
 #define SC_TOKEN_PREFIX_LEN 3
 #define SC_TOKEN_RANDOM_BYTES 32
 #define SC_TOKEN_HEX_LEN 64
 #define SC_TOKEN_TOTAL_LEN (SC_TOKEN_PREFIX_LEN + SC_TOKEN_HEX_LEN)
-#define SC_PAIRING_CODE_LEN 6
+#define SC_PAIRING_CODE_LEN 8
 
 struct sc_pairing_guard {
     bool require_pairing;
-    char pairing_code[SC_PAIRING_CODE_LEN + 1];  /* 6 digits + null, or empty */
+    char pairing_code[SC_PAIRING_CODE_LEN + 1];  /* 8 digits + null, or empty */
     char **paired_token_hashes;   /* SHA-256 hex hashes */
     size_t token_count;
     size_t token_cap;
@@ -40,11 +52,13 @@ static int generate_code(char *out) {
     uint8_t buf[4];
     if (dev_urandom_bytes(buf, 4) != 0) {
         out[0] = '\0';
+        sc_secure_zero(buf, sizeof(buf));
         return -1;
     }
     uint32_t val = (uint32_t)buf[0] | ((uint32_t)buf[1] << 8) |
                    ((uint32_t)buf[2] << 16) | ((uint32_t)buf[3] << 24);
-    snprintf(out, SC_PAIRING_CODE_LEN + 1, "%06u", val % 1000000);
+    sc_secure_zero(buf, sizeof(buf));
+    snprintf(out, SC_PAIRING_CODE_LEN + 1, "%08u", val % 100000000);
     return 0;
 }
 
@@ -52,6 +66,7 @@ static int generate_token(char *out) {
     uint8_t buf[SC_TOKEN_RANDOM_BYTES];
     if (dev_urandom_bytes(buf, sizeof(buf)) != 0) {
         out[0] = '\0';
+        sc_secure_zero(buf, sizeof(buf));
         return -1;
     }
     memcpy(out, SC_TOKEN_PREFIX, SC_TOKEN_PREFIX_LEN);
@@ -61,6 +76,7 @@ static int generate_token(char *out) {
         out[SC_TOKEN_PREFIX_LEN + i * 2 + 1] = hex[buf[i] & 0x0f];
     }
     out[SC_TOKEN_TOTAL_LEN] = '\0';
+    sc_secure_zero(buf, sizeof(buf));
     return 0;
 }
 
@@ -249,6 +265,8 @@ sc_pair_attempt_result_t sc_pairing_guard_attempt_pair(sc_pairing_guard_t *guard
 
     guard->paired_token_hashes[guard->token_count] = hash_slot;
     guard->token_count++;
+    sc_secure_zero(token, sizeof(token));
+    sc_secure_zero(hash_buf, sizeof(hash_buf));
     return SC_PAIR_PAIRED;
 }
 
@@ -263,9 +281,12 @@ bool sc_pairing_guard_is_authenticated(const sc_pairing_guard_t *guard,
 
     for (size_t i = 0; i < guard->token_count; i++) {
         if (guard->paired_token_hashes[i] &&
-            sc_pairing_guard_constant_time_eq(hash_buf, guard->paired_token_hashes[i]))
+            sc_pairing_guard_constant_time_eq(hash_buf, guard->paired_token_hashes[i])) {
+            sc_secure_zero(hash_buf, sizeof(hash_buf));
             return true;
+        }
     }
+    sc_secure_zero(hash_buf, sizeof(hash_buf));
     return false;
 }
 

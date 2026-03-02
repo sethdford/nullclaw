@@ -3,6 +3,9 @@
 #include "seaclaw/core/error.h"
 #include <string.h>
 #include <stdio.h>
+#if defined(__unix__) || defined(__APPLE__)
+#include <unistd.h>
+#endif
 
 /*
  * Firecracker microVM sandbox (Linux only, requires KVM).
@@ -23,8 +26,10 @@
  *   jailer --id VM_ID --exec-file /usr/bin/firecracker -- <argv...>
  */
 
-#ifdef __linux__
+#if !defined(_WIN32)
 #include <unistd.h>
+#endif
+#ifdef __linux__
 #include <fcntl.h>
 #endif
 
@@ -58,6 +63,9 @@ static sc_error_t firecracker_wrap(void *ctx, const char *const *argv, size_t ar
 #else
     sc_firecracker_ctx_t *fc = (sc_firecracker_ctx_t *)ctx;
 
+    char socket_arg[280];
+    char mem_arg[32];
+    char vcpu_arg[16];
     /*
      * Use jailer for production isolation:
      *   jailer --id sc-sandbox --exec-file /usr/bin/firecracker
@@ -71,14 +79,10 @@ static sc_error_t firecracker_wrap(void *ctx, const char *const *argv, size_t ar
      * The actual VM config is generated at spawn time with workspace shared
      * via VirtioFS. This wrap_command builds the outer argv.
      */
-    static char socket_arg[280];
-    static char mem_arg[32];
-    static char vcpu_arg[16];
-
     int n = snprintf(socket_arg, sizeof(socket_arg),
         "--api-sock=%s", fc->socket_path);
     if (n <= 0 || (size_t)n >= sizeof(socket_arg))
-        return SC_ERR_OVERFLOW;
+        return SC_ERR_INTERNAL;
 
     snprintf(mem_arg, sizeof(mem_arg), "%u", fc->mem_size_mib);
     snprintf(vcpu_arg, sizeof(vcpu_arg), "%u", fc->vcpu_count);
@@ -157,7 +161,7 @@ void sc_firecracker_sandbox_init(sc_firecracker_ctx_t *ctx,
     }
 
     snprintf(ctx->socket_path, sizeof(ctx->socket_path),
-        "/tmp/sc_fc_%d.sock", (int)0);
+        "/tmp/sc_fc_%d.sock", (int)getpid());
     memcpy(ctx->kernel_path, "/var/lib/firecracker/vmlinux", 29);
     memcpy(ctx->rootfs_path, "/var/lib/firecracker/rootfs.ext4", 33);
 }
