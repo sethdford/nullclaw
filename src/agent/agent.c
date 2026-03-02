@@ -217,6 +217,12 @@ sc_error_t sc_agent_from_config(sc_agent_t *out, sc_allocator_t *alloc,
 void sc_agent_deinit(sc_agent_t *agent) {
     if (!agent) return;
     sc_agent_clear_history(agent);
+    if (agent->history) {
+        agent->alloc->free(agent->alloc->ctx, agent->history,
+            agent->history_cap * sizeof(sc_chat_message_t));
+        agent->history = NULL;
+        agent->history_cap = 0;
+    }
     if (agent->tools) {
         agent->alloc->free(agent->alloc->ctx, agent->tools, agent->tools_count * sizeof(sc_tool_t));
         agent->tools = NULL;
