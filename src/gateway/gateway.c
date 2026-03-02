@@ -170,6 +170,15 @@ static bool verify_hmac(const char *body, size_t body_len,
 
 /* ── HTTP response helpers ──────────────────────────────────────────────── */
 
+static bool is_localhost_origin(const char *origin) {
+    if (!origin || !origin[0]) return true;
+    return strstr(origin, "://localhost") != NULL ||
+           strstr(origin, "://127.0.0.1") != NULL ||
+           strstr(origin, "://[::1]") != NULL;
+}
+
+static const char *s_request_origin = NULL;
+
 static void send_response(int fd, int status, const char *content_type,
     const char *body, size_t body_len) {
     const char *status_str = "200 OK";
@@ -180,16 +189,21 @@ static void send_response(int fd, int status, const char *content_type,
     else if (status == 304) status_str = "304 Not Modified";
 
     char hdr[512];
-    /* TODO: CORS wildcard (*) is a security risk. Add config.allowed_origins
-       and echo Origin header only when it matches. See security audit. */
+    const char *cors_origin = "";
+    char cors_line[256] = "";
+    if (s_request_origin && is_localhost_origin(s_request_origin)) {
+        cors_origin = s_request_origin;
+        snprintf(cors_line, sizeof(cors_line),
+            "Access-Control-Allow-Origin: %s\r\n", cors_origin);
+    }
     int n = snprintf(hdr, sizeof(hdr),
         "HTTP/1.1 %s\r\n"
         "Content-Type: %s\r\n"
         "Connection: close\r\n"
         "Content-Length: %zu\r\n"
-        "Access-Control-Allow-Origin: *\r\n"
+        "%s"
         "\r\n",
-        status_str, content_type, body_len);
+        status_str, content_type, body_len, cors_line);
     send(fd, hdr, (size_t)n, 0);
     if (body && body_len > 0)
         send(fd, body, body_len, 0);
@@ -532,6 +546,11 @@ sc_error_t sc_gateway_run(sc_allocator_t *alloc,
                     while (*v == ' ') v++;
                     sig_header = v;
                 }
+                if (strncasecmp(line, "Origin:", 7) == 0) {
+                    char *v = line + 7;
+                    while (*v == ' ') v++;
+                    s_request_origin = v;
+                }
             }
 
             if (!rejected) {
@@ -547,6 +566,7 @@ sc_error_t sc_gateway_run(sc_allocator_t *alloc,
 
                 handle_http_request(gw, client, method, path, body_buf, body_len,
                     client_ip, sig_header);
+                s_request_origin = NULL;
                 close(client);
             }
         }

@@ -933,6 +933,175 @@ static void test_secret_store_disabled_returns_plaintext(void) {
     sc_secret_store_destroy(store, &sys);
 }
 
+/* --- Docker sandbox tests --- */
+static void test_sandbox_docker_vtable_wiring(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    sc_docker_ctx_t ctx;
+    sc_docker_sandbox_init(&ctx, "/tmp/workspace", "ubuntu:22.04",
+        sys.ctx, sys.alloc, sys.free);
+    sc_sandbox_t sb = sc_docker_sandbox_get(&ctx);
+    SC_ASSERT(sb.ctx != NULL);
+    SC_ASSERT(sb.vtable != NULL);
+    SC_ASSERT(sb.vtable->wrap_command != NULL);
+    SC_ASSERT(sb.vtable->is_available != NULL);
+    SC_ASSERT(sb.vtable->name != NULL);
+    SC_ASSERT(sb.vtable->description != NULL);
+}
+
+static void test_sandbox_docker_not_available_in_test(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    sc_docker_ctx_t ctx;
+    sc_docker_sandbox_init(&ctx, "/tmp", "alpine", sys.ctx, sys.alloc, sys.free);
+    sc_sandbox_t sb = sc_docker_sandbox_get(&ctx);
+    SC_ASSERT_FALSE(sc_sandbox_is_available(&sb));
+}
+
+static void test_sandbox_docker_wrap_format(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    sc_docker_ctx_t ctx;
+    sc_docker_sandbox_init(&ctx, "/tmp/ws", "myimage:latest",
+        sys.ctx, sys.alloc, sys.free);
+    sc_sandbox_t sb = sc_docker_sandbox_get(&ctx);
+    const char *argv[] = { "echo", "hello" };
+    const char *out[32];
+    size_t out_count = 0;
+    sc_error_t err = sc_sandbox_wrap_command(&sb, argv, 2, out, 32, &out_count);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT(out_count >= 12);
+    SC_ASSERT_STR_EQ(out[0], "docker");
+    SC_ASSERT_STR_EQ(out[1], "run");
+    SC_ASSERT_STR_EQ(out[2], "--rm");
+    SC_ASSERT_STR_EQ(out[out_count - 2], "echo");
+    SC_ASSERT_STR_EQ(out[out_count - 1], "hello");
+}
+
+static void test_sandbox_docker_name_and_desc(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    sc_docker_ctx_t ctx;
+    sc_docker_sandbox_init(&ctx, "/tmp", "alpine", sys.ctx, sys.alloc, sys.free);
+    sc_sandbox_t sb = sc_docker_sandbox_get(&ctx);
+    SC_ASSERT_STR_EQ(sc_sandbox_name(&sb), "docker");
+    SC_ASSERT(strlen(sc_sandbox_description(&sb)) > 0);
+}
+
+/* --- Firecracker wrap output validation (Linux) --- */
+static void test_sandbox_firecracker_wrap_on_linux(void) {
+#ifdef __linux__
+    sc_firecracker_ctx_t ctx;
+    sc_firecracker_sandbox_init(&ctx, "/tmp/ws");
+    sc_sandbox_t sb = sc_firecracker_sandbox_get(&ctx);
+    const char *argv[] = { "echo", "hello" };
+    const char *out[16];
+    size_t out_count = 0;
+    sc_error_t err = sc_sandbox_wrap_command(&sb, argv, 2, out, 16, &out_count);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT(out_count >= 6);
+    SC_ASSERT_STR_EQ(out[0], "firecracker");
+    SC_ASSERT_STR_EQ(out[1], "--no-api");
+    SC_ASSERT_STR_EQ(out[2], "--boot-timer");
+    SC_ASSERT(strstr(out[3], "--config-file=") != NULL);
+    SC_ASSERT_STR_EQ(out[out_count - 2], "echo");
+    SC_ASSERT_STR_EQ(out[out_count - 1], "hello");
+#endif
+}
+
+static void test_sandbox_firecracker_wrap_buffer_too_small(void) {
+#ifdef __linux__
+    sc_firecracker_ctx_t ctx;
+    sc_firecracker_sandbox_init(&ctx, "/tmp/ws");
+    sc_sandbox_t sb = sc_firecracker_sandbox_get(&ctx);
+    const char *argv[] = { "echo" };
+    const char *out[2];
+    size_t out_count = 0;
+    sc_error_t err = sc_sandbox_wrap_command(&sb, argv, 1, out, 2, &out_count);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+#endif
+}
+
+/* --- Seatbelt profile temp dir validation --- */
+static void test_sandbox_seatbelt_profile_allows_tmp_write(void) {
+    sc_seatbelt_ctx_t ctx;
+    sc_seatbelt_sandbox_init(&ctx, "/tmp/workspace");
+    SC_ASSERT(strstr(ctx.profile, "file-write* (subpath \"/tmp\")") != NULL);
+    SC_ASSERT(strstr(ctx.profile, "file-write* (subpath \"/var/folders\")") != NULL);
+    SC_ASSERT(strstr(ctx.profile, "file-write* (subpath \"/private/tmp\")") != NULL);
+}
+
+/* --- Config sandbox backend parsing coverage --- */
+static void test_sandbox_create_each_backend(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    sc_sandbox_alloc_t alloc = {
+        .ctx = sys.ctx, .alloc = sys.alloc, .free = sys.free,
+    };
+
+    sc_sandbox_backend_t backends[] = {
+        SC_SANDBOX_NONE, SC_SANDBOX_LANDLOCK, SC_SANDBOX_FIREJAIL,
+        SC_SANDBOX_BUBBLEWRAP, SC_SANDBOX_SEATBELT, SC_SANDBOX_SECCOMP,
+        SC_SANDBOX_WASI, SC_SANDBOX_LANDLOCK_SECCOMP, SC_SANDBOX_FIRECRACKER,
+        SC_SANDBOX_APPCONTAINER, SC_SANDBOX_AUTO,
+    };
+    size_t n = sizeof(backends) / sizeof(backends[0]);
+
+    for (size_t i = 0; i < n; i++) {
+        sc_sandbox_storage_t *st = sc_sandbox_storage_create(&alloc);
+        SC_ASSERT_NOT_NULL(st);
+        sc_sandbox_t sb = sc_sandbox_create(backends[i], "/tmp/ws", st, &alloc);
+        SC_ASSERT(sb.vtable != NULL);
+        SC_ASSERT(strlen(sc_sandbox_name(&sb)) > 0);
+        SC_ASSERT(strlen(sc_sandbox_description(&sb)) >= 0);
+        sc_sandbox_storage_destroy(st, &alloc);
+    }
+}
+
+/* --- sc_process_run_sandboxed tests --- */
+static void test_process_run_sandboxed_null_args(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    sc_run_result_t result = {0};
+    sc_error_t err = sc_process_run_sandboxed(&sys, NULL, NULL, 1024, NULL, NULL, &result);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+
+    const char *argv[] = { NULL };
+    err = sc_process_run_sandboxed(&sys, argv, NULL, 1024, NULL, NULL, &result);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void test_process_run_sandboxed_with_null_setup(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    const char *argv[] = { "echo", "test-sandbox", NULL };
+    sc_run_result_t result = {0};
+    sc_error_t err = sc_process_run_sandboxed(&sys, argv, NULL, 1024, NULL, NULL, &result);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT(result.stdout_cap > 0);
+    SC_ASSERT(result.stderr_cap > 0);
+    sc_run_result_free(&sys, &result);
+}
+
+/* --- Sandbox storage lifecycle --- */
+static void test_sandbox_storage_create_destroy(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    sc_sandbox_alloc_t alloc = {
+        .ctx = sys.ctx, .alloc = sys.alloc, .free = sys.free,
+    };
+    sc_sandbox_storage_t *st = sc_sandbox_storage_create(&alloc);
+    SC_ASSERT_NOT_NULL(st);
+    sc_sandbox_storage_destroy(st, &alloc);
+    sc_sandbox_storage_destroy(NULL, &alloc);
+}
+
+/* --- Net proxy edge cases --- */
+static void test_net_proxy_null_domain(void) {
+    sc_net_proxy_t proxy;
+    sc_net_proxy_init_deny_all(&proxy);
+    SC_ASSERT_FALSE(sc_net_proxy_domain_allowed(&proxy, NULL));
+}
+
+static void test_net_proxy_add_null_domain(void) {
+    sc_net_proxy_t proxy;
+    sc_net_proxy_init_deny_all(&proxy);
+    SC_ASSERT_FALSE(sc_net_proxy_allow_domain(&proxy, NULL));
+    SC_ASSERT_FALSE(sc_net_proxy_allow_domain(NULL, "test.com"));
+}
+
 void run_security_tests(void) {
     static sc_allocator_t sys = {0};
     sys = sc_system_allocator();
@@ -1002,6 +1171,8 @@ void run_security_tests(void) {
     SC_RUN_TEST(test_sandbox_firecracker_not_available_in_test);
     SC_RUN_TEST(test_sandbox_firecracker_defaults);
     SC_RUN_TEST(test_sandbox_firecracker_wrap_non_linux);
+    SC_RUN_TEST(test_sandbox_firecracker_wrap_on_linux);
+    SC_RUN_TEST(test_sandbox_firecracker_wrap_buffer_too_small);
 
     SC_TEST_SUITE("Sandbox — Landlock+seccomp combined");
     SC_RUN_TEST(test_sandbox_landlock_seccomp_vtable_wiring);
@@ -1020,6 +1191,13 @@ void run_security_tests(void) {
     SC_RUN_TEST(test_net_proxy_disabled_allows_all);
     SC_RUN_TEST(test_net_proxy_max_domains);
 
+    SC_TEST_SUITE("Sandbox — Seatbelt Profile");
+    SC_RUN_TEST(test_sandbox_seatbelt_profile_allows_tmp_write);
+
+    SC_TEST_SUITE("Sandbox — Backend Coverage");
+    SC_RUN_TEST(test_sandbox_create_each_backend);
+    SC_RUN_TEST(test_sandbox_storage_create_destroy);
+
     SC_TEST_SUITE("Sandbox — Auto-detection & Apply");
     SC_RUN_TEST(test_sandbox_auto_select_returns_valid);
     SC_RUN_TEST(test_sandbox_detect_available_runs);
@@ -1027,6 +1205,14 @@ void run_security_tests(void) {
     SC_RUN_TEST(test_sandbox_apply_null_returns_ok);
     SC_RUN_TEST(test_sandbox_noop_available);
     SC_RUN_TEST(test_sandbox_noop_wrap_passthrough);
+
+    SC_TEST_SUITE("Sandbox — sc_process_run_sandboxed");
+    SC_RUN_TEST(test_process_run_sandboxed_null_args);
+    SC_RUN_TEST(test_process_run_sandboxed_with_null_setup);
+
+    SC_TEST_SUITE("Network Proxy — Edge Cases");
+    SC_RUN_TEST(test_net_proxy_null_domain);
+    SC_RUN_TEST(test_net_proxy_add_null_domain);
 
     SC_TEST_SUITE("Observer");
     SC_RUN_TEST(test_observer_noop);
@@ -1039,4 +1225,10 @@ void run_security_tests(void) {
     SC_RUN_TEST(test_secret_store_encrypt_decrypt);
     SC_RUN_TEST(test_secret_store_plaintext_passthrough);
     SC_RUN_TEST(test_secret_store_disabled_returns_plaintext);
+
+    SC_TEST_SUITE("Sandbox — Docker");
+    SC_RUN_TEST(test_sandbox_docker_vtable_wiring);
+    SC_RUN_TEST(test_sandbox_docker_not_available_in_test);
+    SC_RUN_TEST(test_sandbox_docker_wrap_format);
+    SC_RUN_TEST(test_sandbox_docker_name_and_desc);
 }

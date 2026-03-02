@@ -126,8 +126,9 @@ static sc_error_t shell_execute(void *ctx, sc_allocator_t *alloc,
             const char *wrapped[16];
             size_t wrapped_count = 0;
             if (sc_sandbox_wrap_command(s->policy->sandbox,
-                    orig_argv, 3, wrapped, 16, &wrapped_count) == SC_OK &&
+                    orig_argv, 3, wrapped, 15, &wrapped_count) == SC_OK &&
                     wrapped_count > 0) {
+                wrapped[wrapped_count] = NULL;
                 execvp(wrapped[0], (char *const *)wrapped);
                 _exit(127);
             }

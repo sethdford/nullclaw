@@ -17,6 +17,7 @@
 #include "seaclaw/memory.h"
 #include "seaclaw/memory/engines.h"
 #include "seaclaw/security.h"
+#include "seaclaw/security/sandbox.h"
 #include "seaclaw/health.h"
 #include "seaclaw/providers/factory.h"
 #include "seaclaw/tools/factory.h"
@@ -461,6 +462,37 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
     policy.max_actions_per_hour = 200;
     policy.tracker = sc_rate_tracker_create(alloc, policy.max_actions_per_hour);
 
+    sc_sandbox_alloc_t sb_alloc = {
+        .ctx = alloc->ctx, .alloc = alloc->alloc, .free = alloc->free,
+    };
+    sc_sandbox_storage_t *sb_storage = NULL;
+    sc_sandbox_t sandbox = {0};
+    sc_net_proxy_t net_proxy = {0};
+
+    if (cfg.security.sandbox_config.enabled ||
+        cfg.security.sandbox_config.backend != SC_SANDBOX_NONE) {
+        sb_storage = sc_sandbox_storage_create(&sb_alloc);
+        if (sb_storage) {
+            sandbox = sc_sandbox_create(cfg.security.sandbox_config.backend,
+                ws, sb_storage, &sb_alloc);
+            if (sandbox.vtable)
+                policy.sandbox = &sandbox;
+        }
+    }
+
+    if (cfg.security.sandbox_config.net_proxy.enabled) {
+        net_proxy.enabled = true;
+        net_proxy.deny_all = cfg.security.sandbox_config.net_proxy.deny_all;
+        net_proxy.proxy_addr = cfg.security.sandbox_config.net_proxy.proxy_addr;
+        net_proxy.allowed_domains_count = 0;
+        for (size_t i = 0; i < cfg.security.sandbox_config.net_proxy.allowed_domains_len
+                && i < SC_NET_PROXY_MAX_DOMAINS; i++) {
+            net_proxy.allowed_domains[net_proxy.allowed_domains_count++] =
+                cfg.security.sandbox_config.net_proxy.allowed_domains[i];
+        }
+        policy.net_proxy = &net_proxy;
+    }
+
     sc_memory_t memory = service_create_memory(alloc, &cfg, ws);
     sc_session_store_t session_store = {0};
     if (memory.vtable && cfg.memory.backend &&
@@ -475,6 +507,7 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
         fprintf(stderr, "[%s] Tools init failed: %s\n", SC_CODENAME, sc_error_string(err));
         if (memory.vtable && memory.vtable->deinit) memory.vtable->deinit(memory.ctx);
         if (policy.tracker) sc_rate_tracker_destroy(policy.tracker);
+        if (sb_storage) sc_sandbox_storage_destroy(sb_storage, &sb_alloc);
         sc_config_deinit(&cfg);
         return err;
     }
@@ -507,6 +540,7 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
         sc_tools_destroy_default(alloc, tools, tools_count);
         if (memory.vtable && memory.vtable->deinit) memory.vtable->deinit(memory.ctx);
         if (policy.tracker) sc_rate_tracker_destroy(policy.tracker);
+        if (sb_storage) sc_sandbox_storage_destroy(sb_storage, &sb_alloc);
         sc_config_deinit(&cfg);
         return err;
     }
@@ -587,6 +621,7 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
     if (observer.vtable && observer.vtable->deinit) observer.vtable->deinit(observer.ctx);
     if (log_fp) fclose(log_fp);
     if (policy.tracker) sc_rate_tracker_destroy(policy.tracker);
+    if (sb_storage) sc_sandbox_storage_destroy(sb_storage, &sb_alloc);
     sc_config_deinit(&cfg);
     return err;
 }
@@ -806,7 +841,11 @@ static sc_error_t cmd_gateway(sc_allocator_t *alloc, int argc, char **argv) {
     sc_cron_scheduler_t *cron = sc_cron_create(alloc, 64, true);
 
     sc_skillforge_t skills;
-    sc_skillforge_create(alloc, &skills);
+    memset(&skills, 0, sizeof(skills));
+    err = sc_skillforge_create(alloc, &skills);
+    if (err != SC_OK) {
+        fprintf(stderr, "[%s] Skillforge init failed: %s\n", SC_CODENAME, sc_error_string(err));
+    }
 
     const char *ws = cfg.workspace_dir ? cfg.workspace_dir : ".";
     sc_cost_tracker_t costs;
@@ -832,6 +871,37 @@ static sc_error_t cmd_gateway(sc_allocator_t *alloc, int argc, char **argv) {
     policy.max_actions_per_hour = 200;
     policy.tracker = sc_rate_tracker_create(alloc, policy.max_actions_per_hour);
 
+    sc_sandbox_alloc_t gw_sb_alloc = {
+        .ctx = alloc->ctx, .alloc = alloc->alloc, .free = alloc->free,
+    };
+    sc_sandbox_storage_t *gw_sb_storage = NULL;
+    sc_sandbox_t gw_sandbox = {0};
+    sc_net_proxy_t gw_net_proxy = {0};
+
+    if (cfg.security.sandbox_config.enabled ||
+        cfg.security.sandbox_config.backend != SC_SANDBOX_NONE) {
+        gw_sb_storage = sc_sandbox_storage_create(&gw_sb_alloc);
+        if (gw_sb_storage) {
+            gw_sandbox = sc_sandbox_create(cfg.security.sandbox_config.backend,
+                ws, gw_sb_storage, &gw_sb_alloc);
+            if (gw_sandbox.vtable)
+                policy.sandbox = &gw_sandbox;
+        }
+    }
+
+    if (cfg.security.sandbox_config.net_proxy.enabled) {
+        gw_net_proxy.enabled = true;
+        gw_net_proxy.deny_all = cfg.security.sandbox_config.net_proxy.deny_all;
+        gw_net_proxy.proxy_addr = cfg.security.sandbox_config.net_proxy.proxy_addr;
+        gw_net_proxy.allowed_domains_count = 0;
+        for (size_t i = 0; i < cfg.security.sandbox_config.net_proxy.allowed_domains_len
+                && i < SC_NET_PROXY_MAX_DOMAINS; i++) {
+            gw_net_proxy.allowed_domains[gw_net_proxy.allowed_domains_count++] =
+                cfg.security.sandbox_config.net_proxy.allowed_domains[i];
+        }
+        policy.net_proxy = &gw_net_proxy;
+    }
+
     sc_tool_t *tools = NULL;
     size_t tools_count = 0;
     err = sc_tools_create_default(alloc, ws, strlen(ws), &policy, &cfg,
@@ -843,6 +913,7 @@ static sc_error_t cmd_gateway(sc_allocator_t *alloc, int argc, char **argv) {
         if (cron) sc_cron_destroy(cron, alloc);
         sc_skillforge_destroy(&skills);
         if (policy.tracker) sc_rate_tracker_destroy(policy.tracker);
+        if (gw_sb_storage) sc_sandbox_storage_destroy(gw_sb_storage, &gw_sb_alloc);
         sc_config_deinit(&cfg);
         return err;
     }
@@ -935,6 +1006,7 @@ cleanup:
     if (memory.vtable && memory.vtable->deinit) memory.vtable->deinit(memory.ctx);
     sc_tools_destroy_default(alloc, tools, tools_count);
     if (policy.tracker) sc_rate_tracker_destroy(policy.tracker);
+    if (gw_sb_storage) sc_sandbox_storage_destroy(gw_sb_storage, &gw_sb_alloc);
     sc_cost_tracker_deinit(&costs);
     sc_session_manager_deinit(&sessions);
     if (cron) sc_cron_destroy(cron, alloc);

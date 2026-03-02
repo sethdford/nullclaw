@@ -351,6 +351,67 @@ static void test_config_parse_service_loop(void) {
     SC_ASSERT_EQ(err, SC_OK);
 }
 
+static void test_config_parse_memory_postgres(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_arena_t *arena = sc_arena_create(alloc);
+    SC_ASSERT_NOT_NULL(arena);
+    sc_config_t cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.arena = arena;
+    cfg.allocator = sc_arena_allocator(arena);
+    const char *json = "{\"memory\":{\"backend\":\"postgres\","
+        "\"postgres_url\":\"postgres://localhost/test\","
+        "\"postgres_schema\":\"myschema\","
+        "\"postgres_table\":\"entries\"}}";
+    sc_error_t err = sc_config_parse_json(&cfg, json, strlen(json));
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_STR_EQ(cfg.memory.backend, "postgres");
+    SC_ASSERT_STR_EQ(cfg.memory.postgres_url, "postgres://localhost/test");
+    SC_ASSERT_STR_EQ(cfg.memory.postgres_schema, "myschema");
+    SC_ASSERT_STR_EQ(cfg.memory.postgres_table, "entries");
+    sc_arena_destroy(arena);
+}
+
+static void test_config_parse_memory_redis(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_arena_t *arena = sc_arena_create(alloc);
+    SC_ASSERT_NOT_NULL(arena);
+    sc_config_t cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.arena = arena;
+    cfg.allocator = sc_arena_allocator(arena);
+    const char *json = "{\"memory\":{\"backend\":\"redis\","
+        "\"redis_host\":\"redis.local\",\"redis_port\":6380,"
+        "\"redis_key_prefix\":\"sc\"}}";
+    sc_error_t err = sc_config_parse_json(&cfg, json, strlen(json));
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_STR_EQ(cfg.memory.backend, "redis");
+    SC_ASSERT_STR_EQ(cfg.memory.redis_host, "redis.local");
+    SC_ASSERT_EQ(cfg.memory.redis_port, 6380);
+    SC_ASSERT_STR_EQ(cfg.memory.redis_key_prefix, "sc");
+    sc_arena_destroy(arena);
+}
+
+static void test_config_parse_memory_api(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_arena_t *arena = sc_arena_create(alloc);
+    SC_ASSERT_NOT_NULL(arena);
+    sc_config_t cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.arena = arena;
+    cfg.allocator = sc_arena_allocator(arena);
+    const char *json = "{\"memory\":{\"backend\":\"api\","
+        "\"api_base_url\":\"https://mem.example.com\","
+        "\"api_key\":\"test-key\",\"api_timeout_ms\":3000}}";
+    sc_error_t err = sc_config_parse_json(&cfg, json, strlen(json));
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_STR_EQ(cfg.memory.backend, "api");
+    SC_ASSERT_STR_EQ(cfg.memory.api_base_url, "https://mem.example.com");
+    SC_ASSERT_STR_EQ(cfg.memory.api_key, "test-key");
+    SC_ASSERT_EQ(cfg.memory.api_timeout_ms, 3000u);
+    sc_arena_destroy(arena);
+}
+
 void run_config_parse_tests(void) {
     SC_TEST_SUITE("Config parse");
     SC_RUN_TEST(test_config_parse_empty_json);
@@ -377,4 +438,9 @@ void run_config_parse_tests(void) {
 
     SC_TEST_SUITE("Service loop");
     SC_RUN_TEST(test_config_parse_service_loop);
+
+    SC_TEST_SUITE("Memory backend config");
+    SC_RUN_TEST(test_config_parse_memory_postgres);
+    SC_RUN_TEST(test_config_parse_memory_redis);
+    SC_RUN_TEST(test_config_parse_memory_api);
 }

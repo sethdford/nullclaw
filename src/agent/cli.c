@@ -9,6 +9,7 @@
 #include "seaclaw/tool.h"
 #include "seaclaw/tools/factory.h"
 #include "seaclaw/security.h"
+#include "seaclaw/security/sandbox.h"
 #include "seaclaw/observability/log_observer.h"
 #include "seaclaw/channels/cli.h"
 #include "seaclaw/memory.h"
@@ -322,6 +323,37 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
     policy.max_actions_per_hour = 100;
     policy.tracker = sc_rate_tracker_create(alloc, policy.max_actions_per_hour);
 
+    sc_sandbox_alloc_t sb_alloc = {
+        .ctx = alloc->ctx, .alloc = alloc->alloc, .free = alloc->free,
+    };
+    sc_sandbox_storage_t *sb_storage = NULL;
+    sc_sandbox_t sandbox = {0};
+    sc_net_proxy_t net_proxy = {0};
+
+    if (cfg.security.sandbox_config.enabled ||
+        cfg.security.sandbox_config.backend != SC_SANDBOX_NONE) {
+        sb_storage = sc_sandbox_storage_create(&sb_alloc);
+        if (sb_storage) {
+            sandbox = sc_sandbox_create(cfg.security.sandbox_config.backend,
+                ws, sb_storage, &sb_alloc);
+            if (sandbox.vtable)
+                policy.sandbox = &sandbox;
+        }
+    }
+
+    if (cfg.security.sandbox_config.net_proxy.enabled) {
+        net_proxy.enabled = true;
+        net_proxy.deny_all = cfg.security.sandbox_config.net_proxy.deny_all;
+        net_proxy.proxy_addr = cfg.security.sandbox_config.net_proxy.proxy_addr;
+        net_proxy.allowed_domains_count = 0;
+        for (size_t i = 0; i < cfg.security.sandbox_config.net_proxy.allowed_domains_len
+                && i < SC_NET_PROXY_MAX_DOMAINS; i++) {
+            net_proxy.allowed_domains[net_proxy.allowed_domains_count++] =
+                cfg.security.sandbox_config.net_proxy.allowed_domains[i];
+        }
+        policy.net_proxy = &net_proxy;
+    }
+
     sc_observer_t observer = {0};
     FILE *log_fp = NULL;
     const char *log_env = getenv("SEACLAW_LOG");
@@ -344,6 +376,7 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
         fprintf(stderr, "[%s] Tools init failed: %s\n", SC_CODENAME, sc_error_string(err));
         if (memory.vtable && memory.vtable->deinit) memory.vtable->deinit(memory.ctx);
         if (policy.tracker) sc_rate_tracker_destroy(policy.tracker);
+        if (sb_storage) sc_sandbox_storage_destroy(sb_storage, &sb_alloc);
         sc_config_deinit(&cfg);
         return err;
     }
@@ -365,6 +398,7 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
         if (log_fp) fclose(log_fp);
         sc_tools_destroy_default(alloc, tools, tools_count);
         if (policy.tracker) sc_rate_tracker_destroy(policy.tracker);
+        if (sb_storage) sc_sandbox_storage_destroy(sb_storage, &sb_alloc);
         sc_config_deinit(&cfg);
         return err;
     }
@@ -386,6 +420,7 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
         if (log_fp) fclose(log_fp);
         sc_tools_destroy_default(alloc, tools, tools_count);
         if (policy.tracker) sc_rate_tracker_destroy(policy.tracker);
+        if (sb_storage) sc_sandbox_storage_destroy(sb_storage, &sb_alloc);
         sc_config_deinit(&cfg);
         return err;
     }
@@ -497,6 +532,7 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
     if (log_fp) fclose(log_fp);
     sc_tools_destroy_default(alloc, tools, tools_count);
     if (policy.tracker) sc_rate_tracker_destroy(policy.tracker);
+    if (sb_storage) sc_sandbox_storage_destroy(sb_storage, &sb_alloc);
     sc_config_deinit(&cfg);
     return SC_OK;
 }

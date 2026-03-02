@@ -1,5 +1,6 @@
 #include "test_framework.h"
 #include "seaclaw/memory.h"
+#include "seaclaw/memory/engines.h"
 #include "seaclaw/core/allocator.h"
 #include <string.h>
 #include <math.h>
@@ -209,6 +210,34 @@ static void test_sqlite_memory_session_scoped(void) {
 }
 #endif
 
+static void test_api_memory_create(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_memory_t mem = sc_api_memory_create(&alloc, "https://example.com/api", "test-key", 5000);
+    SC_ASSERT_NOT_NULL(mem.ctx);
+    SC_ASSERT_NOT_NULL(mem.vtable);
+    SC_ASSERT_STR_EQ(mem.vtable->name(mem.ctx), "api");
+    mem.vtable->deinit(mem.ctx);
+}
+
+static void test_api_memory_store_without_server(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_memory_t mem = sc_api_memory_create(&alloc, "https://example.com/api", "test-key", 100);
+    sc_memory_category_t cat = { .tag = SC_MEMORY_CATEGORY_CORE };
+    sc_error_t err = mem.vtable->store(mem.ctx, "key", 3, "val", 3, &cat, NULL, 0);
+    /* SC_IS_TEST stub returns SC_OK */
+    SC_ASSERT_EQ(err, SC_OK);
+    mem.vtable->deinit(mem.ctx);
+}
+
+static void test_api_memory_health_check(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_memory_t mem = sc_api_memory_create(&alloc, "https://example.com/api", "test-key", 100);
+    bool ok = mem.vtable->health_check(mem.ctx);
+    /* SC_IS_TEST stub returns true */
+    SC_ASSERT(ok);
+    mem.vtable->deinit(mem.ctx);
+}
+
 void run_memory_tests(void) {
     SC_TEST_SUITE("memory");
     SC_RUN_TEST(test_none_memory_create);
@@ -224,4 +253,9 @@ void run_memory_tests(void) {
     SC_RUN_TEST(test_sqlite_memory_list_ordering);
     SC_RUN_TEST(test_sqlite_memory_session_scoped);
 #endif
+
+    SC_TEST_SUITE("memory — api engine");
+    SC_RUN_TEST(test_api_memory_create);
+    SC_RUN_TEST(test_api_memory_store_without_server);
+    SC_RUN_TEST(test_api_memory_health_check);
 }

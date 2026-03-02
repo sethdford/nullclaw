@@ -45,7 +45,9 @@ static sc_error_t docker_wrap(void *ctx, const char *const *argv, size_t argc,
 
 static bool docker_available(void *ctx) {
     (void)ctx;
-#if defined(__linux__) || defined(__APPLE__)
+#if SC_IS_TEST
+    return false;
+#elif defined(__linux__) || defined(__APPLE__)
     pid_t pid = fork();
     if (pid < 0) return false;
     if (pid == 0) {
@@ -56,7 +58,6 @@ static bool docker_available(void *ctx) {
     if (waitpid(pid, &status, 0) != pid) return false;
     return WIFEXITED(status) && WEXITSTATUS(status) == 0;
 #else
-    (void)dk;
     return false;
 #endif
 }
