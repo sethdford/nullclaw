@@ -104,6 +104,25 @@ static void test_voice_tts_null_config_fails(void) {
     SC_ASSERT_NEQ(err, SC_OK);
 }
 
+static void test_voice_play_mock(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    unsigned char data[] = {0x00, 0x01, 0x02, 0x03};
+    sc_error_t err = sc_voice_play(&alloc, data, 4);
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
+static void test_voice_play_null_audio(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_error_t err = sc_voice_play(&alloc, NULL, 10);
+    SC_ASSERT(err != SC_OK);
+}
+
+static void test_voice_play_zero_length(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_error_t err = sc_voice_play(&alloc, NULL, 0);
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
 static void test_voice_stt_file_unsupported_format_mock(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_voice_config_t cfg = { .api_key = "test-key", .api_key_len = 8 };
@@ -129,4 +148,7 @@ void run_voice_tests(void) {
     SC_RUN_TEST(test_voice_stt_null_config_fails);
     SC_RUN_TEST(test_voice_tts_null_config_fails);
     SC_RUN_TEST(test_voice_stt_file_unsupported_format_mock);
+    SC_RUN_TEST(test_voice_play_mock);
+    SC_RUN_TEST(test_voice_play_null_audio);
+    SC_RUN_TEST(test_voice_play_zero_length);
 }

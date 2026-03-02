@@ -81,6 +81,11 @@ sc_error_t sc_skill_registry_update(sc_allocator_t *alloc) {
     return SC_OK;
 }
 
+sc_error_t sc_skill_registry_publish(sc_allocator_t *alloc, const char *skill_dir) {
+    if (!alloc || !skill_dir) return SC_ERR_INVALID_ARGUMENT;
+    return SC_OK;
+}
+
 size_t sc_skill_registry_get_installed_dir(char *out, size_t out_len) {
     if (!out || out_len == 0) return 0;
     const char *home = getenv("HOME");
@@ -402,6 +407,57 @@ sc_error_t sc_skill_registry_update(sc_allocator_t *alloc) {
         closedir(d);
     }
 #endif
+    return SC_OK;
+}
+
+sc_error_t sc_skill_registry_publish(sc_allocator_t *alloc, const char *skill_dir) {
+    if (!alloc || !skill_dir) return SC_ERR_INVALID_ARGUMENT;
+
+    char json_path[512];
+    char md_path[512];
+    int n = snprintf(json_path, sizeof(json_path), "%s/.skill.json", skill_dir);
+    if (n < 0 || (size_t)n >= sizeof(json_path)) return SC_ERR_INVALID_ARGUMENT;
+    n = snprintf(md_path, sizeof(md_path), "%s/SKILL.md", skill_dir);
+    if (n < 0 || (size_t)n >= sizeof(md_path)) return SC_ERR_INVALID_ARGUMENT;
+
+    bool has_json = false;
+    bool has_md = false;
+    {
+        FILE *fp = fopen(json_path, "rb");
+        if (fp) { has_json = true; fclose(fp); }
+    }
+    {
+        FILE *fp = fopen(md_path, "rb");
+        if (fp) { has_md = true; fclose(fp); }
+    }
+    if (!has_json && !has_md) return SC_ERR_NOT_FOUND;
+
+    if (!has_json) {
+        printf("To publish, submit a PR to https://github.com/seaclaw/skill-registry with your skill manifest.\n");
+        return SC_OK;
+    }
+
+    char buf[4096];
+    FILE *f = fopen(json_path, "rb");
+    if (!f) return SC_ERR_IO;
+    size_t read_len = fread(buf, 1, sizeof(buf) - 1, f);
+    fclose(f);
+    if (read_len == 0 || read_len >= sizeof(buf)) return SC_ERR_IO;
+    buf[read_len] = '\0';
+
+    sc_json_value_t *parsed = NULL;
+    sc_error_t err = sc_json_parse(alloc, buf, read_len, &parsed);
+    if (err != SC_OK || !parsed || parsed->type != SC_JSON_OBJECT) {
+        if (parsed) sc_json_free(alloc, parsed);
+        return err != SC_OK ? err : SC_ERR_PARSE;
+    }
+
+    const char *name = sc_json_get_string(parsed, "name");
+    const char *desc = sc_json_get_string(parsed, "description");
+    sc_json_free(alloc, parsed);
+    if (!name || !name[0] || !desc) return SC_ERR_PARSE;
+
+    printf("To publish, submit a PR to https://github.com/seaclaw/skill-registry with your skill manifest.\n");
     return SC_OK;
 }
 

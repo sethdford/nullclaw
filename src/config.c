@@ -818,6 +818,17 @@ sc_error_t sc_config_load(sc_allocator_t *backing, sc_config_t *out) {
         return err;
     }
 
+    /* Tighten config directory permissions if too permissive */
+    {
+        char dir_buf[SC_MAX_PATH];
+        int dn = snprintf(dir_buf, sizeof(dir_buf), "%s/%s", home, SC_CONFIG_DIR);
+        if (dn > 0 && (size_t)dn < sizeof(dir_buf)) {
+            struct stat dir_st;
+            if (stat(dir_buf, &dir_st) == 0 && (dir_st.st_mode & 0077) != 0)
+                (void)chmod(dir_buf, 0700);
+        }
+    }
+
     char cwd[SC_MAX_PATH];
     if (getcwd(cwd, sizeof(cwd))) {
         char workspace_cfg[SC_MAX_PATH];
@@ -1187,6 +1198,58 @@ sc_error_t sc_config_save(const sc_config_t *cfg) {
             sc_json_number_new(&a, cfg->security.autonomy_level));
         if (cfg->security.sandbox) sc_json_object_set(&a, sec, "sandbox",
             sc_json_string_new(&a, cfg->security.sandbox, strlen(cfg->security.sandbox)));
+
+        /* sandbox_config */
+        sc_json_value_t *sbc = sc_json_object_new(&a);
+        if (sbc) {
+            sc_json_object_set(&a, sbc, "enabled",
+                sc_json_bool_new(&a, cfg->security.sandbox_config.enabled));
+
+            if (cfg->security.sandbox_config.firejail_args_len > 0 &&
+                cfg->security.sandbox_config.firejail_args) {
+                sc_json_value_t *fja = sc_json_array_new(&a);
+                if (fja) {
+                    for (size_t fi = 0; fi < cfg->security.sandbox_config.firejail_args_len; fi++) {
+                        const char *arg = cfg->security.sandbox_config.firejail_args[fi];
+                        if (arg)
+                            sc_json_array_push(&a, fja,
+                                sc_json_string_new(&a, arg, strlen(arg)));
+                    }
+                    sc_json_object_set(&a, sbc, "firejail_args", fja);
+                }
+            }
+
+            /* net_proxy */
+            sc_json_value_t *np = sc_json_object_new(&a);
+            if (np) {
+                sc_json_object_set(&a, np, "enabled",
+                    sc_json_bool_new(&a, cfg->security.sandbox_config.net_proxy.enabled));
+                sc_json_object_set(&a, np, "deny_all",
+                    sc_json_bool_new(&a, cfg->security.sandbox_config.net_proxy.deny_all));
+                if (cfg->security.sandbox_config.net_proxy.proxy_addr)
+                    sc_json_object_set(&a, np, "proxy_addr",
+                        sc_json_string_new(&a,
+                            cfg->security.sandbox_config.net_proxy.proxy_addr,
+                            strlen(cfg->security.sandbox_config.net_proxy.proxy_addr)));
+                if (cfg->security.sandbox_config.net_proxy.allowed_domains_len > 0 &&
+                    cfg->security.sandbox_config.net_proxy.allowed_domains) {
+                    sc_json_value_t *da = sc_json_array_new(&a);
+                    if (da) {
+                        for (size_t di = 0; di < cfg->security.sandbox_config.net_proxy.allowed_domains_len; di++) {
+                            const char *dom = cfg->security.sandbox_config.net_proxy.allowed_domains[di];
+                            if (dom)
+                                sc_json_array_push(&a, da,
+                                    sc_json_string_new(&a, dom, strlen(dom)));
+                        }
+                        sc_json_object_set(&a, np, "allowed_domains", da);
+                    }
+                }
+                sc_json_object_set(&a, sbc, "net_proxy", np);
+            }
+
+            sc_json_object_set(&a, sec, "sandbox_config", sbc);
+        }
+
         sc_json_object_set(&a, root, "security", sec);
     }
 

@@ -3,6 +3,8 @@
 #include "seaclaw/core/error.h"
 #include "seaclaw/core/json.h"
 #include "seaclaw/core/string.h"
+#include "seaclaw/security.h"
+#include "seaclaw/security/sandbox.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -30,10 +32,12 @@
 
 typedef struct sc_claude_code_ctx {
     sc_allocator_t *alloc;
+    sc_security_policy_t *policy;
 } sc_claude_code_ctx_t;
 
 #if defined(SC_GATEWAY_POSIX) && !SC_IS_TEST
 static sc_error_t run_claude_code(sc_allocator_t *alloc,
+    sc_security_policy_t *policy,
     const char *prompt, size_t prompt_len,
     const char *working_dir,
     const char *allowed_tools,
@@ -41,7 +45,6 @@ static sc_error_t run_claude_code(sc_allocator_t *alloc,
     int max_turns,
     char **out, size_t *out_len)
 {
-    /* Build argv: claude -p --output-format json [--model M] [--allowedTools T] [--max-turns N] */
     char *argv[16];
     int argc = 0;
     argv[argc++] = "claude";
@@ -105,6 +108,48 @@ static sc_error_t run_claude_code(sc_allocator_t *alloc,
             if (chdir(working_dir) != 0) _exit(126);
         }
 
+        if (policy && policy->net_proxy && policy->net_proxy->enabled) {
+            const char *addr = policy->net_proxy->proxy_addr;
+            if (!addr) addr = "http://127.0.0.1:0";
+            setenv("HTTP_PROXY", addr, 1);
+            setenv("HTTPS_PROXY", addr, 1);
+            setenv("http_proxy", addr, 1);
+            setenv("https_proxy", addr, 1);
+            if (policy->net_proxy->allowed_domains_count > 0) {
+                size_t total = 0;
+                for (size_t np = 0; np < policy->net_proxy->allowed_domains_count; np++) {
+                    if (policy->net_proxy->allowed_domains[np])
+                        total += strlen(policy->net_proxy->allowed_domains[np]) + 1;
+                }
+                if (total > 0) {
+                    char *no_proxy = (char *)malloc(total + 1);
+                    if (no_proxy) {
+                        size_t off = 0;
+                        for (size_t np = 0; np < policy->net_proxy->allowed_domains_count; np++) {
+                            const char *d = policy->net_proxy->allowed_domains[np];
+                            if (!d) continue;
+                            size_t dlen = strlen(d);
+                            if (off > 0) no_proxy[off++] = ',';
+                            memcpy(no_proxy + off, d, dlen);
+                            off += dlen;
+                        }
+                        no_proxy[off] = '\0';
+                        setenv("NO_PROXY", no_proxy, 1);
+                        setenv("no_proxy", no_proxy, 1);
+                        free(no_proxy);
+                    }
+                }
+            }
+        }
+
+        if (policy && policy->sandbox && policy->sandbox->vtable &&
+            policy->sandbox->vtable->apply) {
+            sc_error_t serr = policy->sandbox->vtable->apply(
+                policy->sandbox->ctx);
+            if (serr != SC_OK && serr != SC_ERR_NOT_SUPPORTED)
+                _exit(125);
+        }
+
         execvp("claude", argv);
         _exit(127);
     }
@@ -147,7 +192,6 @@ static sc_error_t run_claude_code(sc_allocator_t *alloc,
     int status;
     waitpid(pid, &status, 0);
 
-    /* Parse JSON: {"type":"result","result":"..."} */
     sc_json_value_t *parsed = NULL;
     sc_error_t err = sc_json_parse(alloc, buf, len, &parsed);
     if (err == SC_OK && parsed) {
@@ -163,7 +207,6 @@ static sc_error_t run_claude_code(sc_allocator_t *alloc,
         sc_json_free(alloc, parsed);
     }
 
-    /* Fallback: return raw output */
     *out = buf;
     *out_len = len;
     return SC_OK;
@@ -173,7 +216,6 @@ static sc_error_t run_claude_code(sc_allocator_t *alloc,
 static sc_error_t claude_code_execute(void *ctx, sc_allocator_t *alloc,
     const sc_json_value_t *args, sc_tool_result_t *out)
 {
-    (void)ctx;
     if (!args || !out) {
         *out = sc_tool_result_fail("invalid args", 12);
         return SC_OK;
@@ -186,6 +228,7 @@ static sc_error_t claude_code_execute(void *ctx, sc_allocator_t *alloc,
     }
 
 #if SC_IS_TEST
+    (void)ctx;
     const char *working_dir = sc_json_get_string(args, "working_directory");
     const char *model = sc_json_get_string(args, "model");
     size_t need = 64 + strlen(prompt) +
@@ -203,6 +246,7 @@ static sc_error_t claude_code_execute(void *ctx, sc_allocator_t *alloc,
     return SC_OK;
 #elif defined(SC_GATEWAY_POSIX)
     {
+        sc_claude_code_ctx_t *cc = (sc_claude_code_ctx_t *)ctx;
         const char *working_dir = sc_json_get_string(args, "working_directory");
         const char *allowed_tools = sc_json_get_string(args, "allowed_tools");
         const char *model = sc_json_get_string(args, "model");
@@ -213,7 +257,6 @@ static sc_error_t claude_code_execute(void *ctx, sc_allocator_t *alloc,
         if (turns_val && turns_val->type == SC_JSON_NUMBER)
             max_turns = (int)turns_val->data.number;
 
-        /* Build full prompt with optional context */
         char *full_prompt;
         size_t full_len;
         if (context && strlen(context) > 0) {
@@ -241,7 +284,8 @@ static sc_error_t claude_code_execute(void *ctx, sc_allocator_t *alloc,
 
         char *result = NULL;
         size_t result_len = 0;
-        sc_error_t err = run_claude_code(alloc, full_prompt, full_len,
+        sc_error_t err = run_claude_code(alloc, cc ? cc->policy : NULL,
+            full_prompt, full_len,
             working_dir, allowed_tools, model, max_turns,
             &result, &result_len);
         alloc->free(alloc->ctx, full_prompt, full_len + 1);
@@ -255,6 +299,7 @@ static sc_error_t claude_code_execute(void *ctx, sc_allocator_t *alloc,
         return SC_OK;
     }
 #else
+    (void)ctx;
     (void)alloc;
     *out = sc_tool_result_fail("Claude Code requires POSIX", 26);
     return SC_OK;
@@ -277,13 +322,15 @@ static const sc_tool_vtable_t claude_code_vtable = {
     .deinit = claude_code_deinit,
 };
 
-sc_error_t sc_claude_code_create(sc_allocator_t *alloc, sc_tool_t *out)
+sc_error_t sc_claude_code_create(sc_allocator_t *alloc,
+    sc_security_policy_t *policy, sc_tool_t *out)
 {
     if (!alloc || !out) return SC_ERR_INVALID_ARGUMENT;
     sc_claude_code_ctx_t *c = (sc_claude_code_ctx_t *)alloc->alloc(
         alloc->ctx, sizeof(*c));
     if (!c) return SC_ERR_OUT_OF_MEMORY;
     c->alloc = alloc;
+    c->policy = policy;
     out->ctx = c;
     out->vtable = &claude_code_vtable;
     return SC_OK;

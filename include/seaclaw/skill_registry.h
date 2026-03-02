@@ -54,4 +54,10 @@ sc_error_t sc_skill_registry_update(sc_allocator_t *alloc);
  */
 size_t sc_skill_registry_get_installed_dir(char *out, size_t out_len);
 
+/**
+ * Publish a skill from a directory (validates .skill.json or SKILL.md, prints
+ * contribute instructions). Under SC_IS_TEST, returns SC_OK without filesystem.
+ */
+sc_error_t sc_skill_registry_publish(sc_allocator_t *alloc, const char *skill_dir);
+
 #endif /* SC_SKILL_REGISTRY_H */

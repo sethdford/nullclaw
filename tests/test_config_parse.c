@@ -202,6 +202,38 @@ static void test_config_parse_security_section(void) {
     sc_arena_destroy(arena);
 }
 
+static void test_config_parse_sandbox_config(void) {
+    sc_allocator_t backing = sc_system_allocator();
+    sc_config_t cfg_local;
+    memset(&cfg_local, 0, sizeof(cfg_local));
+    sc_arena_t *arena = sc_arena_create(backing);
+    SC_ASSERT_NOT_NULL(arena);
+    cfg_local.allocator = sc_arena_allocator(arena);
+    cfg_local.arena = arena;
+    const char *j =
+        "{\"security\":{\"sandbox\":\"seatbelt\",\"sandbox_config\":{"
+        "\"enabled\":true,"
+        "\"firejail_args\":[\"--whitelist=/opt\",\"--rlimit-cpu=10\"],"
+        "\"net_proxy\":{\"enabled\":true,\"deny_all\":true,"
+        "\"proxy_addr\":\"http://127.0.0.1:8080\","
+        "\"allowed_domains\":[\"api.example.com\",\"*.github.com\"]}"
+        "}}}";
+    sc_error_t err = sc_config_parse_json(&cfg_local, j, strlen(j));
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(cfg_local.security.sandbox_config.enabled);
+    SC_ASSERT_EQ(cfg_local.security.sandbox_config.firejail_args_len, 2);
+    SC_ASSERT(cfg_local.security.sandbox_config.firejail_args != NULL);
+    SC_ASSERT_STR_EQ(cfg_local.security.sandbox_config.firejail_args[0], "--whitelist=/opt");
+    SC_ASSERT_STR_EQ(cfg_local.security.sandbox_config.firejail_args[1], "--rlimit-cpu=10");
+    SC_ASSERT_TRUE(cfg_local.security.sandbox_config.net_proxy.enabled);
+    SC_ASSERT_TRUE(cfg_local.security.sandbox_config.net_proxy.deny_all);
+    SC_ASSERT_STR_EQ(cfg_local.security.sandbox_config.net_proxy.proxy_addr, "http://127.0.0.1:8080");
+    SC_ASSERT_EQ(cfg_local.security.sandbox_config.net_proxy.allowed_domains_len, 2);
+    SC_ASSERT_STR_EQ(cfg_local.security.sandbox_config.net_proxy.allowed_domains[0], "api.example.com");
+    SC_ASSERT_STR_EQ(cfg_local.security.sandbox_config.net_proxy.allowed_domains[1], "*.github.com");
+    sc_arena_destroy(arena);
+}
+
 static void test_config_validate_null_model_fails(void) {
     sc_config_t cfg = {0};
     char prov[] = "openai";
@@ -427,6 +459,7 @@ void run_config_parse_tests(void) {
     SC_RUN_TEST(test_config_parse_malformed_missing_value);
     SC_RUN_TEST(test_config_parse_missing_required_nested_defaults);
     SC_RUN_TEST(test_config_parse_security_section);
+    SC_RUN_TEST(test_config_parse_sandbox_config);
     SC_RUN_TEST(test_config_validate_null_model_fails);
     SC_RUN_TEST(test_config_parse_string_array_basic);
     SC_RUN_TEST(test_config_parse_string_array_empty);

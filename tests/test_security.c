@@ -1198,6 +1198,27 @@ static void test_process_run_sandboxed_with_null_setup(void) {
     sc_run_result_free(&sys, &result);
 }
 
+static void test_process_run_with_policy_null(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    const char *argv[] = { "echo", "policy-test", NULL };
+    sc_run_result_t result = {0};
+    sc_error_t err = sc_process_run_with_policy(&sys, argv, NULL, 1024, NULL, &result);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT(result.stdout_cap > 0);
+    sc_run_result_free(&sys, &result);
+}
+
+static void test_process_run_with_policy_noop_sandbox(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    sc_security_policy_t policy = {0};
+    const char *argv[] = { "echo", "sandboxed", NULL };
+    sc_run_result_t result = {0};
+    sc_error_t err = sc_process_run_with_policy(&sys, argv, NULL, 1024, &policy, &result);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT(result.stdout_cap > 0);
+    sc_run_result_free(&sys, &result);
+}
+
 /* --- Sandbox storage lifecycle --- */
 static void test_sandbox_storage_create_destroy(void) {
     sc_allocator_t sys = sc_system_allocator();
@@ -1222,6 +1243,30 @@ static void test_net_proxy_add_null_domain(void) {
     sc_net_proxy_init_deny_all(&proxy);
     SC_ASSERT_FALSE(sc_net_proxy_allow_domain(&proxy, NULL));
     SC_ASSERT_FALSE(sc_net_proxy_allow_domain(NULL, "test.com"));
+}
+
+static void test_net_proxy_case_insensitive(void) {
+    sc_net_proxy_t proxy;
+    sc_net_proxy_init_deny_all(&proxy);
+    sc_net_proxy_allow_domain(&proxy, "Example.COM");
+    SC_ASSERT(sc_net_proxy_domain_allowed(&proxy, "example.com"));
+    SC_ASSERT(sc_net_proxy_domain_allowed(&proxy, "EXAMPLE.COM"));
+    SC_ASSERT(sc_net_proxy_domain_allowed(&proxy, "Example.Com"));
+}
+
+static void test_net_proxy_wildcard_case_insensitive(void) {
+    sc_net_proxy_t proxy;
+    sc_net_proxy_init_deny_all(&proxy);
+    sc_net_proxy_allow_domain(&proxy, "*.Example.COM");
+    SC_ASSERT(sc_net_proxy_domain_allowed(&proxy, "sub.example.com"));
+    SC_ASSERT(sc_net_proxy_domain_allowed(&proxy, "SUB.EXAMPLE.COM"));
+}
+
+static void test_net_proxy_empty_domain_rejected(void) {
+    sc_net_proxy_t proxy;
+    sc_net_proxy_init_deny_all(&proxy);
+    sc_net_proxy_allow_domain(&proxy, "example.com");
+    SC_ASSERT_FALSE(sc_net_proxy_domain_allowed(&proxy, ""));
 }
 
 /* --- Seatbelt truncated profile guard --- */
@@ -1409,9 +1454,16 @@ void run_security_tests(void) {
     SC_RUN_TEST(test_process_run_sandboxed_null_args);
     SC_RUN_TEST(test_process_run_sandboxed_with_null_setup);
 
+    SC_TEST_SUITE("Sandbox — sc_process_run_with_policy");
+    SC_RUN_TEST(test_process_run_with_policy_null);
+    SC_RUN_TEST(test_process_run_with_policy_noop_sandbox);
+
     SC_TEST_SUITE("Network Proxy — Edge Cases");
     SC_RUN_TEST(test_net_proxy_null_domain);
     SC_RUN_TEST(test_net_proxy_add_null_domain);
+    SC_RUN_TEST(test_net_proxy_case_insensitive);
+    SC_RUN_TEST(test_net_proxy_wildcard_case_insensitive);
+    SC_RUN_TEST(test_net_proxy_empty_domain_rejected);
 
     SC_TEST_SUITE("Observer");
     SC_RUN_TEST(test_observer_noop);

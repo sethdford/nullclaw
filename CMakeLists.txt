@@ -237,6 +237,7 @@ set(SC_CORE_SOURCES
     src/gateway/ws_server.c
     src/gateway/control_protocol.c
     src/gateway/event_bridge.c
+    src/gateway/push.c
     src/runtime/native.c
     src/runtime/docker.c
     src/runtime/wasm_rt.c

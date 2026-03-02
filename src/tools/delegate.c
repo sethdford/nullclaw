@@ -1,4 +1,5 @@
 #include "seaclaw/tool.h"
+#include "seaclaw/tools/delegate.h"
 #include "seaclaw/tools/claude_code.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
@@ -82,13 +83,14 @@ static const sc_tool_vtable_t delegate_vtable = {
     .deinit = delegate_deinit,
 };
 
-sc_error_t sc_delegate_create(sc_allocator_t *alloc, sc_tool_t *out) {
+sc_error_t sc_delegate_create(sc_allocator_t *alloc,
+    sc_security_policy_t *policy, sc_tool_t *out) {
     if (!alloc || !out) return SC_ERR_INVALID_ARGUMENT;
     sc_delegate_ctx_t *c = (sc_delegate_ctx_t *)alloc->alloc(alloc->ctx, sizeof(*c));
     if (!c) return SC_ERR_OUT_OF_MEMORY;
     memset(c, 0, sizeof(*c));
 
-    sc_error_t err = sc_claude_code_create(alloc, &c->claude_code_tool);
+    sc_error_t err = sc_claude_code_create(alloc, policy, &c->claude_code_tool);
     c->has_claude_code = (err == SC_OK);
 
     out->ctx = c;

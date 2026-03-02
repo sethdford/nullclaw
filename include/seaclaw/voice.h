@@ -27,4 +27,6 @@ sc_error_t sc_voice_tts(sc_allocator_t *alloc, const sc_voice_config_t *config,
     const char *text, size_t text_len,
     void **out_audio, size_t *out_audio_len);
 
+sc_error_t sc_voice_play(sc_allocator_t *alloc, const void *audio_data, size_t audio_len);
+
 #endif /* SC_VOICE_H */

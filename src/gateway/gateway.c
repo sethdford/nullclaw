@@ -51,6 +51,8 @@ void sc_gateway_config_from_cfg(const sc_config_gateway_t *cfg_gw,
     out->on_webhook = NULL;
     out->on_webhook_ctx = NULL;
     out->control_ui_dir = cfg_gw->control_ui_dir;
+    out->cors_origins = (const char *const *)cfg_gw->cors_origins;
+    out->cors_origins_len = cfg_gw->cors_origins_len;
     out->auth_token = NULL;
     out->control = NULL;
 }
@@ -170,11 +172,20 @@ static bool verify_hmac(const char *body, size_t body_len,
 
 /* ── HTTP response helpers ──────────────────────────────────────────────── */
 
-static bool is_localhost_origin(const char *origin) {
+static const char *const *s_cors_origins = NULL;
+static size_t s_cors_origins_len = 0;
+
+static bool is_allowed_origin(const char *origin) {
     if (!origin || !origin[0]) return true;
-    return strstr(origin, "://localhost") != NULL ||
-           strstr(origin, "://127.0.0.1") != NULL ||
-           strstr(origin, "://[::1]") != NULL;
+    if (strstr(origin, "://localhost") != NULL ||
+        strstr(origin, "://127.0.0.1") != NULL ||
+        strstr(origin, "://[::1]") != NULL)
+        return true;
+    for (size_t i = 0; i < s_cors_origins_len; i++) {
+        if (s_cors_origins[i] && strcmp(origin, s_cors_origins[i]) == 0)
+            return true;
+    }
+    return false;
 }
 
 static const char *s_request_origin = NULL;
@@ -191,7 +202,7 @@ static void send_response(int fd, int status, const char *content_type,
     char hdr[512];
     const char *cors_origin = "";
     char cors_line[256] = "";
-    if (s_request_origin && is_localhost_origin(s_request_origin)) {
+    if (s_request_origin && is_allowed_origin(s_request_origin)) {
         cors_origin = s_request_origin;
         snprintf(cors_line, sizeof(cors_line),
             "Access-Control-Allow-Origin: %s\r\n", cors_origin);
@@ -366,6 +377,9 @@ sc_error_t sc_gateway_run(sc_allocator_t *alloc,
         sc_health_mark_ok("gateway");
         return SC_OK;
     }
+
+    s_cors_origins = cfg.cors_origins;
+    s_cors_origins_len = cfg.cors_origins_len;
 
 #ifdef SC_GATEWAY_POSIX
     sc_gateway_state_t *gw = NULL;

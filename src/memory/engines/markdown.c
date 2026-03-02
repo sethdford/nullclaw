@@ -394,6 +394,7 @@ static const sc_memory_vtable_t markdown_vtable = {
 
 sc_memory_t sc_markdown_memory_create(sc_allocator_t *alloc, const char *dir_path) {
     if (!alloc || !dir_path) return (sc_memory_t){ .ctx = NULL, .vtable = NULL };
+    ensure_dir(dir_path);
     size_t len = strlen(dir_path);
     char *dir = sc_strndup(alloc, dir_path, len);
     if (!dir) return (sc_memory_t){ .ctx = NULL, .vtable = NULL };

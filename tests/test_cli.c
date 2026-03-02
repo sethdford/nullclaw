@@ -88,6 +88,14 @@ static void test_cmd_update_check(void) {
     SC_ASSERT_EQ(err, SC_OK);
 }
 
+static void test_cmd_sandbox_default(void) {
+    set_test_home();
+    sc_allocator_t alloc = sc_system_allocator();
+    char *argv[] = {"seaclaw", "sandbox"};
+    sc_error_t err = cmd_sandbox(&alloc, 2, argv);
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
 void run_cli_tests(void) {
     SC_TEST_SUITE("CLI Commands");
     SC_RUN_TEST(test_cmd_channel_list);
@@ -100,4 +108,5 @@ void run_cli_tests(void) {
     SC_RUN_TEST(test_cmd_models_list);
     SC_RUN_TEST(test_cmd_auth_status);
     SC_RUN_TEST(test_cmd_update_check);
+    SC_RUN_TEST(test_cmd_sandbox_default);
 }
