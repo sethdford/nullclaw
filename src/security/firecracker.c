@@ -53,35 +53,32 @@ static sc_error_t firecracker_wrap(void *ctx, const char *const *argv, size_t ar
 #else
     sc_firecracker_ctx_t *fc = (sc_firecracker_ctx_t *)ctx;
 
-    char socket_arg[280];
-    char mem_arg[32];
-    char vcpu_arg[16];
     /*
-     * Use jailer for production isolation:
+     * Firecracker requires a JSON config file for VM specification.
+     * The config file is expected at the socket path with .json extension.
+     *
+     * Production flow:
+     *   1. Caller generates /tmp/sc_fc_<pid>.json with kernel, rootfs,
+     *      vcpu, mem, and virtio-fs (workspace) configuration
+     *   2. wrap_command produces:
+     *        firecracker --no-api --boot-timer --config-file CONFIG
+     *   3. Firecracker boots the microVM and runs the command inside it
+     *
+     * For jailer-based isolation (recommended for production):
      *   jailer --id sc-sandbox --exec-file /usr/bin/firecracker
-     *     --uid 65534 --gid 65534 --chroot-base-dir /srv/jailer
-     *     -- --config-file /path/to/vmconfig.json
-     *
-     * For simplicity in the vtable model, we wrap with firecracker directly:
-     *   firecracker --no-api --boot-timer
-     *     --config-file /tmp/sc_fc_<pid>.json
-     *
-     * The actual VM config is generated at spawn time with workspace shared
-     * via VirtioFS. This wrap_command builds the outer argv.
+     *     --uid 65534 --gid 65534 -- --config-file CONFIG
      */
-    int n = snprintf(socket_arg, sizeof(socket_arg),
-        "--api-sock=%s", fc->socket_path);
-    if (n <= 0 || (size_t)n >= sizeof(socket_arg))
+    char config_arg[280];
+    int n = snprintf(config_arg, sizeof(config_arg),
+        "--config-file=%s.json", fc->socket_path);
+    if (n <= 0 || (size_t)n >= sizeof(config_arg))
         return SC_ERR_INTERNAL;
-
-    snprintf(mem_arg, sizeof(mem_arg), "%u", fc->mem_size_mib);
-    snprintf(vcpu_arg, sizeof(vcpu_arg), "%u", fc->vcpu_count);
 
     const char *prefix[] = {
         "firecracker",
-        socket_arg,
         "--no-api",
         "--boot-timer",
+        config_arg,
     };
     const size_t prefix_len = sizeof(prefix) / sizeof(prefix[0]);
 
@@ -100,7 +97,11 @@ static sc_error_t firecracker_wrap(void *ctx, const char *const *argv, size_t ar
 static bool firecracker_available(void *ctx) {
     (void)ctx;
 #ifdef __linux__
+#if SC_IS_TEST
+    return false;
+#else
     return firecracker_binary_exists() && kvm_available();
+#endif
 #else
     return false;
 #endif

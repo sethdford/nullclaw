@@ -155,7 +155,7 @@ static sc_error_t impl_store(void *ctx,
         return SC_ERR_MEMORY_STORE;
     }
 
-    sqlite3_bind_text(stmt, 1, id, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 1, id, -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 2, key, (int)key_len, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 3, content, (int)content_len, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 4, cat_str, -1, SQLITE_STATIC);
@@ -279,7 +279,7 @@ static sc_error_t impl_recall(void *ctx, sc_allocator_t *alloc,
         return SC_ERR_MEMORY_RECALL;
     }
 
-    sqlite3_bind_text(stmt, 1, like_pattern, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 1, like_pattern, -1, SQLITE_STATIC);
     sqlite3_bind_int64(stmt, 2, (sqlite3_int64)limit);
 
     sc_memory_entry_t *entries = (sc_memory_entry_t *)alloc->alloc(alloc->ctx,

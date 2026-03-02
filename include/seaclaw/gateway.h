@@ -17,7 +17,7 @@
 
 /* Forward declarations */
 typedef struct sc_control_protocol sc_control_protocol_t;
-typedef struct sc_app_context sc_app_context_t;
+struct sc_app_context;
 
 typedef struct sc_gateway_config {
     const char *host;
@@ -40,7 +40,7 @@ typedef struct sc_gateway_config {
     sc_control_protocol_t *control;
 
     /* Application context for RPC methods (sessions, tools, config, etc.) */
-    sc_app_context_t *app_ctx;
+    struct sc_app_context *app_ctx;
 } sc_gateway_config_t;
 
 /* ──────────────────────────────────────────────────────────────────────────

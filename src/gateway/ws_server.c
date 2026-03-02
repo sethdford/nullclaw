@@ -231,6 +231,45 @@ sc_error_t sc_ws_server_upgrade(sc_ws_server_t *srv, int fd,
     }
     if (!slot) return SC_ERR_ALREADY_EXISTS;
 
+    /* Authenticate WebSocket upgrade if auth_token is configured */
+    if (srv->auth_token && srv->auth_token[0]) {
+        char auth_hdr[256] = {0};
+        if (!extract_header(req, req_len, "Authorization", auth_hdr, sizeof(auth_hdr))) {
+            const char *r401 = "HTTP/1.1 401 Unauthorized\r\n\r\n";
+            send(fd, r401, strlen(r401), 0);
+            return SC_ERR_PERMISSION_DENIED;
+        }
+        if (strncmp(auth_hdr, "Bearer ", 7) != 0) {
+            const char *r401 = "HTTP/1.1 401 Unauthorized\r\n\r\n";
+            send(fd, r401, strlen(r401), 0);
+            return SC_ERR_PERMISSION_DENIED;
+        }
+        const char *tok = auth_hdr + 7;
+        size_t tok_len = strlen(tok);
+        size_t exp_len = strlen(srv->auth_token);
+        unsigned char d = (tok_len != exp_len) ? 1 : 0;
+        size_t cmp_len = tok_len < exp_len ? tok_len : exp_len;
+        for (size_t i = 0; i < cmp_len; i++)
+            d |= (unsigned char)tok[i] ^ (unsigned char)srv->auth_token[i];
+        if (d != 0) {
+            const char *r401 = "HTTP/1.1 401 Unauthorized\r\n\r\n";
+            send(fd, r401, strlen(r401), 0);
+            return SC_ERR_PERMISSION_DENIED;
+        }
+    }
+
+    /* Validate Origin header — only allow localhost origins */
+    char origin[256] = {0};
+    if (extract_header(req, req_len, "Origin", origin, sizeof(origin))) {
+        if (!strstr(origin, "://localhost") &&
+            !strstr(origin, "://127.0.0.1") &&
+            !strstr(origin, "://[::1]")) {
+            const char *r403 = "HTTP/1.1 403 Forbidden\r\n\r\n";
+            send(fd, r403, strlen(r403), 0);
+            return SC_ERR_PERMISSION_DENIED;
+        }
+    }
+
     char ws_key[128] = {0};
     if (!extract_header(req, req_len, "Sec-WebSocket-Key", ws_key, sizeof(ws_key)))
         return SC_ERR_INVALID_ARGUMENT;

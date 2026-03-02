@@ -52,7 +52,15 @@ static bool seccomp_supported(void) {
 #if SC_IS_TEST
     return false;
 #else
-    return prctl(PR_GET_SECCOMP, 0, 0, 0, 0) != -1 || errno != EINVAL;
+    /* prctl(PR_GET_SECCOMP) returns:
+     *   0     = seccomp supported, not active
+     *   2     = seccomp active (filter mode)
+     *  -1/EINVAL = kernel doesn't know about seccomp → not supported
+     *  -1/other  = seccomp known but query failed → assume supported
+     */
+    int r = prctl(PR_GET_SECCOMP, 0, 0, 0, 0);
+    if (r >= 0) return true;
+    return errno != EINVAL;
 #endif
 }
 
@@ -155,7 +163,7 @@ static sc_error_t seccomp_apply(void *ctx) {
         filter[idx++] = BPF_JUMP_SC(BPF_JMP | BPF_JEQ | BPF_K,
             (unsigned int)blocked_syscalls[i], 0, 1);
         filter[idx++] = BPF_STMT_SC(BPF_RET | BPF_K,
-            SECCOMP_RET_ERRNO | (1 & 0xFFFF)); /* EPERM */
+            SECCOMP_RET_ERRNO | (EPERM & 0xFFFF));
     }
 
     /* Block network syscalls if not allowed */
@@ -163,7 +171,7 @@ static sc_error_t seccomp_apply(void *ctx) {
         filter[idx++] = BPF_JUMP_SC(BPF_JMP | BPF_JEQ | BPF_K,
             (unsigned int)network_syscalls[i], 0, 1);
         filter[idx++] = BPF_STMT_SC(BPF_RET | BPF_K,
-            SECCOMP_RET_ERRNO | (1 & 0xFFFF)); /* EPERM */
+            SECCOMP_RET_ERRNO | (EPERM & 0xFFFF));
     }
 
     /* Allow everything else */

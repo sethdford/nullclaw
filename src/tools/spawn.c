@@ -91,6 +91,20 @@ static sc_error_t spawn_execute(void *ctx, sc_allocator_t *alloc,
         *out = sc_tool_result_fail("missing command", 14);
         return SC_OK;
     }
+    {
+        static const char *const SHELL_CMDS[] = {
+            "/bin/sh", "/bin/bash", "/bin/zsh", "/bin/csh", "/bin/ksh",
+            "/usr/bin/sh", "/usr/bin/bash", "/usr/bin/zsh",
+            "sh", "bash", "zsh", "csh", "ksh", NULL
+        };
+        for (const char *const *b = SHELL_CMDS; *b; b++) {
+            if (strcmp(cmd, *b) == 0) {
+                *out = sc_tool_result_fail(
+                    "shell interpreters not allowed in spawn; use shell tool", 55);
+                return SC_OK;
+            }
+        }
+    }
 #if SC_IS_TEST
     char *msg = sc_strndup(alloc, "(spawn disabled in test)", 24);
     if (!msg) { *out = sc_tool_result_fail("out of memory", 12); return SC_ERR_OUT_OF_MEMORY; }

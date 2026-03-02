@@ -143,8 +143,10 @@ sc_error_t sc_process_run_sandboxed(sc_allocator_t *alloc,
     err_buf[err_len] = '\0';
     out->stdout_buf = out_buf;
     out->stdout_len = out_len;
+    out->stdout_cap = cap;
     out->stderr_buf = err_buf;
     out->stderr_len = err_len;
+    out->stderr_cap = cap;
 
     if (WIFEXITED(status)) {
         out->exit_code = WEXITSTATUS(status);

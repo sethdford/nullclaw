@@ -160,7 +160,12 @@ static bool verify_hmac(const char *body, size_t body_len,
     for (int i = 0; i < 32; i++)
         snprintf(hex + i * 2, 3, "%02x", computed[i]);
     hex[64] = '\0';
-    return strncmp(sig_header, hex, 64) == 0;
+    size_t sig_len = strlen(sig_header);
+    if (sig_len < 64) return false;
+    unsigned char diff = 0;
+    for (int i = 0; i < 64; i++)
+        diff |= (unsigned char)sig_header[i] ^ (unsigned char)hex[i];
+    return diff == 0;
 }
 
 /* ── HTTP response helpers ──────────────────────────────────────────────── */
@@ -216,7 +221,9 @@ static const char *mime_for_ext(const char *path) {
 #ifdef SC_GATEWAY_POSIX
 static bool serve_static_file(int fd, const char *base_dir, const char *url_path) {
     if (!base_dir || !url_path) return false;
-    if (strstr(url_path, "..")) return false;
+    if (strstr(url_path, "..") || strstr(url_path, "%2e%2e") ||
+        strstr(url_path, "%2E%2E") || strstr(url_path, "%2e%2E") ||
+        strstr(url_path, "%2E%2e") || strstr(url_path, "%00")) return false;
 
     char filepath[1024];
     const char *rel = url_path;
@@ -225,18 +232,23 @@ static bool serve_static_file(int fd, const char *base_dir, const char *url_path
 
     snprintf(filepath, sizeof(filepath), "%s/%s", base_dir, rel);
 
+    int file_fd = open(filepath, O_RDONLY | O_NOFOLLOW);
     struct stat st;
-    if (stat(filepath, &st) != 0 || !S_ISREG(st.st_mode)) {
+    if (file_fd < 0 || fstat(file_fd, &st) != 0 || !S_ISREG(st.st_mode)) {
+        if (file_fd >= 0) close(file_fd);
         /* SPA fallback: serve index.html for unmatched routes */
         snprintf(filepath, sizeof(filepath), "%s/index.html", base_dir);
-        if (stat(filepath, &st) != 0 || !S_ISREG(st.st_mode))
+        file_fd = open(filepath, O_RDONLY | O_NOFOLLOW);
+        if (file_fd < 0 || fstat(file_fd, &st) != 0 || !S_ISREG(st.st_mode)) {
+            if (file_fd >= 0) close(file_fd);
             return false;
+        }
     }
 
-    if (st.st_size > 10 * 1024 * 1024) return false;
+    if (st.st_size > 10 * 1024 * 1024) { close(file_fd); return false; }
 
-    FILE *f = fopen(filepath, "rb");
-    if (!f) return false;
+    FILE *f = fdopen(file_fd, "rb");
+    if (!f) { close(file_fd); return false; }
 
     size_t fsize = (size_t)st.st_size;
     char *buf = (char *)malloc(fsize);

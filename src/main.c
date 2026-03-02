@@ -366,6 +366,39 @@ static sc_memory_t service_create_memory(sc_allocator_t *alloc,
         return sc_lucid_memory_create(alloc, ".seaclaw/lucid.db", ws);
     }
 
+#ifdef SC_ENABLE_POSTGRES
+    if (strcmp(backend, "postgres") == 0) {
+        const char *url = cfg->memory.postgres_url;
+        if (!url) url = "postgres://localhost/seaclaw";
+        const char *schema = cfg->memory.postgres_schema;
+        if (!schema) schema = "public";
+        const char *table = cfg->memory.postgres_table;
+        if (!table) table = "memories";
+        return sc_postgres_memory_create(alloc, url, schema, table);
+    }
+#endif
+
+#ifdef SC_ENABLE_REDIS_ENGINE
+    if (strcmp(backend, "redis") == 0) {
+        const char *host = cfg->memory.redis_host;
+        if (!host) host = "localhost";
+        unsigned short port = cfg->memory.redis_port;
+        if (!port) port = 6379;
+        const char *prefix = cfg->memory.redis_key_prefix;
+        if (!prefix) prefix = "sc_mem";
+        return sc_redis_memory_create(alloc, host, port, prefix);
+    }
+#endif
+
+    if (strcmp(backend, "api") == 0) {
+        const char *base = cfg->memory.api_base_url;
+        if (!base) base = "https://api.example.com/memory";
+        const char *key = cfg->memory.api_key;
+        uint32_t timeout = cfg->memory.api_timeout_ms;
+        if (!timeout) timeout = 5000;
+        return sc_api_memory_create(alloc, base, key, timeout);
+    }
+
     return sc_markdown_memory_create(alloc, ws);
 }
 

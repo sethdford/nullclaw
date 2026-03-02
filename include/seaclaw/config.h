@@ -116,6 +116,15 @@ typedef struct sc_memory_config {
     bool auto_save;
     char *sqlite_path;
     uint32_t max_entries;
+    char *postgres_url;
+    char *postgres_schema;
+    char *postgres_table;
+    char *redis_host;
+    uint16_t redis_port;
+    char *redis_key_prefix;
+    char *api_base_url;
+    char *api_key;
+    uint32_t api_timeout_ms;
 } sc_memory_config_t;
 
 typedef struct sc_tunnel_config {

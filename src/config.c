@@ -327,6 +327,46 @@ static sc_error_t parse_memory(sc_allocator_t *a, sc_config_t *cfg,
     double max_ent = sc_json_get_number(obj, "max_entries", cfg->memory.max_entries);
     if (max_ent >= 0 && max_ent <= 1000000) cfg->memory.max_entries = (uint32_t)max_ent;
     cfg->memory.auto_save = sc_json_get_bool(obj, "auto_save", cfg->memory.auto_save);
+
+    const char *pg_url = sc_json_get_string(obj, "postgres_url");
+    if (pg_url) {
+        if (cfg->memory.postgres_url) a->free(a->ctx, cfg->memory.postgres_url, strlen(cfg->memory.postgres_url) + 1);
+        cfg->memory.postgres_url = sc_strdup(a, pg_url);
+    }
+    const char *pg_schema = sc_json_get_string(obj, "postgres_schema");
+    if (pg_schema) {
+        if (cfg->memory.postgres_schema) a->free(a->ctx, cfg->memory.postgres_schema, strlen(cfg->memory.postgres_schema) + 1);
+        cfg->memory.postgres_schema = sc_strdup(a, pg_schema);
+    }
+    const char *pg_table = sc_json_get_string(obj, "postgres_table");
+    if (pg_table) {
+        if (cfg->memory.postgres_table) a->free(a->ctx, cfg->memory.postgres_table, strlen(cfg->memory.postgres_table) + 1);
+        cfg->memory.postgres_table = sc_strdup(a, pg_table);
+    }
+    const char *r_host = sc_json_get_string(obj, "redis_host");
+    if (r_host) {
+        if (cfg->memory.redis_host) a->free(a->ctx, cfg->memory.redis_host, strlen(cfg->memory.redis_host) + 1);
+        cfg->memory.redis_host = sc_strdup(a, r_host);
+    }
+    double r_port = sc_json_get_number(obj, "redis_port", cfg->memory.redis_port);
+    if (r_port >= 1 && r_port <= 65535) cfg->memory.redis_port = (uint16_t)r_port;
+    const char *r_prefix = sc_json_get_string(obj, "redis_key_prefix");
+    if (r_prefix) {
+        if (cfg->memory.redis_key_prefix) a->free(a->ctx, cfg->memory.redis_key_prefix, strlen(cfg->memory.redis_key_prefix) + 1);
+        cfg->memory.redis_key_prefix = sc_strdup(a, r_prefix);
+    }
+    const char *api_url = sc_json_get_string(obj, "api_base_url");
+    if (api_url) {
+        if (cfg->memory.api_base_url) a->free(a->ctx, cfg->memory.api_base_url, strlen(cfg->memory.api_base_url) + 1);
+        cfg->memory.api_base_url = sc_strdup(a, api_url);
+    }
+    const char *api_k = sc_json_get_string(obj, "api_key");
+    if (api_k) {
+        if (cfg->memory.api_key) a->free(a->ctx, cfg->memory.api_key, strlen(cfg->memory.api_key) + 1);
+        cfg->memory.api_key = sc_strdup(a, api_k);
+    }
+    double api_tm = sc_json_get_number(obj, "api_timeout_ms", cfg->memory.api_timeout_ms);
+    if (api_tm >= 0 && api_tm <= 300000) cfg->memory.api_timeout_ms = (uint32_t)api_tm;
     return SC_OK;
 }
 

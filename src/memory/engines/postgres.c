@@ -705,9 +705,22 @@ static const sc_memory_vtable_t postgres_vtable = {
     .deinit = impl_deinit,
 };
 
+static bool pg_is_safe_identifier(const char *id) {
+    if (!id || !id[0]) return false;
+    for (const char *p = id; *p; p++) {
+        if (!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') ||
+              (*p >= '0' && *p <= '9') || *p == '_')) return false;
+    }
+    return true;
+}
+
 sc_memory_t sc_postgres_memory_create(sc_allocator_t *alloc,
     const char *url, const char *schema, const char *table) {
     if (!alloc) return (sc_memory_t){ .ctx = NULL, .vtable = NULL };
+    const char *s = schema ? schema : "public";
+    const char *t = table ? table : "memories";
+    if (!pg_is_safe_identifier(s) || !pg_is_safe_identifier(t))
+        return (sc_memory_t){ .ctx = NULL, .vtable = NULL };
 
 #if defined(SC_IS_TEST) && SC_IS_TEST
     (void)url;(void)schema;(void)table;
@@ -732,8 +745,8 @@ sc_memory_t sc_postgres_memory_create(sc_allocator_t *alloc,
         return (sc_memory_t){ .ctx = NULL, .vtable = NULL };
     }
 
-    self->schema_q = sc_strdup(alloc, schema_val);
-    self->table_q = sc_strdup(alloc, table_val);
+    self->schema_q = sc_strdup(alloc, schema);
+    self->table_q = sc_strdup(alloc, table);
     if (!self->schema_q || !self->table_q) {
         if (self->schema_q) alloc->free(alloc->ctx, self->schema_q, strlen(self->schema_q) + 1);
         if (self->table_q) alloc->free(alloc->ctx, self->table_q, strlen(self->table_q) + 1);
