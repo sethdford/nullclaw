@@ -1,0 +1,3 @@
+module SeaClawProtocol {
+    header "/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawProtocol.build/include/SeaClawProtocol-Swift.h"
+}

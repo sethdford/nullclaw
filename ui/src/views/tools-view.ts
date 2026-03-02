@@ -8,11 +8,6 @@ interface ToolDef {
   parameters?: unknown;
 }
 
-function unwrapPayload(res: unknown): unknown {
-  const r = res as { payload?: unknown };
-  return r?.payload ?? res;
-}
-
 @customElement("sc-tools-view")
 export class ScToolsView extends LitElement {
   static override styles = css`
@@ -99,8 +94,10 @@ export class ScToolsView extends LitElement {
   private async loadTools(): Promise<void> {
     if (!this.gateway) return;
     try {
-      const res = await this.gateway.request("tools.catalog", {});
-      const payload = unwrapPayload(res) as { tools?: ToolDef[] };
+      const payload = await this.gateway.request<{ tools?: ToolDef[] }>(
+        "tools.catalog",
+        {},
+      );
       this.tools = payload?.tools ?? [];
     } catch {
       this.tools = [];

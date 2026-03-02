@@ -20,11 +20,6 @@ interface ConfigGetRes {
   default_provider?: string;
 }
 
-function unwrapPayload(res: unknown): unknown {
-  const r = res as { payload?: unknown; result?: unknown };
-  return r?.payload ?? r?.result ?? res;
-}
-
 @customElement("sc-models-view")
 export class ScModelsView extends LitElement {
   static override styles = css`
@@ -149,8 +144,8 @@ export class ScModelsView extends LitElement {
         gw.request<ModelsListRes>("models.list", {}).catch(() => ({})),
         gw.request<ConfigGetRes>("config.get", {}).catch(() => ({})),
       ]);
-      const modelsPayload = unwrapPayload(modelsRes) as ModelsListRes;
-      const configPayload = unwrapPayload(configRes) as ConfigGetRes;
+      const modelsPayload = modelsRes;
+      const configPayload = configRes;
       this.defaultModel =
         modelsPayload?.default_model ?? configPayload?.default_model ?? "";
       this.defaultProvider = configPayload?.default_provider ?? "";

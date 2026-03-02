@@ -23,11 +23,6 @@ interface Capabilities {
   providers?: unknown[];
 }
 
-function unwrapPayload(res: unknown): unknown {
-  const r = res as { payload?: unknown };
-  return r?.payload ?? res;
-}
-
 @customElement("sc-agents-view")
 export class ScAgentsView extends LitElement {
   static override styles = css`
@@ -188,21 +183,18 @@ export class ScAgentsView extends LitElement {
     this.loading = true;
     this.error = "";
     try {
-      const [configRes, sessionsRes, capsRes] = await Promise.all([
-        gw.request("config.get", {}),
-        gw.request("sessions.list", {}),
-        gw.request("capabilities", {}),
+      const [cfg, sess, caps] = await Promise.all([
+        gw.request<Partial<ConfigData>>("config.get", {}),
+        gw.request<{ sessions?: Session[] }>("sessions.list", {}),
+        gw.request<Capabilities>("capabilities", {}),
       ]);
-      const cfg = unwrapPayload(configRes) as Partial<ConfigData>;
       this.config = {
         default_provider: cfg?.default_provider ?? "",
         default_model: cfg?.default_model ?? "",
         temperature: cfg?.temperature ?? 0.7,
         max_tokens: cfg?.max_tokens ?? 0,
       };
-      const sess = unwrapPayload(sessionsRes) as { sessions?: Session[] };
       this.sessions = sess?.sessions ?? [];
-      const caps = unwrapPayload(capsRes) as Capabilities;
       this.capabilities = {
         tools: caps?.tools ?? [],
         channels: caps?.channels ?? [],

@@ -29,11 +29,6 @@ interface SessionItem {
   turn_count?: number;
 }
 
-function unwrapPayload(res: unknown): unknown {
-  const r = res as { payload?: unknown; result?: unknown };
-  return r?.payload ?? r?.result ?? res;
-}
-
 @customElement("sc-overview-view")
 export class ScOverviewView extends LitElement {
   static override styles = css`
@@ -222,13 +217,11 @@ export class ScOverviewView extends LitElement {
           .request<{ sessions?: SessionItem[] }>("sessions.list", {})
           .catch(() => ({ sessions: [] })),
       ]);
-      this.health = unwrapPayload(healthRes) as HealthRes;
-      this.capabilities = unwrapPayload(capRes) as CapabilitiesRes;
-      const chPayload = unwrapPayload(chRes) as { channels?: ChannelItem[] };
+      this.health = healthRes as HealthRes;
+      this.capabilities = capRes as CapabilitiesRes;
+      const chPayload = chRes as { channels?: ChannelItem[] };
       this.channels = chPayload?.channels ?? [];
-      const sessPayload = unwrapPayload(sessRes) as {
-        sessions?: SessionItem[];
-      };
+      const sessPayload = sessRes as { sessions?: SessionItem[] };
       this.sessions = sessPayload?.sessions ?? [];
     } catch (e) {
       this.error = e instanceof Error ? e.message : "Failed to load overview";

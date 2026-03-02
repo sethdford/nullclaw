@@ -23,11 +23,6 @@ interface ConfigData {
   temperature?: number;
 }
 
-function unwrapPayload(res: unknown): unknown {
-  const r = res as { payload?: unknown };
-  return r?.payload ?? res;
-}
-
 function toRawConfig(edited: ConfigData): Record<string, unknown> {
   return {
     workspace: edited.workspace_dir ?? ".",
@@ -214,8 +209,10 @@ export class ScConfigView extends LitElement {
   private async loadConfig(): Promise<void> {
     if (!this.gateway) return;
     try {
-      const res = await this.gateway.request("config.get", {});
-      const cfg = unwrapPayload(res) as Partial<ConfigData>;
+      const cfg = await this.gateway.request<Partial<ConfigData>>(
+        "config.get",
+        {},
+      );
       this.config = {
         exists: cfg?.exists ?? false,
         workspace_dir: cfg?.workspace_dir ?? "",
@@ -236,12 +233,10 @@ export class ScConfigView extends LitElement {
   private async loadSchema(): Promise<void> {
     if (!this.gateway) return;
     try {
-      const res = (await this.gateway.request("config.schema", {})) as {
+      const res = await this.gateway.request<{
         schema?: ConfigSchema;
-      };
-      const s =
-        (unwrapPayload(res) as { schema?: ConfigSchema })?.schema ??
-        res?.schema;
+      }>("config.schema", {});
+      const s = res?.schema;
       this.schema = s ?? { type: "object", properties: {} };
     } catch {
       this.schema = {
@@ -306,8 +301,10 @@ export class ScConfigView extends LitElement {
       } else {
         raw = JSON.stringify(toRawConfig(this.edited));
       }
-      const res = await this.gateway.request("config.set", { raw });
-      const payload = unwrapPayload(res) as { saved?: boolean };
+      const payload = await this.gateway.request<{ saved?: boolean }>(
+        "config.set",
+        { raw },
+      );
       if (payload?.saved !== false) {
         if (this.rawMode) {
           try {

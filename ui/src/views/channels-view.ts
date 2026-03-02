@@ -11,11 +11,6 @@ interface ChannelStatus {
   [key: string]: unknown;
 }
 
-function unwrapPayload(res: unknown): unknown {
-  const r = res as { payload?: unknown };
-  return r?.payload ?? res;
-}
-
 @customElement("sc-channels-view")
 export class ScChannelsView extends LitElement {
   static override styles = css`
@@ -82,8 +77,9 @@ export class ScChannelsView extends LitElement {
   private async loadChannels(): Promise<void> {
     if (!this.gateway) return;
     try {
-      const res = await this.gateway.request("channels.status", {});
-      const payload = unwrapPayload(res) as { channels?: ChannelStatus[] };
+      const payload = await this.gateway.request<{
+        channels?: ChannelStatus[];
+      }>("channels.status", {});
       this.channels = payload?.channels ?? [];
     } catch {
       this.channels = [];

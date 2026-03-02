@@ -9,11 +9,6 @@ interface NodeItem {
   ws_connections?: number;
 }
 
-function unwrapPayload(res: unknown): unknown {
-  const r = res as { payload?: unknown };
-  return r?.payload ?? res;
-}
-
 @customElement("sc-nodes-view")
 export class ScNodesView extends LitElement {
   static override styles = css`
@@ -169,13 +164,11 @@ export class ScNodesView extends LitElement {
     this.loading = true;
     this.error = "";
     try {
-      const [nodesRes, healthRes] = await Promise.all([
-        gw.request("nodes.list", {}),
-        gw.request("health", {}),
+      const [nodesPayload, healthPayload] = await Promise.all([
+        gw.request<{ nodes?: NodeItem[] }>("nodes.list", {}),
+        gw.request<{ status?: string }>("health", {}),
       ]);
-      const nodesPayload = unwrapPayload(nodesRes) as { nodes?: NodeItem[] };
       this.nodes = nodesPayload?.nodes ?? [];
-      const healthPayload = unwrapPayload(healthRes) as { status?: string };
       this.healthStatus = healthPayload?.status ?? "unknown";
     } catch (e) {
       this.error = e instanceof Error ? e.message : "Failed to load";

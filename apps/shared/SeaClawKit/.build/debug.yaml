@@ -1,0 +1,91 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "PackageStructure": ["<PackageStructure>"]
+  "SeaClawChatUI-arm64-apple-macosx26.0-debug.module": ["<SeaClawChatUI-arm64-apple-macosx26.0-debug.module>"]
+  "SeaClawClient-arm64-apple-macosx26.0-debug.module": ["<SeaClawClient-arm64-apple-macosx26.0-debug.module>"]
+  "SeaClawProtocol-arm64-apple-macosx26.0-debug.module": ["<SeaClawProtocol-arm64-apple-macosx26.0-debug.module>"]
+  "main": ["<SeaClawChatUI-arm64-apple-macosx26.0-debug.module>","<SeaClawClient-arm64-apple-macosx26.0-debug.module>","<SeaClawProtocol-arm64-apple-macosx26.0-debug.module>"]
+  "test": ["<SeaClawChatUI-arm64-apple-macosx26.0-debug.module>","<SeaClawClient-arm64-apple-macosx26.0-debug.module>","<SeaClawProtocol-arm64-apple-macosx26.0-debug.module>"]
+default: "main"
+nodes:
+  "/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawChatUI/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawClient/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawProtocol/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawChatUI.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawChatUI/ChatBubble.swift","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawChatUI/ChatInputBar.swift","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawChatUI/ToolCallCard.swift"]
+    outputs: ["/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawChatUI.build/sources"]
+    description: "Write auxiliary file /Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawChatUI.build/sources"
+
+  "/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawClient.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawClient/SeaClawConnection.swift"]
+    outputs: ["/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawClient.build/sources"]
+    description: "Write auxiliary file /Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawClient.build/sources"
+
+  "/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawProtocol.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawProtocol/ControlFrame.swift","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawProtocol/Methods.swift"]
+    outputs: ["/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawProtocol.build/sources"]
+    description: "Write auxiliary file /Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawProtocol.build/sources"
+
+  "/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"]
+    outputs: ["/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+
+  "<SeaClawChatUI-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawChatUI.build/ChatBubble.swift.o","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawChatUI.build/ChatInputBar.swift.o","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawChatUI.build/ToolCallCard.swift.o","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/Modules/SeaClawChatUI.swiftmodule"]
+    outputs: ["<SeaClawChatUI-arm64-apple-macosx26.0-debug.module>"]
+
+  "<SeaClawClient-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawClient.build/SeaClawConnection.swift.o","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/Modules/SeaClawClient.swiftmodule"]
+    outputs: ["<SeaClawClient-arm64-apple-macosx26.0-debug.module>"]
+
+  "<SeaClawProtocol-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawProtocol.build/ControlFrame.swift.o","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawProtocol.build/Methods.swift.o","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/Modules/SeaClawProtocol.swiftmodule"]
+    outputs: ["<SeaClawProtocol-arm64-apple-macosx26.0-debug.module>"]
+
+  "C.SeaClawChatUI-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawChatUI/ChatBubble.swift","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawChatUI/ChatInputBar.swift","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawChatUI/ToolCallCard.swift","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/Modules/SeaClawProtocol.swiftmodule","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawChatUI.build/sources"]
+    outputs: ["/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawChatUI.build/ChatBubble.swift.o","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawChatUI.build/ChatInputBar.swift.o","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawChatUI.build/ToolCallCard.swift.o","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/Modules/SeaClawChatUI.swiftmodule"]
+    description: "Compiling Swift Module 'SeaClawChatUI' (3 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","SeaClawChatUI","-emit-dependencies","-emit-module","-emit-module-path","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/Modules/SeaClawChatUI.swiftmodule","-output-file-map","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawChatUI.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawChatUI.build/sources","-I","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j16","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawChatUI.build/include/SeaClawChatUI-Swift.h","-swift-version","5","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","seaclawkit"]
+
+  "C.SeaClawClient-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawClient/SeaClawConnection.swift","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/Modules/SeaClawProtocol.swiftmodule","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawClient.build/sources"]
+    outputs: ["/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawClient.build/SeaClawConnection.swift.o","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/Modules/SeaClawClient.swiftmodule"]
+    description: "Compiling Swift Module 'SeaClawClient' (1 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","SeaClawClient","-emit-dependencies","-emit-module","-emit-module-path","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/Modules/SeaClawClient.swiftmodule","-output-file-map","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawClient.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawClient.build/sources","-I","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j16","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawClient.build/include/SeaClawClient-Swift.h","-swift-version","5","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","seaclawkit"]
+
+  "C.SeaClawProtocol-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawProtocol/ControlFrame.swift","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawProtocol/Methods.swift","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawProtocol.build/sources"]
+    outputs: ["/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawProtocol.build/ControlFrame.swift.o","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawProtocol.build/Methods.swift.o","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/Modules/SeaClawProtocol.swiftmodule"]
+    description: "Compiling Swift Module 'SeaClawProtocol' (2 sources)"
+    args: ["/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc","-module-name","SeaClawProtocol","-emit-dependencies","-emit-module","-emit-module-path","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/Modules/SeaClawProtocol.swiftmodule","-output-file-map","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawProtocol.build/output-file-map.json","-parse-as-library","-incremental","-c","@/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawProtocol.build/sources","-I","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx14.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j16","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-parse-as-library","-emit-objc-header","-emit-objc-header-path","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/.build/arm64-apple-macosx/debug/SeaClawProtocol.build/include/SeaClawProtocol-Swift.h","-swift-version","5","-plugin-path","/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing","-sdk","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-F","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-I","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-L","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib","-g","-Xcc","-isysroot","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks","-Xcc","-F","-Xcc","/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks","-Xcc","-fPIC","-Xcc","-g","-package-name","seaclawkit"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawChatUI/","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawClient/","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Sources/SeaClawProtocol/","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Package.swift","/Users/sethford/Documents/nullclaw/apps/shared/SeaClawKit/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+
