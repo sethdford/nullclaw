@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
+#include <strings.h>
 
 /* Sandbox vtable interface for OS-level isolation. */
 
@@ -152,10 +153,10 @@ static inline bool sc_net_proxy_domain_allowed(const sc_net_proxy_t *proxy,
     const char *domain) {
     if (!proxy || !proxy->enabled) return true;
     if (proxy->deny_all && proxy->allowed_domains_count == 0) return false;
-    if (!domain) return false;
+    if (!domain || !domain[0]) return false;
     for (size_t i = 0; i < proxy->allowed_domains_count; i++) {
         if (proxy->allowed_domains[i] &&
-            strcmp(proxy->allowed_domains[i], domain) == 0)
+            strcasecmp(proxy->allowed_domains[i], domain) == 0)
             return true;
         /* Wildcard subdomain matching: *.example.com matches sub.example.com */
         if (proxy->allowed_domains[i] &&
@@ -165,7 +166,7 @@ static inline bool sc_net_proxy_domain_allowed(const sc_net_proxy_t *proxy,
             size_t slen = strlen(suffix);
             size_t dlen = strlen(domain);
             if (dlen >= slen &&
-                strcmp(domain + dlen - slen, suffix) == 0)
+                strcasecmp(domain + dlen - slen, suffix) == 0)
                 return true;
         }
     }

@@ -723,6 +723,8 @@ static sc_error_t cmd_skills(sc_allocator_t *alloc, int argc, char **argv) {
     fprintf(stderr, "  seaclaw skills install <name>\n");
     fprintf(stderr, "  seaclaw skills uninstall <name>\n");
     fprintf(stderr, "  seaclaw skills update\n");
+    fprintf(stderr, "  seaclaw skills info <name>\n");
+    fprintf(stderr, "  seaclaw skills publish [directory]\n");
     return SC_ERR_INVALID_ARGUMENT;
 }
 

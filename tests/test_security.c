@@ -1224,6 +1224,30 @@ static void test_net_proxy_add_null_domain(void) {
     SC_ASSERT_FALSE(sc_net_proxy_allow_domain(NULL, "test.com"));
 }
 
+static void test_net_proxy_case_insensitive(void) {
+    sc_net_proxy_t proxy;
+    sc_net_proxy_init_deny_all(&proxy);
+    sc_net_proxy_allow_domain(&proxy, "Example.COM");
+    SC_ASSERT(sc_net_proxy_domain_allowed(&proxy, "example.com"));
+    SC_ASSERT(sc_net_proxy_domain_allowed(&proxy, "EXAMPLE.COM"));
+    SC_ASSERT(sc_net_proxy_domain_allowed(&proxy, "Example.Com"));
+}
+
+static void test_net_proxy_wildcard_case_insensitive(void) {
+    sc_net_proxy_t proxy;
+    sc_net_proxy_init_deny_all(&proxy);
+    sc_net_proxy_allow_domain(&proxy, "*.Example.COM");
+    SC_ASSERT(sc_net_proxy_domain_allowed(&proxy, "sub.example.com"));
+    SC_ASSERT(sc_net_proxy_domain_allowed(&proxy, "SUB.EXAMPLE.COM"));
+}
+
+static void test_net_proxy_empty_domain_rejected(void) {
+    sc_net_proxy_t proxy;
+    sc_net_proxy_init_deny_all(&proxy);
+    sc_net_proxy_allow_domain(&proxy, "example.com");
+    SC_ASSERT_FALSE(sc_net_proxy_domain_allowed(&proxy, ""));
+}
+
 /* --- Seatbelt truncated profile guard --- */
 static void test_seatbelt_wrap_fails_on_truncated_profile(void) {
     sc_seatbelt_ctx_t ctx;
@@ -1412,6 +1436,9 @@ void run_security_tests(void) {
     SC_TEST_SUITE("Network Proxy — Edge Cases");
     SC_RUN_TEST(test_net_proxy_null_domain);
     SC_RUN_TEST(test_net_proxy_add_null_domain);
+    SC_RUN_TEST(test_net_proxy_case_insensitive);
+    SC_RUN_TEST(test_net_proxy_wildcard_case_insensitive);
+    SC_RUN_TEST(test_net_proxy_empty_domain_rejected);
 
     SC_TEST_SUITE("Observer");
     SC_RUN_TEST(test_observer_noop);

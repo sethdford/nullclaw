@@ -18,7 +18,7 @@
 The smallest fully autonomous AI assistant infrastructure — a static C binary that fits on any $5 board, boots in milliseconds, and requires nothing but libc.
 
 ```
-282 KB binary · <2 ms startup · 1,946 tests · 50+ providers · 20 channels · 47 tools · Pluggable everything
+282 KB binary · <2 ms startup · 3,400+ tests · 50+ providers · 20 channels · 47 tools · Pluggable everything
 ```
 
 ### Features
@@ -57,8 +57,15 @@ SeaClaw's verified numbers (measured on macOS arm64, March 2026):
 Binary size:   282 KB core / 380 KB full (MinSizeRel + LTO)
 Peak RSS:      < 5 MB
 Startup:       <2 ms (Apple Silicon M4 Max)
-Tests:         1,946 passing, 0 ASan errors
+Tests:         3,400+ passing, 0 ASan errors
 ```
+
+### Why Switch from OpenClaw?
+
+- **Security:** Encrypted secrets (ChaCha20-Poly1305) vs plain-text API keys; curated skill registry with no malicious packages.
+- **Cost:** $5 hardware vs $599+ setup; no $300/mo API overhead from bloated runtime.
+- **Supply chain:** 0 dependencies vs 1,200+ npm packages.
+- **Privacy:** Single binary, no telemetry, full data ownership.
 
 Reproduce locally:
 
@@ -497,7 +504,9 @@ Use `channels.web` for browser UI events (WebChannel v1):
 | `status`                                          | Show full system status                                |
 | `channel status`                                  | Show channel health/status                             |
 | `cron list\|add\|remove\|pause\|resume\|run`      | Manage scheduled tasks                                 |
-| `skills list\|install\|remove\|info`              | Manage skill packs                                     |
+| `skills list\|install\|remove\|info\|search`      | Manage skill packs                                     |
+| `skills info <name>`                              | Show skill details                                     |
+| `skills publish`                                  | Publish skill to registry                              |
 | `hardware scan\|flash\|monitor`                   | Hardware device management                             |
 | `models list\|info\|benchmark`                    | Model catalog                                          |
 | `migrate openclaw [--dry-run] [--source PATH]`    | Import memory + migrate config from OpenClaw           |
@@ -510,7 +519,7 @@ Build and tests require a C11 compiler and CMake 3.16+.
 mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Debug -DSC_ENABLE_ALL_CHANNELS=ON
 cmake --build .                            # Dev build
-./seaclaw_tests                             # 1,946 tests
+./seaclaw_tests                             # 3,400+ tests
 cd ..
 ```
 
@@ -548,7 +557,7 @@ Language: C11 + ASM (aarch64, x86_64)
 Source files: 432
 Lines of code: ~64,000
 Test files: 71
-Tests: 1,946
+Tests: 3,400+
 Binary: 282 KB core / 380 KB full (MinSizeRel + LTO)
 Peak RSS: < 5 MB
 Startup: <2 ms (Apple Silicon)
@@ -576,7 +585,7 @@ config.c Config loading/merging (~/.seaclaw/config.json)
 ...
 
 include/seaclaw/ Public C headers
-tests/ 71 test files, 1,946 tests
+tests/ 71 test files, 3,400+ tests
 asm/ Platform-specific assembly (aarch64, x86_64, generic C)
 
 ```
@@ -600,7 +609,7 @@ Implement a vtable interface, submit a PR:
 - New `Tunnel` -> `src/tunnel/`
 - New `Sandbox` backend -> `src/security/`
 - New `Peripheral` -> `src/peripherals/`
-- New `Skill` -> `~/.seaclaw/workspace/skills/<name>/`
+- New `Skill` -> `skills/` directory or submit to the [skill registry](https://github.com/seaclaw/skill-registry)
 
 ## Disclaimer
 

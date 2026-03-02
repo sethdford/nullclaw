@@ -113,6 +113,18 @@ static void test_skill_registry_get_installed_dir(void) {
     if (n >= 6) SC_ASSERT_TRUE(strstr(buf, "skills") != NULL);
 }
 
+static void test_skill_registry_publish_mock(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_error_t err = sc_skill_registry_publish(&alloc, "/tmp/skill");
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
+static void test_skill_registry_publish_null_dir(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_error_t err = sc_skill_registry_publish(&alloc, NULL);
+    SC_ASSERT(err != SC_OK);
+}
+
 void run_skills_tests(void) {
     SC_TEST_SUITE("Skills");
     SC_RUN_TEST(test_skills_list_delegates_to_skillforge);
@@ -127,4 +139,6 @@ void run_skills_tests(void) {
     SC_RUN_TEST(test_skill_registry_install_mock);
     SC_RUN_TEST(test_skill_registry_uninstall_mock);
     SC_RUN_TEST(test_skill_registry_get_installed_dir);
+    SC_RUN_TEST(test_skill_registry_publish_mock);
+    SC_RUN_TEST(test_skill_registry_publish_null_dir);
 }

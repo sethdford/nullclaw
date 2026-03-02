@@ -99,7 +99,7 @@ TOOL_TEST_3(memory_list, sc_memory_list_create, "memory_list", &alloc, NULL)
 TOOL_TEST_3(memory_forget, sc_memory_forget_create, "memory_forget", &alloc, NULL)
 
 TOOL_TEST_3(message, sc_message_create, "message", &alloc, NULL)
-TOOL_TEST_3(delegate, sc_delegate_create, "delegate", &alloc)
+TOOL_TEST_3(delegate, sc_delegate_create, "delegate", &alloc, NULL)
 TOOL_TEST_3(cron_add, sc_cron_add_create, "cron_add", &alloc)
 TOOL_TEST_3(cron_list, sc_cron_list_create, "cron_list", &alloc)
 TOOL_TEST_3(cron_remove, sc_cron_remove_create, "cron_remove", &alloc)
@@ -120,14 +120,14 @@ TOOL_TEST_3(spi, sc_spi_create, "spi", &alloc, NULL, 0)
 static void test_claude_code_create(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_tool_t tool;
-    sc_error_t err = sc_claude_code_create(&alloc, &tool);
+    sc_error_t err = sc_claude_code_create(&alloc, NULL, &tool);
     SC_ASSERT_EQ(err, SC_OK);
     if (tool.vtable && tool.vtable->deinit) tool.vtable->deinit(tool.ctx, &alloc);
 }
 static void test_claude_code_name(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_tool_t tool;
-    sc_error_t err = sc_claude_code_create(&alloc, &tool);
+    sc_error_t err = sc_claude_code_create(&alloc, NULL, &tool);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_STR_EQ(tool.vtable->name(tool.ctx), "claude_code");
     if (tool.vtable && tool.vtable->deinit) tool.vtable->deinit(tool.ctx, &alloc);
@@ -135,7 +135,7 @@ static void test_claude_code_name(void) {
 static void test_claude_code_description(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_tool_t tool;
-    sc_claude_code_create(&alloc, &tool);
+    sc_claude_code_create(&alloc, NULL, &tool);
     const char *desc = tool.vtable->description(tool.ctx);
     SC_ASSERT_NOT_NULL(desc);
     SC_ASSERT_TRUE(strlen(desc) > 0);
@@ -145,7 +145,7 @@ static void test_claude_code_description(void) {
 static void test_claude_code_execute_empty(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_tool_t tool;
-    sc_claude_code_create(&alloc, &tool);
+    sc_claude_code_create(&alloc, NULL, &tool);
     sc_json_value_t *args = sc_json_object_new(&alloc);
     SC_ASSERT_NOT_NULL(args);
     sc_tool_result_t result;
@@ -161,7 +161,7 @@ static void test_claude_code_execute_empty(void) {
 static void test_claude_code_execute_with_prompt(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_tool_t tool;
-    sc_claude_code_create(&alloc, &tool);
+    sc_claude_code_create(&alloc, NULL, &tool);
     sc_json_value_t *args = sc_json_object_new(&alloc);
     sc_json_value_t *prompt_val = sc_json_string_new(&alloc, "fix the bug", 11);
     sc_json_object_set(&alloc, args, "prompt", prompt_val);
@@ -178,7 +178,7 @@ static void test_claude_code_execute_with_prompt(void) {
 static void test_claude_code_execute_with_model_and_dir(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_tool_t tool;
-    sc_claude_code_create(&alloc, &tool);
+    sc_claude_code_create(&alloc, NULL, &tool);
     sc_json_value_t *args = sc_json_object_new(&alloc);
     sc_json_object_set(&alloc, args, "prompt",
         sc_json_string_new(&alloc, "refactor", 8));

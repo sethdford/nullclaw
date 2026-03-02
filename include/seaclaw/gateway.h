@@ -33,6 +33,10 @@ typedef struct sc_gateway_config {
     /* Control UI: directory containing static files to serve (SPA) */
     const char *control_ui_dir;
 
+    /* CORS allowed origins (NULL/0 = localhost only). Configurable for deployments. */
+    const char *const *cors_origins;
+    size_t cors_origins_len;
+
     /* Auth token for WebSocket connections (NULL = localhost-only auto-approve) */
     const char *auth_token;
 

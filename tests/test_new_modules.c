@@ -1,4 +1,5 @@
 #include "test_framework.h"
+#include "seaclaw/gateway/push.h"
 #include "seaclaw/config_types.h"
 #include "seaclaw/portable_atomic.h"
 #include "seaclaw/context_tokens.h"
@@ -944,6 +945,87 @@ static void test_choices_prompt_zero_count_rejected(void) {
     SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
 }
 
+/* ─── Push notification tests ───────────────────────────────────────────── */
+static void test_push_init_deinit(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_error_t err = sc_push_init(&mgr, &alloc, &config);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(mgr.token_count, 0u);
+    SC_ASSERT_EQ(mgr.token_cap, 4u);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_register_token(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_error_t err = sc_push_register_token(&mgr, "dev-token-123", SC_PUSH_FCM);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(mgr.token_count, 1u);
+    SC_ASSERT_STR_EQ(mgr.tokens[0].device_token, "dev-token-123");
+    SC_ASSERT_EQ(mgr.tokens[0].provider, SC_PUSH_FCM);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_register_duplicate(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "dup-token", SC_PUSH_FCM);
+    sc_error_t err = sc_push_register_token(&mgr, "dup-token", SC_PUSH_FCM);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(mgr.token_count, 1u);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_unregister_token(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "to-remove", SC_PUSH_FCM);
+    SC_ASSERT_EQ(mgr.token_count, 1u);
+    sc_error_t err = sc_push_unregister_token(&mgr, "to-remove");
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(mgr.token_count, 0u);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_send_no_tokens(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_error_t err = sc_push_send(&mgr, "Title", "Body", NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_send_mock(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "mock-token", SC_PUSH_FCM);
+    sc_error_t err = sc_push_send(&mgr, "Test", "Message", "{\"x\":1}");
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_send_to_mock(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_error_t err = sc_push_send_to(&mgr, "specific-token", "Hi", "There", NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_push_deinit(&mgr);
+}
+
 void run_new_modules_tests(void) {
     SC_TEST_SUITE("New Modules");
     SC_RUN_TEST(test_config_types_constants);
@@ -1050,4 +1132,13 @@ void run_new_modules_tests(void) {
     SC_RUN_TEST(test_choices_confirm_default_no);
     SC_RUN_TEST(test_choices_prompt_null_choices_rejected);
     SC_RUN_TEST(test_choices_prompt_zero_count_rejected);
+
+    /* Push notification */
+    SC_RUN_TEST(test_push_init_deinit);
+    SC_RUN_TEST(test_push_register_token);
+    SC_RUN_TEST(test_push_register_duplicate);
+    SC_RUN_TEST(test_push_unregister_token);
+    SC_RUN_TEST(test_push_send_no_tokens);
+    SC_RUN_TEST(test_push_send_mock);
+    SC_RUN_TEST(test_push_send_to_mock);
 }

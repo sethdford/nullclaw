@@ -138,7 +138,7 @@ sc_error_t sc_onboard_run(sc_allocator_t *alloc) {
 #ifdef _WIN32
     (void)_mkdir(config_dir);
 #else
-    (void)mkdir(config_dir, 0755);
+    (void)mkdir(config_dir, 0700);
 #endif
 
     char config_path[SC_MAX_PATH];
@@ -152,7 +152,7 @@ sc_error_t sc_onboard_run(sc_allocator_t *alloc) {
 #ifdef _WIN32
     (void)_mkdir(ws_dir);
 #else
-    (void)mkdir(ws_dir, 0755);
+    (void)mkdir(ws_dir, 0700);
 #endif
 
     /* Scaffold workspace templates (write only if missing) */

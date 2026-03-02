@@ -350,3 +350,55 @@ tts_fail:
     return SC_ERR_OUT_OF_MEMORY;
 #endif
 }
+
+sc_error_t sc_voice_play(sc_allocator_t *alloc, const void *audio_data, size_t audio_len)
+{
+    if (!alloc) return SC_ERR_INVALID_ARGUMENT;
+    if (!audio_data && audio_len > 0) return SC_ERR_INVALID_ARGUMENT;
+
+#if SC_IS_TEST
+    (void)audio_data;
+    (void)audio_len;
+    return SC_OK;
+#else
+    char *tmp_dir = sc_platform_get_temp_dir(alloc);
+    if (!tmp_dir) return SC_ERR_IO;
+
+    char tmp_path[256];
+    int n = snprintf(tmp_path, sizeof(tmp_path), "%s/seaclaw_tts_%d.mp3", tmp_dir, get_pid());
+    alloc->free(alloc->ctx, tmp_dir, strlen(tmp_dir) + 1);
+    if (n < 0 || (size_t)n >= sizeof(tmp_path)) return SC_ERR_IO;
+
+    FILE *f = fopen(tmp_path, "wb");
+    if (!f) return SC_ERR_IO;
+    if (audio_len > 0 && fwrite(audio_data, 1, audio_len, f) != audio_len) {
+        fclose(f);
+        unlink(tmp_path);
+        return SC_ERR_IO;
+    }
+    fclose(f);
+
+#if defined(__APPLE__)
+    const char *argv[] = { "afplay", tmp_path, NULL };
+    sc_run_result_t result = {0};
+    sc_error_t err = sc_process_run(alloc, argv, NULL, 64 * 1024, &result);
+    sc_run_result_free(alloc, &result);
+#elif defined(__linux__)
+    const char *argv_pa[] = { "paplay", tmp_path, NULL };
+    sc_run_result_t result = {0};
+    sc_error_t err = sc_process_run(alloc, argv_pa, NULL, 64 * 1024, &result);
+    if (err != SC_OK || !result.success) {
+        sc_run_result_free(alloc, &result);
+        const char *argv_a[] = { "aplay", tmp_path, NULL };
+        err = sc_process_run(alloc, argv_a, NULL, 64 * 1024, &result);
+    }
+    sc_run_result_free(alloc, &result);
+#else
+    unlink(tmp_path);
+    return SC_ERR_NOT_SUPPORTED;
+#endif
+
+    unlink(tmp_path);
+    return err;
+#endif
+}

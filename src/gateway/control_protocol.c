@@ -50,7 +50,7 @@ static sc_error_t build_connect_response(sc_allocator_t *alloc,
         "cron.add", "cron.remove", "cron.run", "skills.list", "skills.install",
         "skills.enable", "skills.disable",
         "update.check", "update.run", "exec.approval.resolve",
-        "usage.summary"
+        "usage.summary", "models.list", "nodes.list"
     };
     for (size_t i = 0; i < sizeof(methods) / sizeof(methods[0]); i++) {
         sc_json_value_t *m = sc_json_string_new(alloc, methods[i],
@@ -774,6 +774,65 @@ static sc_error_t handle_skills_install(sc_allocator_t *alloc,
     return err;
 }
 
+/* ── models.list ─────────────────────────────────────────────────────── */
+
+static sc_error_t handle_models_list(sc_allocator_t *alloc,
+    const sc_app_context_t *app, char **out, size_t *out_len) {
+    sc_json_value_t *obj = sc_json_object_new(alloc);
+    if (!obj) return SC_ERR_OUT_OF_MEMORY;
+
+    sc_json_value_t *arr = sc_json_array_new(alloc);
+
+    if (app && app->config && app->config->providers) {
+        for (size_t i = 0; i < app->config->providers_len; i++) {
+            sc_provider_entry_t *pe = &app->config->providers[i];
+            sc_json_value_t *p = sc_json_object_new(alloc);
+            json_set_str(alloc, p, "name", pe->name);
+            sc_json_object_set(alloc, p, "has_key",
+                sc_json_bool_new(alloc, pe->api_key && pe->api_key[0]));
+            json_set_str(alloc, p, "base_url", pe->base_url);
+            sc_json_object_set(alloc, p, "native_tools",
+                sc_json_bool_new(alloc, pe->native_tools));
+            sc_json_object_set(alloc, p, "is_default",
+                sc_json_bool_new(alloc,
+                    app->config->default_provider &&
+                    strcmp(pe->name, app->config->default_provider) == 0));
+            sc_json_array_push(alloc, arr, p);
+        }
+    }
+
+    json_set_str(alloc, obj, "default_model",
+        (app && app->config) ? app->config->default_model : "");
+    sc_json_object_set(alloc, obj, "providers", arr);
+    sc_error_t err = sc_json_stringify(alloc, obj, out, out_len);
+    sc_json_free(alloc, obj);
+    return err;
+}
+
+/* ── nodes.list ──────────────────────────────────────────────────────── */
+
+static sc_error_t handle_nodes_list(sc_allocator_t *alloc,
+    const sc_app_context_t *app, char **out, size_t *out_len) {
+    sc_json_value_t *obj = sc_json_object_new(alloc);
+    if (!obj) return SC_ERR_OUT_OF_MEMORY;
+
+    sc_json_value_t *arr = sc_json_array_new(alloc);
+
+    sc_json_value_t *local = sc_json_object_new(alloc);
+    json_set_str(alloc, local, "id", "local");
+    json_set_str(alloc, local, "type", "gateway");
+    json_set_str(alloc, local, "status", "online");
+    sc_json_object_set(alloc, local, "ws_connections",
+        sc_json_number_new(alloc,
+            (app && app->config) ? 1.0 : 0.0));
+    sc_json_array_push(alloc, arr, local);
+
+    sc_json_object_set(alloc, obj, "nodes", arr);
+    sc_error_t err = sc_json_stringify(alloc, obj, out, out_len);
+    sc_json_free(alloc, obj);
+    return err;
+}
+
 /* ── update.check ────────────────────────────────────────────────────── */
 
 static sc_error_t handle_update_check(sc_allocator_t *alloc, char **out,
@@ -935,6 +994,10 @@ static sc_error_t build_method_response(sc_allocator_t *alloc,
         return handle_exec_approval(alloc, app, root, payload_out, payload_len_out);
     if (strcmp(method, "usage.summary") == 0)
         return handle_usage_summary(alloc, app, payload_out, payload_len_out);
+    if (strcmp(method, "models.list") == 0)
+        return handle_models_list(alloc, app, payload_out, payload_len_out);
+    if (strcmp(method, "nodes.list") == 0)
+        return handle_nodes_list(alloc, app, payload_out, payload_len_out);
 
     return SC_ERR_NOT_FOUND;
 }

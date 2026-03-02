@@ -141,7 +141,7 @@ sc_error_t sc_tools_create_default(sc_allocator_t *alloc,
     if (err != SC_OK) goto fail;
     idx++;
 
-    err = sc_delegate_create(alloc, &tools[idx]);
+    err = sc_delegate_create(alloc, policy, &tools[idx]);
     if (err != SC_OK) goto fail;
     idx++;
 
@@ -212,7 +212,7 @@ sc_error_t sc_tools_create_default(sc_allocator_t *alloc,
     if (err != SC_OK) goto fail;
     idx++;
 
-    err = sc_claude_code_create(alloc, &tools[idx]);
+    err = sc_claude_code_create(alloc, policy, &tools[idx]);
     if (err != SC_OK) goto fail;
     idx++;
 
