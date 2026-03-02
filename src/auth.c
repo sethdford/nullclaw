@@ -4,6 +4,7 @@
 #include "seaclaw/core/json.h"
 #include "seaclaw/core/string.h"
 #include "seaclaw/core/http.h"
+#include "seaclaw/security.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
@@ -78,28 +79,48 @@ sc_error_t sc_auth_save_credential(sc_allocator_t *alloc,
     if (!alloc || !provider || !token) return SC_ERR_INVALID_ARGUMENT;
     char *path = auth_file_path(alloc);
     if (!path) return SC_ERR_IO;
-    /* TODO: Encrypt credentials using sc_secret_store before writing to disk */
-    /* Simplified: overwrite with single provider. Full impl would merge. */
+    /* Encrypt credentials via sc_secret_store (falls back to plaintext if unavailable) */
+    char config_dir[512];
+    snprintf(config_dir, sizeof(config_dir), "%.*s",
+        (int)(strrchr(path, '/') ? (size_t)(strrchr(path, '/') - path) : 0), path);
+    sc_secret_store_t *store = sc_secret_store_create(alloc, config_dir, true);
+
     int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     alloc->free(alloc->ctx, path, strlen(path) + 1);
-    if (fd < 0) return SC_ERR_IO;
+    if (fd < 0) {
+        if (store) sc_secret_store_destroy(store, alloc);
+        return SC_ERR_IO;
+    }
     FILE *f = fdopen(fd, "w");
     if (!f) {
         close(fd);
+        if (store) sc_secret_store_destroy(store, alloc);
         return SC_ERR_IO;
     }
+
+    char *enc_access = NULL;
+    char *enc_refresh = NULL;
+    if (store && token->access_token) {
+        (void)sc_secret_store_encrypt(store, alloc, token->access_token, &enc_access);
+    }
+    if (store && token->refresh_token) {
+        (void)sc_secret_store_encrypt(store, alloc, token->refresh_token, &enc_refresh);
+    }
+    const char *access_out = enc_access ? enc_access : token->access_token;
+    const char *refresh_out = enc_refresh ? enc_refresh : token->refresh_token;
+
     fprintf(f, "{\"%s\":{", provider);
     fprintf(f, "\"access_token\":\"");
-    for (const char *p = token->access_token; p && *p; p++) {
+    for (const char *p = access_out; p && *p; p++) {
         if (*p == '"' || *p == '\\') fputc('\\', f);
         fputc(*p, f);
     }
     fprintf(f, "\",\"expires_at\":%lld,\"token_type\":\"%s\"",
             (long long)token->expires_at,
             token->token_type ? token->token_type : "Bearer");
-    if (token->refresh_token) {
+    if (refresh_out) {
         fprintf(f, ",\"refresh_token\":\"");
-        for (const char *p = token->refresh_token; p && *p; p++) {
+        for (const char *p = refresh_out; p && *p; p++) {
             if (*p == '"' || *p == '\\') fputc('\\', f);
             fputc(*p, f);
         }
@@ -107,6 +128,9 @@ sc_error_t sc_auth_save_credential(sc_allocator_t *alloc,
     }
     fprintf(f, "}}\n");
     fclose(f);
+    if (enc_access) alloc->free(alloc->ctx, enc_access, strlen(enc_access) + 1);
+    if (enc_refresh) alloc->free(alloc->ctx, enc_refresh, strlen(enc_refresh) + 1);
+    if (store) sc_secret_store_destroy(store, alloc);
     return SC_OK;
 }
 
@@ -143,15 +167,45 @@ sc_error_t sc_auth_load_credential(sc_allocator_t *alloc,
         sc_json_free(alloc, root);
         return SC_OK;
     }
-    token_out->access_token = sc_strdup(alloc, at);
+
+    /* Decrypt if encrypted (enc2: prefix) */
+    char *decrypted_at = NULL;
+    char *decrypted_rt = NULL;
+    sc_secret_store_t *store = NULL;
+    if (strncmp(at, "enc2:", 5) == 0) {
+        char *lpath = auth_file_path(alloc);
+        if (lpath) {
+            char cdir[512];
+            const char *slash = strrchr(lpath, '/');
+            if (slash) {
+                size_t dlen = (size_t)(slash - lpath);
+                if (dlen >= sizeof(cdir)) dlen = sizeof(cdir) - 1;
+                memcpy(cdir, lpath, dlen);
+                cdir[dlen] = '\0';
+            } else {
+                cdir[0] = '.'; cdir[1] = '\0';
+            }
+            alloc->free(alloc->ctx, lpath, strlen(lpath) + 1);
+            store = sc_secret_store_create(alloc, cdir, false);
+            if (store) {
+                (void)sc_secret_store_decrypt(store, alloc, at, &decrypted_at);
+            }
+        }
+    }
+    token_out->access_token = decrypted_at ? decrypted_at : sc_strdup(alloc, at);
     if (!token_out->access_token) {
+        if (store) sc_secret_store_destroy(store, alloc);
         sc_json_free(alloc, root);
         return SC_ERR_OUT_OF_MEMORY;
     }
     const char *rt = sc_json_get_string(prov, "refresh_token");
     if (rt && rt[0]) {
-        token_out->refresh_token = sc_strdup(alloc, rt);
+        if (store && strncmp(rt, "enc2:", 5) == 0) {
+            (void)sc_secret_store_decrypt(store, alloc, rt, &decrypted_rt);
+        }
+        token_out->refresh_token = decrypted_rt ? decrypted_rt : sc_strdup(alloc, rt);
     }
+    if (store) sc_secret_store_destroy(store, alloc);
     token_out->expires_at = (int64_t)sc_json_get_number(prov, "expires_at", 0);
     const char *tt = sc_json_get_string(prov, "token_type");
     token_out->token_type = sc_strdup(alloc, tt && tt[0] ? tt : "Bearer");
@@ -194,9 +248,26 @@ char *sc_auth_get_api_key(sc_allocator_t *alloc, const char *provider) {
     if (!alloc || !provider) return NULL;
     sc_oauth_token_t tok;
     if (sc_auth_load_credential(alloc, provider, &tok) != SC_OK) return NULL;
-    char *key = tok.access_token;  /* API keys stored as access_token */
+    char *key = tok.access_token;
     tok.access_token = NULL;
     sc_oauth_token_deinit(&tok, alloc);
+    if (key && sc_secret_store_is_encrypted(key)) {
+        char *home = sc_platform_home_dir(alloc);
+        if (home) {
+            char config_dir[512];
+            snprintf(config_dir, sizeof(config_dir), "%s/.seaclaw", home);
+            alloc->free(alloc->ctx, home, strlen(home) + 1);
+            sc_secret_store_t *store = sc_secret_store_create(alloc, config_dir, true);
+            if (store) {
+                char *plain = NULL;
+                if (sc_secret_store_decrypt(store, alloc, key, &plain) == SC_OK && plain) {
+                    alloc->free(alloc->ctx, key, strlen(key) + 1);
+                    key = plain;
+                }
+                sc_secret_store_destroy(store, alloc);
+            }
+        }
+    }
     return key;
 }
 

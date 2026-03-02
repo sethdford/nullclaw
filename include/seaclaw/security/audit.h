@@ -140,4 +140,13 @@ sc_error_t sc_audit_logger_log_command(sc_audit_logger_t *logger,
 /** Filter: should this severity be logged? */
 bool sc_audit_should_log(sc_audit_event_type_t type, sc_audit_severity_t min_sev);
 
+/* ── HMAC chain verification ─────────────────────────────────────────────── */
+
+/** Load audit HMAC key from base_dir/.audit_hmac_key. For verification. */
+sc_error_t sc_audit_load_key(const char *base_dir, unsigned char key[32]);
+
+/** Verify HMAC chain in audit log. Returns SC_ERR_CRYPTO_DECRYPT if tampering detected. */
+sc_error_t sc_audit_verify_chain(const char *audit_file_path,
+    const unsigned char *key);
+
 #endif /* SC_AUDIT_H */

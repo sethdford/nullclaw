@@ -1,7 +1,7 @@
 #include "seaclaw/security.h"
 #include <stdint.h>
 #include "seaclaw/core/error.h"
-#include "crypto.h"
+#include "seaclaw/crypto.h"
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <string.h>
@@ -9,6 +9,11 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <unistd.h>
+
+#ifdef SC_ENABLE_FIPS_CRYPTO
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+#endif
 
 #define SC_KEY_LEN 32
 
@@ -34,6 +39,7 @@ struct sc_secret_store {
     bool enabled;
 };
 
+#ifndef SC_ENABLE_FIPS_CRYPTO
 static int dev_urandom_bytes(uint8_t *buf, size_t len) {
     FILE *f = fopen("/dev/urandom", "rb");
     if (!f) return -1;
@@ -41,6 +47,85 @@ static int dev_urandom_bytes(uint8_t *buf, size_t len) {
     fclose(f);
     return (n == len) ? 0 : -1;
 }
+#endif
+
+#ifdef SC_ENABLE_FIPS_CRYPTO
+#define SC_AES_GCM_NONCE_LEN 12
+#define SC_AES_GCM_TAG_LEN   16
+#define SC_AES_GCM_KEY_LEN   32
+
+static int secure_random_bytes(uint8_t *buf, size_t len) {
+    return (RAND_bytes(buf, (int)len) == 1) ? 0 : -1;
+}
+
+static sc_error_t aes_gcm_encrypt(const unsigned char *key,
+                                  const unsigned char *plaintext, size_t pt_len,
+                                  unsigned char *out, size_t *out_len) {
+    unsigned char nonce[SC_AES_GCM_NONCE_LEN];
+    if (RAND_bytes(nonce, sizeof(nonce)) != 1) return SC_ERR_CRYPTO_ENCRYPT;
+
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) return SC_ERR_OUT_OF_MEMORY;
+
+    sc_error_t err = SC_OK;
+    int len = 0;
+    int ct_len = 0;
+
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL) != 1) { err = SC_ERR_CRYPTO_ENCRYPT; goto cleanup; }
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, SC_AES_GCM_NONCE_LEN, NULL) != 1) { err = SC_ERR_CRYPTO_ENCRYPT; goto cleanup; }
+    if (EVP_EncryptInit_ex(ctx, NULL, NULL, key, nonce) != 1) { err = SC_ERR_CRYPTO_ENCRYPT; goto cleanup; }
+    if (EVP_EncryptUpdate(ctx, out + SC_AES_GCM_NONCE_LEN, &len, plaintext, (int)pt_len) != 1) { err = SC_ERR_CRYPTO_ENCRYPT; goto cleanup; }
+    ct_len = len;
+    if (EVP_EncryptFinal_ex(ctx, out + SC_AES_GCM_NONCE_LEN + ct_len, &len) != 1) { err = SC_ERR_CRYPTO_ENCRYPT; goto cleanup; }
+    ct_len += len;
+
+    memcpy(out, nonce, SC_AES_GCM_NONCE_LEN);
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, SC_AES_GCM_TAG_LEN, out + SC_AES_GCM_NONCE_LEN + ct_len) != 1) { err = SC_ERR_CRYPTO_ENCRYPT; goto cleanup; }
+
+    *out_len = SC_AES_GCM_NONCE_LEN + (size_t)ct_len + SC_AES_GCM_TAG_LEN;
+
+cleanup:
+    EVP_CIPHER_CTX_free(ctx);
+    return err;
+}
+
+static sc_error_t aes_gcm_decrypt(const unsigned char *key,
+                                  const unsigned char *in, size_t in_len,
+                                  unsigned char *plaintext, size_t *pt_len) {
+    if (in_len < SC_AES_GCM_NONCE_LEN + SC_AES_GCM_TAG_LEN) return SC_ERR_INVALID_ARGUMENT;
+
+    const unsigned char *nonce = in;
+    size_t ct_len = in_len - SC_AES_GCM_NONCE_LEN - SC_AES_GCM_TAG_LEN;
+    const unsigned char *ciphertext = in + SC_AES_GCM_NONCE_LEN;
+    const unsigned char *tag = in + SC_AES_GCM_NONCE_LEN + ct_len;
+
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) return SC_ERR_OUT_OF_MEMORY;
+
+    sc_error_t err = SC_OK;
+    int len = 0;
+    int out_len = 0;
+
+    if (EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL) != 1) { err = SC_ERR_CRYPTO_DECRYPT; goto cleanup; }
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, SC_AES_GCM_NONCE_LEN, NULL) != 1) { err = SC_ERR_CRYPTO_DECRYPT; goto cleanup; }
+    if (EVP_DecryptInit_ex(ctx, NULL, NULL, key, nonce) != 1) { err = SC_ERR_CRYPTO_DECRYPT; goto cleanup; }
+    if (EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, (int)ct_len) != 1) { err = SC_ERR_CRYPTO_DECRYPT; goto cleanup; }
+    out_len = len;
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, SC_AES_GCM_TAG_LEN, (void *)tag) != 1) { err = SC_ERR_CRYPTO_DECRYPT; goto cleanup; }
+    if (EVP_DecryptFinal_ex(ctx, plaintext + out_len, &len) != 1) { err = SC_ERR_CRYPTO_DECRYPT; goto cleanup; }
+    out_len += len;
+
+    *pt_len = (size_t)out_len;
+
+cleanup:
+    EVP_CIPHER_CTX_free(ctx);
+    return err;
+}
+#else
+static int secure_random_bytes(uint8_t *buf, size_t len) {
+    return dev_urandom_bytes(buf, len);
+}
+#endif /* SC_ENABLE_FIPS_CRYPTO */
 
 void sc_hex_encode(const uint8_t *data, size_t len, char *out_hex) {
     static const char hex[] = "0123456789abcdef";
@@ -103,7 +188,7 @@ static sc_error_t load_or_create_key(sc_secret_store_t *store, uint8_t key[SC_KE
     }
 
     /* Create new key */
-    if (dev_urandom_bytes(key, SC_KEY_LEN) != 0)
+    if (secure_random_bytes(key, SC_KEY_LEN) != 0)
         return SC_ERR_CRYPTO_ENCRYPT;
 
     /* Ensure parent dir exists */
@@ -180,13 +265,15 @@ sc_error_t sc_secret_store_encrypt(sc_secret_store_t *store,
     sc_error_t err = load_or_create_key(store, key);
     if (err != SC_OK) return err;
 
+    size_t plen = strlen(plaintext);
+
+#ifndef SC_ENABLE_FIPS_CRYPTO
     uint8_t nonce[SC_NONCE_LEN];
-    if (dev_urandom_bytes(nonce, SC_NONCE_LEN) != 0) {
+    if (secure_random_bytes(nonce, SC_NONCE_LEN) != 0) {
         sc_secure_zero(key, SC_KEY_LEN);
         return SC_ERR_CRYPTO_ENCRYPT;
     }
 
-    size_t plen = strlen(plaintext);
     uint8_t *ciphertext = (uint8_t *)alloc->alloc(alloc->ctx, plen + SC_HMAC_LEN);
     if (!ciphertext) return SC_ERR_OUT_OF_MEMORY;
 
@@ -222,6 +309,36 @@ sc_error_t sc_secret_store_encrypt(sc_secret_store_t *store,
 
     sc_secure_zero(key, SC_KEY_LEN);
     sc_secure_zero(nonce, SC_NONCE_LEN);
+#else
+    size_t blob_len = SC_AES_GCM_NONCE_LEN + plen + SC_AES_GCM_TAG_LEN;
+    uint8_t *blob = (uint8_t *)alloc->alloc(alloc->ctx, blob_len);
+    if (!blob) {
+        sc_secure_zero(key, SC_KEY_LEN);
+        return SC_ERR_OUT_OF_MEMORY;
+    }
+    size_t out_len = blob_len;
+    err = aes_gcm_encrypt(key, (const unsigned char *)plaintext, plen, blob, &out_len);
+    if (err != SC_OK) {
+        alloc->free(alloc->ctx, blob, blob_len);
+        sc_secure_zero(key, SC_KEY_LEN);
+        return err;
+    }
+    blob_len = out_len;
+
+    size_t hex_len = blob_len * 2 + SC_ENC2_PREFIX_LEN + 1;
+    char *hex_out = (char *)alloc->alloc(alloc->ctx, hex_len);
+    if (!hex_out) {
+        alloc->free(alloc->ctx, blob, blob_len);
+        sc_secure_zero(key, SC_KEY_LEN);
+        return SC_ERR_OUT_OF_MEMORY;
+    }
+    memcpy(hex_out, SC_ENC2_PREFIX, SC_ENC2_PREFIX_LEN);
+    sc_hex_encode(blob, blob_len, hex_out + SC_ENC2_PREFIX_LEN);
+    alloc->free(alloc->ctx, blob, blob_len);
+
+    sc_secure_zero(key, SC_KEY_LEN);
+#endif /* SC_ENABLE_FIPS_CRYPTO */
+
     *out_ciphertext_hex = hex_out;
     return SC_OK;
 }
@@ -261,6 +378,7 @@ sc_error_t sc_secret_store_decrypt(sc_secret_store_t *store,
     err = load_or_create_key(store, key);
     if (err != SC_OK) return err;
 
+#ifndef SC_ENABLE_FIPS_CRYPTO
     size_t ct_len = blob_len - SC_NONCE_LEN - SC_HMAC_LEN;
     uint8_t computed_hmac[32];
     sc_hmac_sha256(key, SC_KEY_LEN, blob + SC_NONCE_LEN, ct_len, computed_hmac);
@@ -289,6 +407,34 @@ sc_error_t sc_secret_store_decrypt(sc_secret_store_t *store,
     plain[ct_len] = '\0';
     sc_secure_zero(key, SC_KEY_LEN);
     sc_secure_zero(plain_buf, ct_len);
+#else
+    if (blob_len < SC_AES_GCM_NONCE_LEN + SC_AES_GCM_TAG_LEN) {
+        sc_secure_zero(key, SC_KEY_LEN);
+        return SC_ERR_CRYPTO_DECRYPT;
+    }
+    size_t pt_len = 0;
+    uint8_t plain_buf[8192];
+    if (blob_len - SC_AES_GCM_NONCE_LEN - SC_AES_GCM_TAG_LEN > sizeof(plain_buf)) {
+        sc_secure_zero(key, SC_KEY_LEN);
+        return SC_ERR_CRYPTO_DECRYPT;
+    }
+    err = aes_gcm_decrypt(key, blob, blob_len, plain_buf, &pt_len);
+    if (err != SC_OK) {
+        sc_secure_zero(key, SC_KEY_LEN);
+        return err;
+    }
+    char *plain = (char *)alloc->alloc(alloc->ctx, pt_len + 1);
+    if (!plain) {
+        sc_secure_zero(key, SC_KEY_LEN);
+        sc_secure_zero(plain_buf, pt_len);
+        return SC_ERR_OUT_OF_MEMORY;
+    }
+    memcpy(plain, plain_buf, pt_len);
+    plain[pt_len] = '\0';
+    sc_secure_zero(key, SC_KEY_LEN);
+    sc_secure_zero(plain_buf, pt_len);
+#endif /* SC_ENABLE_FIPS_CRYPTO */
+
     *out_plaintext = plain;
     return SC_OK;
 }

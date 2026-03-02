@@ -51,9 +51,19 @@ static bool impl_is_running(void *ctx) {
     return self->running;
 }
 
+static void impl_deinit(void *ctx, sc_allocator_t *alloc) {
+    sc_none_tunnel_t *self = (sc_none_tunnel_t *)ctx;
+    if (self->url) {
+        alloc->free(alloc->ctx, self->url, strlen(self->url) + 1);
+        self->url = NULL;
+    }
+    alloc->free(alloc->ctx, self, sizeof(sc_none_tunnel_t));
+}
+
 static const sc_tunnel_vtable_t none_vtable = {
     .start = impl_start,
     .stop = impl_stop,
+    .deinit = impl_deinit,
     .public_url = impl_public_url,
     .provider_name = impl_provider_name,
     .is_running = impl_is_running,

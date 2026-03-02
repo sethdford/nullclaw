@@ -129,9 +129,24 @@ static bool impl_is_running(void *ctx) {
     return self->running && self->child_handle != NULL;
 }
 
+static void impl_deinit(void *ctx, sc_allocator_t *alloc) {
+    sc_custom_tunnel_t *self = (sc_custom_tunnel_t *)ctx;
+    impl_stop(ctx);
+    if (self->public_url) {
+        alloc->free(alloc->ctx, self->public_url, strlen(self->public_url) + 1);
+        self->public_url = NULL;
+    }
+    if (self->command_template) {
+        alloc->free(alloc->ctx, self->command_template, self->command_template_len + 1);
+        self->command_template = NULL;
+    }
+    alloc->free(alloc->ctx, self, sizeof(sc_custom_tunnel_t));
+}
+
 static const sc_tunnel_vtable_t custom_vtable = {
     .start = impl_start,
     .stop = impl_stop,
+    .deinit = impl_deinit,
     .public_url = impl_public_url,
     .provider_name = impl_provider_name,
     .is_running = impl_is_running,

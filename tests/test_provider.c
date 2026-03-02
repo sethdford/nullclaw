@@ -217,6 +217,8 @@ static void test_router_resolves_hint(void) {
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_STR_EQ(router.vtable->get_name(router.ctx), "router");
     router.vtable->deinit(router.ctx, &alloc);
+    fast_prov.vtable->deinit(fast_prov.ctx, &alloc);
+    smart_prov.vtable->deinit(smart_prov.ctx, &alloc);
 }
 
 static void test_codex_cli_create_and_chat(void) {

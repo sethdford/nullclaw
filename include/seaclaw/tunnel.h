@@ -49,6 +49,7 @@ typedef struct sc_tunnel {
 typedef struct sc_tunnel_vtable {
     sc_tunnel_error_t (*start)(void *ctx, uint16_t local_port, char **public_url_out, size_t *url_len);
     void (*stop)(void *ctx);
+    void (*deinit)(void *ctx, sc_allocator_t *alloc);
     const char *(*public_url)(void *ctx);
     const char *(*provider_name)(void *ctx);
     bool (*is_running)(void *ctx);

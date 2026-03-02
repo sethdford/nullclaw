@@ -299,6 +299,130 @@ static void test_audit_logger_disabled(void) {
     sc_audit_logger_destroy(log, &sys);
 }
 
+static void test_audit_chain_verify_valid(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    char tmp[] = "/tmp/sc_audit_chain_XXXXXX";
+    char *dir = mkdtemp(tmp);
+    SC_ASSERT_NOT_NULL(dir);
+
+    sc_audit_config_t cfg = { .enabled = true, .log_path = "chain.log", .max_size_mb = 10 };
+    sc_audit_logger_t *log = sc_audit_logger_create(&sys, &cfg, dir);
+    SC_ASSERT_NOT_NULL(log);
+
+    sc_audit_event_t ev1, ev2, ev3;
+    sc_audit_event_init(&ev1, SC_AUDIT_COMMAND_EXECUTION);
+    sc_audit_event_with_action(&ev1, "ls", "low", true, true);
+    sc_audit_event_init(&ev2, SC_AUDIT_FILE_ACCESS);
+    sc_audit_event_init(&ev3, SC_AUDIT_AUTH_SUCCESS);
+
+    SC_ASSERT(sc_audit_logger_log(log, &ev1) == SC_OK);
+    SC_ASSERT(sc_audit_logger_log(log, &ev2) == SC_OK);
+    SC_ASSERT(sc_audit_logger_log(log, &ev3) == SC_OK);
+    sc_audit_logger_destroy(log, &sys);
+
+    unsigned char key[32];
+    SC_ASSERT(sc_audit_load_key(dir, key) == SC_OK);
+
+    char log_path[512];
+    snprintf(log_path, sizeof(log_path), "%s/chain.log", dir);
+    SC_ASSERT(sc_audit_verify_chain(log_path, key) == SC_OK);
+
+    unlink(log_path);
+    char key_path[512];
+    snprintf(key_path, sizeof(key_path), "%s/.audit_hmac_key", dir);
+    unlink(key_path);
+    rmdir(dir);
+}
+
+static void test_audit_chain_tamper_detected(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    char tmp[] = "/tmp/sc_audit_tamper_XXXXXX";
+    char *dir = mkdtemp(tmp);
+    SC_ASSERT_NOT_NULL(dir);
+
+    sc_audit_config_t cfg = { .enabled = true, .log_path = "tamper.log", .max_size_mb = 10 };
+    sc_audit_logger_t *log = sc_audit_logger_create(&sys, &cfg, dir);
+    SC_ASSERT_NOT_NULL(log);
+
+    sc_audit_event_t ev;
+    sc_audit_event_init(&ev, SC_AUDIT_COMMAND_EXECUTION);
+    sc_audit_event_with_action(&ev, "ls -la", "low", true, true);
+    SC_ASSERT(sc_audit_logger_log(log, &ev) == SC_OK);
+    sc_audit_logger_destroy(log, &sys);
+
+    char log_path[512];
+    snprintf(log_path, sizeof(log_path), "%s/tamper.log", dir);
+    FILE *f = fopen(log_path, "r+b");
+    SC_ASSERT_NOT_NULL(f);
+    fseek(f, 50, SEEK_SET);  /* Tamper somewhere in the middle */
+    int c = fgetc(f);
+    fseek(f, 50, SEEK_SET);
+    fputc(c == 'a' ? 'b' : 'a', f);
+    fclose(f);
+
+    unsigned char key[32];
+    SC_ASSERT(sc_audit_load_key(dir, key) == SC_OK);
+    SC_ASSERT(sc_audit_verify_chain(log_path, key) == SC_ERR_CRYPTO_DECRYPT);
+
+    unlink(log_path);
+    char key_path[512];
+    snprintf(key_path, sizeof(key_path), "%s/.audit_hmac_key", dir);
+    unlink(key_path);
+    rmdir(dir);
+}
+
+static void test_audit_chain_delete_detected(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    char tmp[] = "/tmp/sc_audit_del_XXXXXX";
+    char *dir = mkdtemp(tmp);
+    SC_ASSERT_NOT_NULL(dir);
+
+    sc_audit_config_t cfg = { .enabled = true, .log_path = "del.log", .max_size_mb = 10 };
+    sc_audit_logger_t *log = sc_audit_logger_create(&sys, &cfg, dir);
+    SC_ASSERT_NOT_NULL(log);
+
+    sc_audit_event_t ev1, ev2;
+    sc_audit_event_init(&ev1, SC_AUDIT_COMMAND_EXECUTION);
+    sc_audit_event_init(&ev2, SC_AUDIT_FILE_ACCESS);
+    SC_ASSERT(sc_audit_logger_log(log, &ev1) == SC_OK);
+    SC_ASSERT(sc_audit_logger_log(log, &ev2) == SC_OK);
+    sc_audit_logger_destroy(log, &sys);
+
+    char log_path[512];
+    snprintf(log_path, sizeof(log_path), "%s/del.log", dir);
+    char buf[8192];
+    size_t total = 0;
+    FILE *fr = fopen(log_path, "rb");
+    SC_ASSERT_NOT_NULL(fr);
+    char line[4096];
+    bool first = true;
+    while (fgets(line, sizeof(line), fr)) {
+        if (first) {
+            first = false;
+            continue;  /* Skip first line (delete it) */
+        }
+        size_t n = strlen(line);
+        memcpy(buf + total, line, n + 1);
+        total += n + 1;
+    }
+    fclose(fr);
+
+    FILE *fw = fopen(log_path, "wb");
+    SC_ASSERT_NOT_NULL(fw);
+    fwrite(buf, 1, total, fw);
+    fclose(fw);
+
+    unsigned char key[32];
+    SC_ASSERT(sc_audit_load_key(dir, key) == SC_OK);
+    SC_ASSERT(sc_audit_verify_chain(log_path, key) == SC_ERR_CRYPTO_DECRYPT);
+
+    unlink(log_path);
+    char key_path[512];
+    snprintf(key_path, sizeof(key_path), "%s/.audit_hmac_key", dir);
+    unlink(key_path);
+    rmdir(dir);
+}
+
 static void test_sandbox_noop(void) {
     sc_allocator_t sys = sc_system_allocator();
     sc_sandbox_alloc_t alloc = {

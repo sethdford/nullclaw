@@ -154,7 +154,7 @@ static sc_error_t git_execute(void *ctx, sc_allocator_t *alloc,
         {
             const char *files = sc_json_get_string(args, "files");
             const char *files_arg = files && files[0] ? files : ".";
-            if (files_arg != ".") {
+            if (strcmp(files_arg, ".") != 0) {
                 sc_error_t err = sc_tool_validate_path(files_arg,
                     c->workspace_dir, c->workspace_dir ? c->workspace_dir_len : 0);
                 if (err != SC_OK) {

@@ -33,27 +33,17 @@
 #include <fcntl.h>
 #endif
 
+#if defined(__linux__) && !SC_IS_TEST
 static bool firecracker_binary_exists(void) {
-#if SC_IS_TEST
-    return false;
-#elif defined(__linux__)
     if (access("/usr/bin/firecracker", X_OK) == 0) return true;
     if (access("/usr/local/bin/firecracker", X_OK) == 0) return true;
     return false;
-#else
-    return false;
-#endif
 }
 
 static bool kvm_available(void) {
-#if SC_IS_TEST
-    return false;
-#elif defined(__linux__)
     return access("/dev/kvm", R_OK | W_OK) == 0;
-#else
-    return false;
-#endif
 }
+#endif
 
 static sc_error_t firecracker_wrap(void *ctx, const char *const *argv, size_t argc,
     const char **buf, size_t buf_count, size_t *out_count) {
