@@ -108,6 +108,30 @@ static sc_error_t seccomp_apply(void *ctx) {
 #ifdef SYS_acct
         SYS_acct,
 #endif
+#ifdef SYS_unshare
+        SYS_unshare,
+#endif
+#ifdef SYS_setns
+        SYS_setns,
+#endif
+#ifdef SYS_add_key
+        SYS_add_key,
+#endif
+#ifdef SYS_request_key
+        SYS_request_key,
+#endif
+#ifdef SYS_keyctl
+        SYS_keyctl,
+#endif
+#ifdef SYS_perf_event_open
+        SYS_perf_event_open,
+#endif
+#ifdef SYS_bpf
+        SYS_bpf,
+#endif
+#ifdef SYS_userfaultfd
+        SYS_userfaultfd,
+#endif
     };
 
     /* Network syscalls to block when allow_network is false */
