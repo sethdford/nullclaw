@@ -5,7 +5,7 @@
 <h1 align="center">SeaClaw</h1>
 
 <p align="center">
-  <strong>Null overhead. Null compromise. 100% C. 100% Agnostic.</strong><br>
+  <strong>Bring AI to every device on Earth.</strong><br>
   <strong>282 KB binary. < 5 MB RAM. Boots in <2 ms. Runs on anything with a CPU.</strong>
 </p>
 
@@ -612,7 +612,7 @@ MIT — see [LICENSE](LICENSE)
 
 ---
 
-**seaclaw** — Zero overhead. Zero compromise. Deploy anywhere. Swap anything.
+**seaclaw** — Bring AI to every device on Earth.
 
 ## Star History
 
