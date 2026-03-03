@@ -77,6 +77,7 @@ void run_channel_loop_tests(void);
 void run_util_modules_tests(void);
 void run_roadmap_tests(void);
 void run_new_features_tests(void);
+void run_oauth_tests(void);
 void run_ollama_integration_tests(void);
 void run_plugin_tests(void);
 
@@ -156,6 +157,7 @@ int main(void) {
     run_util_modules_tests();
     run_roadmap_tests();
     run_new_features_tests();
+    run_oauth_tests();
     run_ollama_integration_tests();
     run_plugin_tests();
 

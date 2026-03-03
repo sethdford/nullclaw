@@ -278,6 +278,7 @@ set(SC_CORE_SOURCES
     src/tunnel/none.c
     src/tunnel/root.c
     src/gateway/gateway.c
+    src/gateway/oauth.c
     src/gateway/rate_limit.c
     src/gateway/ws_server.c
     src/gateway/control_protocol.c
@@ -1177,6 +1178,7 @@ set(SC_TEST_SOURCES
     tests/test_roadmap.c
     tests/test_new_features.c
     tests/test_ollama_integration.c
+    tests/test_oauth.c
     tests/test_plugin.c
 )
 

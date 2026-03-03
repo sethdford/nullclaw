@@ -231,6 +231,76 @@ export class ScApp extends LitElement {
         height: 100%;
       }
     }
+
+    .more-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      background: color-mix(in srgb, var(--sc-bg) 40%, transparent);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+    .more-sheet {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 9999;
+      background: var(--sc-bg-surface);
+      border-radius: var(--sc-radius-xl) var(--sc-radius-xl) 0 0;
+      box-shadow: var(--sc-shadow-lg);
+      padding: var(--sc-space-md) var(--sc-space-md)
+        calc(var(--sc-space-lg) + env(safe-area-inset-bottom, 0));
+      animation: sc-sheet-up 0.25s var(--sc-ease-out);
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    @keyframes sc-sheet-up {
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
+    .more-sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--sc-border);
+      border-radius: 2px;
+      margin: 0 auto var(--sc-space-md);
+    }
+    .more-sheet-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--sc-space-sm);
+    }
+    .more-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--sc-space-xs);
+      padding: var(--sc-space-sm);
+      border-radius: var(--sc-radius);
+      background: transparent;
+      border: none;
+      color: var(--sc-text);
+      font-family: var(--sc-font);
+      font-size: var(--sc-text-xs);
+      cursor: pointer;
+      transition: background var(--sc-duration-fast);
+    }
+    .more-item:hover {
+      background: var(--sc-bg-elevated);
+    }
+    .more-item .more-icon {
+      width: 24px;
+      height: 24px;
+    }
+    .more-item .more-icon svg {
+      width: 100%;
+      height: 100%;
+    }
   `;
 
   @state() private tab: TabId = "overview";
@@ -238,6 +308,7 @@ export class ScApp extends LitElement {
   @state() private connectionStatus: GatewayStatus = "disconnected";
   @state() private sidebarCollapsed = false;
   @state() private commandPaletteOpen = false;
+  @state() private moreSheetOpen = false;
 
   gateway: GatewayClient | null = null;
   private _keyHandler = this._onGlobalKey.bind(this);
@@ -400,8 +471,40 @@ export class ScApp extends LitElement {
               </button>
             `,
           )}
+          <button
+            class="mobile-tab ${this.moreSheetOpen ? "active" : ""}"
+            @click=${() => (this.moreSheetOpen = !this.moreSheetOpen)}
+            aria-label="More"
+          >
+            <span class="icon">${icons.grid}</span>
+            <span>More</span>
+          </button>
         </nav>
       </div>
+      ${this.moreSheetOpen
+        ? html`
+            <div class="more-backdrop" @click=${() => (this.moreSheetOpen = false)}></div>
+            <div class="more-sheet" role="dialog" aria-label="More views">
+              <div class="more-sheet-handle"></div>
+              <div class="more-sheet-grid">
+                ${MORE_TABS.map(
+                  (t) => html`
+                    <button
+                      class="more-item"
+                      @click=${() => {
+                        this.moreSheetOpen = false;
+                        this._switchTab(t.id);
+                      }}
+                    >
+                      <span class="more-icon">${t.icon}</span>
+                      <span>${t.label}</span>
+                    </button>
+                  `,
+                )}
+              </div>
+            </div>
+          `
+        : nothing}
 
       <sc-command-palette
         .open=${this.commandPaletteOpen}
