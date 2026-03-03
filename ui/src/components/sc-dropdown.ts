@@ -244,7 +244,6 @@ export class ScDropdown extends LitElement {
   }
 
   override render() {
-    const nonDivider = this._getNonDividerItems();
     let itemIndex = -1;
 
     return html`

@@ -11,10 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define SC_CONFIG_DIR        ".seaclaw"
-#define SC_CONFIG_FILE       "config.json"
-#define SC_DEFAULT_WORKSPACE "workspace"
-#define SC_MAX_PATH          1024
+#include "config_internal.h"
 
 static const char *default_allowed_commands[] = {"git",  "npm",  "cargo", "ls", "cat",  "grep",
                                                  "find", "echo", "pwd",   "wc", "head", "tail"};
@@ -297,7 +294,7 @@ static sc_error_t parse_autonomy(sc_allocator_t *a, sc_config_t *cfg, const sc_j
     return SC_OK;
 }
 
-static const char *sandbox_backend_to_string(sc_sandbox_backend_t b) {
+const char *sc_config_sandbox_backend_to_string(sc_sandbox_backend_t b) {
     switch (b) {
     case SC_SANDBOX_AUTO:
         return "auto";
@@ -1547,12 +1544,12 @@ sc_error_t sc_config_parse_json(sc_config_t *cfg, const char *content, size_t le
     return SC_OK;
 }
 
-static const char *env_get(const char *name) {
+const char *sc_config_env_get(const char *name) {
     const char *v = getenv(name);
     return (v && v[0]) ? v : NULL;
 }
 
-static void apply_env_str(sc_allocator_t *a, char **dst, const char *v) {
+void sc_config_apply_env_str(sc_allocator_t *a, char **dst, const char *v) {
     if (!v || !v[0])
         return;
     if (*dst)
@@ -1566,22 +1563,22 @@ void sc_config_apply_env_overrides(sc_config_t *cfg) {
     sc_allocator_t *a = &cfg->allocator;
 
     const char *v;
-    v = env_get("SEACLAW_PROVIDER");
+    v = getenv("SEACLAW_PROVIDER");
     if (v)
-        apply_env_str(a, &cfg->default_provider, v);
+        sc_config_apply_env_str(a, &cfg->default_provider, v);
 
-    v = env_get("SEACLAW_MODEL");
+    v = getenv("SEACLAW_MODEL");
     if (v)
-        apply_env_str(a, &cfg->default_model, v);
+        sc_config_apply_env_str(a, &cfg->default_model, v);
 
-    v = env_get("SEACLAW_TEMPERATURE");
+    v = getenv("SEACLAW_TEMPERATURE");
     if (v) {
         double temp = strtod(v, NULL);
         if (temp >= 0.0 && temp <= 2.0)
             cfg->default_temperature = temp;
     }
 
-    v = env_get("SEACLAW_GATEWAY_PORT");
+    v = getenv("SEACLAW_GATEWAY_PORT");
     if (v) {
         unsigned long port = strtoul(v, NULL, 10);
         if (port < 1)
@@ -1591,40 +1588,40 @@ void sc_config_apply_env_overrides(sc_config_t *cfg) {
         cfg->gateway.port = (uint16_t)port;
     }
 
-    v = env_get("SEACLAW_GATEWAY_HOST");
+    v = getenv("SEACLAW_GATEWAY_HOST");
     if (v)
-        apply_env_str(a, &cfg->gateway.host, v);
+        sc_config_apply_env_str(a, &cfg->gateway.host, v);
 
-    v = env_get("SEACLAW_WORKSPACE");
+    v = getenv("SEACLAW_WORKSPACE");
     if (v && !strstr(v, ".."))
-        apply_env_str(a, &cfg->workspace_dir, v);
+        sc_config_apply_env_str(a, &cfg->workspace_dir, v);
 
-    v = env_get("SEACLAW_ALLOW_PUBLIC_BIND");
+    v = getenv("SEACLAW_ALLOW_PUBLIC_BIND");
     if (v)
         cfg->gateway.allow_public_bind = (strcmp(v, "1") == 0 || strcmp(v, "true") == 0);
 
-    v = env_get("SEACLAW_WEBHOOK_HMAC_SECRET");
+    v = getenv("SEACLAW_WEBHOOK_HMAC_SECRET");
     if (v)
-        apply_env_str(a, &cfg->gateway.webhook_hmac_secret, v);
+        sc_config_apply_env_str(a, &cfg->gateway.webhook_hmac_secret, v);
 
-    v = env_get("SEACLAW_API_KEY");
+    v = getenv("SEACLAW_API_KEY");
     if (v)
-        apply_env_str(a, &cfg->api_key, v);
+        sc_config_apply_env_str(a, &cfg->api_key, v);
     else if (cfg->default_provider && !cfg->api_key) {
         if (strcmp(cfg->default_provider, "openai") == 0)
-            v = env_get("OPENAI_API_KEY");
+            v = getenv("OPENAI_API_KEY");
         else if (strcmp(cfg->default_provider, "anthropic") == 0)
-            v = env_get("ANTHROPIC_API_KEY");
+            v = getenv("ANTHROPIC_API_KEY");
         else if (strcmp(cfg->default_provider, "gemini") == 0 ||
                  strcmp(cfg->default_provider, "google") == 0)
-            v = env_get("GEMINI_API_KEY");
+            v = getenv("GEMINI_API_KEY");
         else if (strcmp(cfg->default_provider, "ollama") == 0)
-            v = env_get("OLLAMA_HOST");
+            v = getenv("OLLAMA_HOST");
         if (v)
-            apply_env_str(a, &cfg->api_key, v);
+            sc_config_apply_env_str(a, &cfg->api_key, v);
     }
 
-    v = env_get("SEACLAW_AUTONOMY");
+    v = getenv("SEACLAW_AUTONOMY");
     if (v) {
         unsigned long al = strtoul(v, NULL, 10);
         if (al <= 4)
@@ -1724,7 +1721,8 @@ sc_error_t sc_config_save(const sc_config_t *cfg) {
             sc_json_object_set(&a, sbc, "enabled",
                                sc_json_bool_new(&a, cfg->security.sandbox_config.enabled));
 
-            const char *be_str = sandbox_backend_to_string(cfg->security.sandbox_config.backend);
+            const char *be_str =
+                sc_config_sandbox_backend_to_string(cfg->security.sandbox_config.backend);
             sc_json_object_set(&a, sbc, "backend", sc_json_string_new(&a, be_str, strlen(be_str)));
 
             if (cfg->security.sandbox_config.firejail_args_len > 0 &&
@@ -2135,9 +2133,9 @@ bool sc_config_get_provider_native_tools(const sc_config_t *cfg, const char *nam
 }
 
 const char *sc_config_get_web_search_provider(const sc_config_t *cfg) {
-    const char *v = env_get("WEB_SEARCH_PROVIDER");
+    const char *v = getenv("WEB_SEARCH_PROVIDER");
     if (!v)
-        v = env_get("SEACLAW_WEB_SEARCH_PROVIDER");
+        v = getenv("SEACLAW_WEB_SEARCH_PROVIDER");
     if (v && v[0])
         return v;
     return (cfg && cfg->tools.web_search_provider && cfg->tools.web_search_provider[0])
