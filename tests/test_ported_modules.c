@@ -9,6 +9,7 @@
 #include "seaclaw/security.h"
 #include "seaclaw/security/sandbox.h"
 #include "seaclaw/update.h"
+#include "seaclaw/service.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/arena.h"
 #include "seaclaw/config.h"
@@ -151,6 +152,40 @@ static void test_update_apply_mock(void) {
     SC_ASSERT_EQ(err, SC_OK);
 }
 
+static void test_service_start_stop(void) {
+    sc_error_t err = sc_service_start();
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(sc_service_status());
+    sc_service_stop();
+    SC_ASSERT_FALSE(sc_service_status());
+}
+
+static void test_service_configure_null(void) {
+    sc_service_configure(NULL, NULL);
+    sc_error_t err = sc_service_start();
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_service_stop();
+}
+
+static void test_service_double_start(void) {
+    sc_error_t err = sc_service_start();
+    SC_ASSERT_EQ(err, SC_OK);
+    err = sc_service_start();
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_service_stop();
+}
+
+static void test_service_configure_with_ctx(void) {
+    sc_channel_loop_ctx_t ctx = {0};
+    sc_channel_loop_state_t state = {0};
+    sc_service_configure(&ctx, &state);
+    sc_error_t err = sc_service_start();
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(sc_service_status());
+    sc_service_stop();
+    sc_service_configure(NULL, NULL);
+}
+
 void run_ported_modules_tests(void) {
     SC_TEST_SUITE("Ported Modules");
     SC_RUN_TEST(test_channel_catalog_all);
@@ -169,4 +204,8 @@ void run_ported_modules_tests(void) {
     SC_RUN_TEST(test_config_mutator_mutate);
     SC_RUN_TEST(test_update_check_mock);
     SC_RUN_TEST(test_update_apply_mock);
+    SC_RUN_TEST(test_service_start_stop);
+    SC_RUN_TEST(test_service_configure_null);
+    SC_RUN_TEST(test_service_double_start);
+    SC_RUN_TEST(test_service_configure_with_ctx);
 }

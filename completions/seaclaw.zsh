@@ -96,6 +96,24 @@ _seaclaw() {
                         logout:Logout from provider
                     )'
                     ;;
+                skills)
+                    _describe 'skills subcommand' '(
+                        list:List installed skills
+                        search:Search skill registry
+                        install:Install a skill
+                        uninstall:Uninstall a skill
+                        update:Update all installed skills
+                        info:Show skill details
+                        publish:Publish a skill
+                    )'
+                    ;;
+                migrate)
+                    _describe 'migrate subcommand' '(
+                        sqlite:Migrate from SQLite backend
+                        markdown:Migrate from markdown backend
+                        --dry-run:Preview without writing
+                    )'
+                    ;;
                 capabilities)
                     _describe 'capabilities option' '(
                         --json:Output capabilities as JSON

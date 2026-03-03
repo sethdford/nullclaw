@@ -216,11 +216,11 @@ static void test_slack_start_stop_typing(void) {
     sc_slack_create(&alloc, "t", 1, &ch);
     if (ch.vtable->start_typing) {
         sc_error_t err = ch.vtable->start_typing(ch.ctx, "channel", 7);
-        (void)err;
+        SC_ASSERT_EQ(err, SC_OK);
     }
     if (ch.vtable->stop_typing) {
         sc_error_t err = ch.vtable->stop_typing(ch.ctx, "channel", 7);
-        (void)err;
+        SC_ASSERT_EQ(err, SC_OK);
     }
     sc_slack_destroy(&ch);
 }
@@ -233,7 +233,7 @@ static void test_slack_send_long_message(void) {
     for (size_t i = 0; i < sizeof(buf) - 1; i++) buf[i] = 'm';
     buf[sizeof(buf) - 1] = '\0';
     sc_error_t err = ch.vtable->send(ch.ctx, "ch", 2, buf, sizeof(buf) - 1, NULL, 0);
-    (void)err;
+    SC_ASSERT_EQ(err, SC_OK);
     sc_slack_destroy(&ch);
 }
 #endif
@@ -245,7 +245,7 @@ static void test_whatsapp_send(void) {
     sc_channel_t ch;
     sc_whatsapp_create(&alloc, "123456", 6, "token", 5, &ch);
     sc_error_t err = ch.vtable->send(ch.ctx, "15551234567", 11, "hi", 2, NULL, 0);
-    (void)err;
+    SC_ASSERT_EQ(err, SC_OK);
     sc_whatsapp_destroy(&ch);
 }
 
@@ -307,7 +307,7 @@ static void test_matrix_send(void) {
     sc_channel_t ch;
     sc_matrix_create(&alloc, "https://matrix.org", 17, "tok", 3, &ch);
     sc_error_t err = ch.vtable->send(ch.ctx, "#room:matrix.org", 16, "test", 4, NULL, 0);
-    (void)err;
+    SC_ASSERT_EQ(err, SC_OK);
     sc_matrix_destroy(&ch);
 }
 #endif
@@ -319,7 +319,7 @@ static void test_irc_send(void) {
     sc_channel_t ch;
     sc_irc_create(&alloc, "irc.example.com", 15, 6667, &ch);
     sc_error_t err = ch.vtable->send(ch.ctx, "#chan", 5, "msg", 3, NULL, 0);
-    (void)err;
+    SC_ASSERT_EQ(err, SC_OK);
     sc_irc_destroy(&ch);
 }
 
@@ -482,7 +482,7 @@ static void test_email_send(void) {
     sc_channel_t ch;
     sc_email_create(&alloc, "smtp.example.com", 16, 587, "from@ex.com", 11, &ch);
     sc_error_t err = ch.vtable->send(ch.ctx, "user@ex.com", 11, "body", 4, NULL, 0);
-    (void)err;
+    SC_ASSERT_EQ(err, SC_OK);
     sc_email_destroy(&ch);
 }
 
@@ -641,7 +641,7 @@ static void test_mattermost_send(void) {
     sc_channel_t ch;
     sc_mattermost_create(&alloc, "https://chat.example.com", 24, "token", 5, &ch);
     sc_error_t err = ch.vtable->send(ch.ctx, "channel_id", 10, "msg", 3, NULL, 0);
-    (void)err;
+    SC_ASSERT_EQ(err, SC_OK);
     sc_mattermost_destroy(&ch);
 }
 
@@ -752,7 +752,7 @@ static void test_signal_send(void) {
     sc_channel_t ch;
     sc_signal_create(&alloc, "http://localhost", 16, "a", 1, &ch);
     sc_error_t err = ch.vtable->send(ch.ctx, NULL, 0, "hello", 5, NULL, 0);
-    (void)err;
+    SC_ASSERT_EQ(err, SC_OK);
     sc_signal_destroy(&ch);
 }
 
@@ -770,11 +770,11 @@ static void test_signal_start_stop_typing(void) {
     sc_signal_create(&alloc, "http://x", 7, "a", 1, &ch);
     if (ch.vtable->start_typing) {
         sc_error_t err = ch.vtable->start_typing(ch.ctx, "recipient", 9);
-        (void)err;
+        SC_ASSERT_EQ(err, SC_OK);
     }
     if (ch.vtable->stop_typing) {
         sc_error_t err = ch.vtable->stop_typing(ch.ctx, "recipient", 9);
-        (void)err;
+        SC_ASSERT_EQ(err, SC_OK);
     }
     sc_signal_destroy(&ch);
 }
@@ -787,7 +787,7 @@ static void test_signal_send_long_message(void) {
     for (size_t i = 0; i < sizeof(buf) - 1; i++) buf[i] = 'x';
     buf[sizeof(buf) - 1] = '\0';
     sc_error_t err = ch.vtable->send(ch.ctx, NULL, 0, buf, sizeof(buf) - 1, NULL, 0);
-    (void)err;
+    SC_ASSERT_EQ(err, SC_OK);
     sc_signal_destroy(&ch);
 }
 #endif
@@ -816,7 +816,7 @@ static void test_nostr_send(void) {
     sc_channel_t ch;
     sc_nostr_create(&alloc, "/tmp", 4, "npub", 4, NULL, 0, NULL, 0, &ch);
     sc_error_t err = ch.vtable->send(ch.ctx, NULL, 0, "msg", 3, NULL, 0);
-    (void)err;
+    SC_ASSERT_EQ(err, SC_OK);
     sc_nostr_destroy(&ch);
 }
 
@@ -849,7 +849,7 @@ static void test_qq_send(void) {
     sc_channel_t ch;
     sc_qq_create(&alloc, "https://x", 9, "t", 1, &ch);
     sc_error_t err = ch.vtable->send(ch.ctx, NULL, 0, "h", 1, NULL, 0);
-    (void)err;
+    SC_ASSERT_EQ(err, SC_OK);
     sc_qq_destroy(&ch);
 }
 
@@ -863,14 +863,11 @@ static void test_qq_health_check(void) {
 #endif
 
 #if SC_HAS_MAIXCAM
-extern sc_error_t sc_maixcam_create(sc_allocator_t *alloc,
-    const char *device_path, size_t device_path_len,
-    sc_channel_t *out);
-extern void sc_maixcam_destroy(sc_channel_t *ch);
+#include "seaclaw/channels/maixcam.h"
 static void test_maixcam_create(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_channel_t ch;
-    sc_error_t err = sc_maixcam_create(&alloc, "/dev/ttyUSB0", 11, &ch);
+    sc_error_t err = sc_maixcam_create(&alloc, "/dev/ttyUSB0", 12, 0, &ch);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_STR_EQ(ch.vtable->name(ch.ctx), "maixcam");
     sc_maixcam_destroy(&ch);
@@ -879,7 +876,7 @@ static void test_maixcam_create(void) {
 static void test_maixcam_health_check(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_channel_t ch;
-    sc_maixcam_create(&alloc, "/dev/x", 6, &ch);
+    sc_maixcam_create(&alloc, "/dev/x", 6, 0, &ch);
     SC_ASSERT_TRUE(ch.vtable->health_check(ch.ctx));
     sc_maixcam_destroy(&ch);
 }
@@ -970,11 +967,11 @@ static void test_telegram_start_stop_typing(void) {
     sc_telegram_create(&alloc, "t", 1, &ch);
     if (ch.vtable->start_typing) {
         sc_error_t err = ch.vtable->start_typing(ch.ctx, "user1", 5);
-        (void)err;
+        SC_ASSERT_EQ(err, SC_OK);
     }
     if (ch.vtable->stop_typing) {
         sc_error_t err = ch.vtable->stop_typing(ch.ctx, "user1", 5);
-        (void)err;
+        SC_ASSERT_EQ(err, SC_OK);
     }
     sc_telegram_destroy(&ch);
 }
@@ -996,7 +993,7 @@ static void test_telegram_send_long_message(void) {
     for (size_t i = 0; i < sizeof(buf) - 1; i++) buf[i] = 'a';
     buf[sizeof(buf) - 1] = '\0';
     sc_error_t err = ch.vtable->send(ch.ctx, "123", 3, buf, sizeof(buf) - 1, NULL, 0);
-    (void)err;
+    SC_ASSERT_EQ(err, SC_OK);
     sc_telegram_destroy(&ch);
 }
 
@@ -1004,8 +1001,8 @@ static void test_telegram_send(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_channel_t ch;
     sc_telegram_create(&alloc, "t", 1, &ch);
-    sc_error_t err = ch.vtable->send(ch.ctx, NULL, 0, "test msg", 8, NULL, 0);
-    (void)err;
+    sc_error_t err = ch.vtable->send(ch.ctx, "12345", 5, "test msg", 8, NULL, 0);
+    SC_ASSERT_EQ(err, SC_OK);
     sc_telegram_destroy(&ch);
 }
 
@@ -1023,8 +1020,8 @@ static void test_discord_send(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_channel_t ch;
     sc_discord_create(&alloc, "t", 1, &ch);
-    sc_error_t err = ch.vtable->send(ch.ctx, NULL, 0, "msg", 3, NULL, 0);
-    (void)err;
+    sc_error_t err = ch.vtable->send(ch.ctx, "channel1", 8, "msg", 3, NULL, 0);
+    SC_ASSERT_EQ(err, SC_OK);
     sc_discord_destroy(&ch);
 }
 

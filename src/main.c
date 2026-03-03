@@ -47,6 +47,9 @@
 #if SC_HAS_IMESSAGE
 #include "seaclaw/channels/imessage.h"
 #endif
+#if SC_HAS_TELEGRAM
+#include "seaclaw/channels/telegram.h"
+#endif
 #if SC_HAS_DISCORD
 #include "seaclaw/channels/discord.h"
 #endif
@@ -639,6 +642,27 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
     }
 #endif
 
+#if SC_HAS_TELEGRAM
+    sc_channel_t telegram_ch = {0};
+    if (cfg.channels.telegram.token) {
+        const char *const *af = (const char *const *)cfg.channels.telegram.allow_from;
+        err = sc_telegram_create_ex(alloc,
+            cfg.channels.telegram.token, strlen(cfg.channels.telegram.token),
+            af, cfg.channels.telegram.allow_from_count,
+            &telegram_ch);
+        if (err == SC_OK) {
+            channels[ch_count].channel_ctx = telegram_ch.ctx;
+            channels[ch_count].channel = &telegram_ch;
+            channels[ch_count].poll_fn = sc_telegram_poll;
+            channels[ch_count].interval_ms = 1000;
+            channels[ch_count].last_poll_ms = 0;
+            ch_count++;
+            fprintf(stderr, "[%s] telegram channel configured (long-polling)\n",
+                SC_CODENAME);
+        }
+    }
+#endif
+
 #if SC_HAS_DISCORD
     sc_channel_t discord_ch = {0};
     if (cfg.channels.discord.token && cfg.channels.discord.channel_ids_count > 0) {
@@ -672,6 +696,9 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
 #endif
 #if SC_HAS_IMESSAGE
     if (imessage_ch.ctx) sc_imessage_destroy(&imessage_ch);
+#endif
+#if SC_HAS_TELEGRAM
+    if (telegram_ch.ctx) sc_telegram_destroy(&telegram_ch);
 #endif
 #if SC_HAS_DISCORD
     if (discord_ch.ctx) sc_discord_destroy(&discord_ch);

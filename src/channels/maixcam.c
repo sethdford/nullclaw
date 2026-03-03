@@ -102,12 +102,12 @@ sc_error_t sc_maixcam_create(sc_allocator_t *alloc,
     c->port = port;
     if (host && host_len > 0) {
         c->host = (char *)malloc(host_len + 1);
-        if (c->host) {
-            memcpy(c->host, host, host_len);
-            c->host[host_len] = '\0';
-        }
+        if (!c->host) { free(c); return SC_ERR_OUT_OF_MEMORY; }
+        memcpy(c->host, host, host_len);
+        c->host[host_len] = '\0';
     } else {
         c->host = strdup("0.0.0.0");
+        if (!c->host) { free(c); return SC_ERR_OUT_OF_MEMORY; }
     }
     out->ctx = c;
     out->vtable = &maixcam_vtable;

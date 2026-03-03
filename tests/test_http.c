@@ -63,33 +63,31 @@ static void test_http_response_body_extraction(void) {
 #endif
 }
 
-#if 0
 static void test_http_get_ex_mock(void) {
 #if SC_IS_TEST
     sc_allocator_t alloc = sc_system_allocator();
     sc_http_response_t resp = {0};
     sc_error_t err = sc_http_get_ex(&alloc, "https://example.com/", "Accept: application/json\n", &resp);
+    SC_ASSERT_TRUE(err == SC_OK || err == SC_ERR_NOT_SUPPORTED);
     if (err == SC_OK) {
         SC_ASSERT_NOT_NULL(resp.body);
         sc_http_response_free(&alloc, &resp);
     }
 #endif
 }
-#endif /* #if 0 */
 
-#if 0
 static void test_http_request_get_mock(void) {
 #if SC_IS_TEST
     sc_allocator_t alloc = sc_system_allocator();
     sc_http_response_t resp = {0};
     sc_error_t err = sc_http_request(&alloc, "https://api.test/", "GET", NULL, NULL, 0, &resp);
+    SC_ASSERT_TRUE(err == SC_OK || err == SC_ERR_NOT_SUPPORTED);
     if (err == SC_OK) {
         SC_ASSERT_NOT_NULL(resp.body);
         sc_http_response_free(&alloc, &resp);
     }
 #endif
 }
-#endif
 
 #if SC_IS_TEST
 static void test_http_post_json_mock(void) {
@@ -111,6 +109,8 @@ void run_http_tests(void) {
     SC_RUN_TEST(test_http_response_free_null_body);
     SC_RUN_TEST(test_http_response_status_code);
     SC_RUN_TEST(test_http_response_body_extraction);
+    SC_RUN_TEST(test_http_get_ex_mock);
+    SC_RUN_TEST(test_http_request_get_mock);
 #if SC_IS_TEST
     SC_RUN_TEST(test_http_post_json_mock);
 #endif

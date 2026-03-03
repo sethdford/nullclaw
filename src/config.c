@@ -494,6 +494,38 @@ static void parse_imessage_channel(sc_allocator_t *a, sc_config_t *cfg,
     }
 }
 
+static void parse_telegram_channel(sc_allocator_t *a, sc_config_t *cfg,
+                                  const sc_json_value_t *obj)
+{
+    if (!obj) return;
+    sc_telegram_channel_config_t *t = &cfg->channels.telegram;
+
+    const sc_json_value_t *val = obj;
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items)
+        val = obj->data.array.items[0];
+    if (val->type != SC_JSON_OBJECT) return;
+
+    const char *s = sc_json_get_string(val, "token");
+    if (s) {
+        if (t->token) a->free(a->ctx, t->token, strlen(t->token) + 1);
+        t->token = sc_strdup(a, s);
+    }
+
+    sc_json_value_t *af = sc_json_object_get(val, "allow_from");
+    if (af && af->type == SC_JSON_ARRAY && af->data.array.items) {
+        for (size_t i = 0; i < t->allow_from_count; i++) {
+            if (t->allow_from[i])
+                a->free(a->ctx, t->allow_from[i], strlen(t->allow_from[i]) + 1);
+        }
+        t->allow_from_count = 0;
+        for (size_t i = 0; i < af->data.array.len && t->allow_from_count < SC_TELEGRAM_ALLOW_FROM_MAX; i++) {
+            sc_json_value_t *item = af->data.array.items[i];
+            if (item && item->type == SC_JSON_STRING && item->data.string.ptr)
+                t->allow_from[t->allow_from_count++] = sc_strdup(a, item->data.string.ptr);
+        }
+    }
+}
+
 static void parse_discord_channel(sc_allocator_t *a, sc_config_t *cfg,
                                  const sc_json_value_t *obj)
 {
@@ -552,6 +584,9 @@ static sc_error_t parse_channels(sc_allocator_t *a, sc_config_t *cfg,
 
     sc_json_value_t *imsg_obj = sc_json_object_get(obj, "imessage");
     if (imsg_obj) parse_imessage_channel(a, cfg, imsg_obj);
+
+    sc_json_value_t *telegram_obj = sc_json_object_get(obj, "telegram");
+    if (telegram_obj) parse_telegram_channel(a, cfg, telegram_obj);
 
     sc_json_value_t *discord_obj = sc_json_object_get(obj, "discord");
     if (discord_obj) parse_discord_channel(a, cfg, discord_obj);

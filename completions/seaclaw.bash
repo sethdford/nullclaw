@@ -51,6 +51,16 @@ _seaclaw() {
                 COMPREPLY=($(compgen -W 'login status logout' -- "$cur"))
             fi
             ;;
+        skills)
+            if [[ $COMP_CWORD -eq 2 ]]; then
+                COMPREPLY=($(compgen -W 'list search install uninstall update info publish' -- "$cur"))
+            fi
+            ;;
+        migrate)
+            if [[ $COMP_CWORD -eq 2 ]]; then
+                COMPREPLY=($(compgen -W 'sqlite markdown --dry-run' -- "$cur"))
+            fi
+            ;;
         capabilities)
             if [[ $COMP_CWORD -eq 2 ]]; then
                 COMPREPLY=($(compgen -W '--json' -- "$cur"))

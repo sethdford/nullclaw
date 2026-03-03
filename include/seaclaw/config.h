@@ -99,6 +99,13 @@ typedef struct sc_discord_channel_config {
     size_t channel_ids_count;
 } sc_discord_channel_config_t;
 
+#define SC_TELEGRAM_ALLOW_FROM_MAX 16
+typedef struct sc_telegram_channel_config {
+    char *token;
+    char *allow_from[SC_TELEGRAM_ALLOW_FROM_MAX];
+    size_t allow_from_count;
+} sc_telegram_channel_config_t;
+
 #define SC_MCP_SERVERS_MAX 16
 #define SC_MCP_SERVER_ARGS_MAX 16
 
@@ -118,6 +125,7 @@ typedef struct sc_channels_config {
     sc_email_channel_config_t email;
     sc_imessage_channel_config_t imessage;
     sc_discord_channel_config_t discord;
+    sc_telegram_channel_config_t telegram;
 } sc_channels_config_t;
 
 typedef struct sc_memory_config {
