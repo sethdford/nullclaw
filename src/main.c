@@ -609,7 +609,8 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
     }
     agent.agent_pool = agent_pool;
     agent.policy_engine = NULL;
-    if (cfg.policy.enabled) agent.policy_engine = sc_policy_engine_create(alloc);
+    if (cfg.policy.enabled)
+        agent.policy_engine = sc_policy_engine_create(alloc);
     sc_agent_set_retrieval_engine(&agent, &retrieval_engine);
 
     fprintf(stderr, "[%s] agent ready (provider=%s model=%s tools=%zu)\n", SC_CODENAME, prov_name,
@@ -1156,7 +1157,8 @@ static sc_error_t cmd_gateway(sc_allocator_t *alloc, int argc, char **argv) {
         agent_active = true;
 
         agent.policy_engine = NULL;
-        if (cfg.policy.enabled) agent.policy_engine = sc_policy_engine_create(alloc);
+        if (cfg.policy.enabled)
+            agent.policy_engine = sc_policy_engine_create(alloc);
         agent_bridge.agent = &agent;
         agent_bridge.bus = &bus;
         sc_bus_subscribe(&bus, gw_agent_on_message, &agent_bridge, SC_BUS_MESSAGE_RECEIVED);

@@ -462,9 +462,9 @@ char *sc_agent_handle_slash_command(sc_agent_t *agent, const char *message, size
                            "  /plan <json>      Execute a structured plan\n"
                            "  /cost             Show token usage\n"
                            "  /status           Show agent status\n"
-            "  /spawn <task>     Spawn a sub-agent\n"
-            "  /agents           List running agents\n"
-            "  /cancel <id>      Cancel a sub-agent\n";
+                           "  /spawn <task>     Spawn a sub-agent\n"
+                           "  /agents           List running agents\n"
+                           "  /cancel <id>      Cancel a sub-agent\n";
         return sc_strndup(agent->alloc, help, strlen(help));
     }
 
@@ -583,7 +583,8 @@ char *sc_agent_handle_slash_command(sc_agent_t *agent, const char *message, size
         scfg.mode = SC_SPAWN_ONE_SHOT;
         scfg.max_iterations = 10;
         uint64_t new_id = 0;
-        sc_error_t err = sc_agent_pool_spawn(agent->agent_pool, &scfg, arg_buf, arg_len, "cli-spawn", &new_id);
+        sc_error_t err =
+            sc_agent_pool_spawn(agent->agent_pool, &scfg, arg_buf, arg_len, "cli-spawn", &new_id);
         if (err != SC_OK)
             return sc_sprintf(agent->alloc, "Spawn failed: %s", sc_error_string(err));
         return sc_sprintf(agent->alloc, "Spawned agent #%llu", (unsigned long long)new_id);
@@ -598,20 +599,25 @@ char *sc_agent_handle_slash_command(sc_agent_t *agent, const char *message, size
         if (err != SC_OK)
             return sc_sprintf(agent->alloc, "List failed: %s", sc_error_string(err));
         if (info_count == 0) {
-            if (info) agent->alloc->free(agent->alloc->ctx, info, 0);
+            if (info)
+                agent->alloc->free(agent->alloc->ctx, info, 0);
             return sc_strndup(agent->alloc, "No agents running.", 18);
         }
         char *buf = (char *)agent->alloc->alloc(agent->alloc->ctx, 4096);
-        if (!buf) { agent->alloc->free(agent->alloc->ctx, info, info_count * sizeof(sc_agent_pool_info_t)); return NULL; }
+        if (!buf) {
+            agent->alloc->free(agent->alloc->ctx, info, info_count * sizeof(sc_agent_pool_info_t));
+            return NULL;
+        }
         int off = snprintf(buf, 4096, "Agents (%zu):\n", info_count);
         for (size_t i = 0; i < info_count && off < 4000; i++) {
             off += snprintf(buf + off, 4096 - (size_t)off, "  #%llu [%s] %s\n",
-                (unsigned long long)info[i].agent_id,
-                info[i].status == SC_AGENT_RUNNING ? "running" :
-                info[i].status == SC_AGENT_IDLE ? "idle" :
-                info[i].status == SC_AGENT_COMPLETED ? "done" :
-                info[i].status == SC_AGENT_FAILED ? "failed" : "cancelled",
-                info[i].label ? info[i].label : "");
+                            (unsigned long long)info[i].agent_id,
+                            info[i].status == SC_AGENT_RUNNING     ? "running"
+                            : info[i].status == SC_AGENT_IDLE      ? "idle"
+                            : info[i].status == SC_AGENT_COMPLETED ? "done"
+                            : info[i].status == SC_AGENT_FAILED    ? "failed"
+                                                                   : "cancelled",
+                            info[i].label ? info[i].label : "");
         }
         agent->alloc->free(agent->alloc->ctx, info, info_count * sizeof(sc_agent_pool_info_t));
         return buf;
@@ -632,11 +638,12 @@ char *sc_agent_handle_slash_command(sc_agent_t *agent, const char *message, size
     return NULL;
 }
 
-static sc_policy_action_t sc_agent_check_policy(sc_agent_t *agent,
-    const char *tool_name, const char *arguments)
-{
-    if (!agent->policy_engine) return SC_POLICY_ALLOW;
-    sc_policy_eval_ctx_t pe_ctx = { .tool_name = tool_name, .args_json = arguments, .session_cost_usd = 0 };
+static sc_policy_action_t sc_agent_check_policy(sc_agent_t *agent, const char *tool_name,
+                                                const char *arguments) {
+    if (!agent->policy_engine)
+        return SC_POLICY_ALLOW;
+    sc_policy_eval_ctx_t pe_ctx = {
+        .tool_name = tool_name, .args_json = arguments, .session_cost_usd = 0};
     sc_policy_result_t pe_res = sc_policy_engine_evaluate(agent->policy_engine, &pe_ctx);
     return pe_res.action;
 }
@@ -1102,10 +1109,14 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
                     sc_tool_result_t result = sc_tool_result_fail("invalid arguments", 16);
                     if (args) {
                         char pol_tn[64];
-                        size_t pol_tn_len = call->name_len < sizeof(pol_tn) - 1 ? call->name_len : sizeof(pol_tn) - 1;
-                        if (pol_tn_len > 0 && call->name) memcpy(pol_tn, call->name, pol_tn_len);
+                        size_t pol_tn_len = call->name_len < sizeof(pol_tn) - 1
+                                                ? call->name_len
+                                                : sizeof(pol_tn) - 1;
+                        if (pol_tn_len > 0 && call->name)
+                            memcpy(pol_tn, call->name, pol_tn_len);
                         pol_tn[pol_tn_len] = '\0';
-                        sc_policy_action_t pa = sc_agent_check_policy(agent, pol_tn, call->arguments);
+                        sc_policy_action_t pa =
+                            sc_agent_check_policy(agent, pol_tn, call->arguments);
                         if (pa == SC_POLICY_DENY) {
                             result = sc_tool_result_fail("denied by policy", 16);
                             sc_json_free(agent->alloc, args);

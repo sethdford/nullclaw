@@ -1,19 +1,19 @@
 #include "seaclaw/agent/cli.h"
 #include "seaclaw/agent.h"
+#include "seaclaw/agent/profile.h"
 #include "seaclaw/agent/tui.h"
 #include "seaclaw/channels/cli.h"
 #include "seaclaw/config.h"
 #include "seaclaw/core/error.h"
 #include "seaclaw/core/string.h"
 #include "seaclaw/cron.h"
-#include "seaclaw/agent/profile.h"
-#include "seaclaw/observability/otel.h"
-#include "seaclaw/plugin.h"
 #include "seaclaw/memory.h"
 #include "seaclaw/memory/engines.h"
 #include "seaclaw/memory/retrieval.h"
 #include "seaclaw/memory/vector.h"
 #include "seaclaw/observability/log_observer.h"
+#include "seaclaw/observability/otel.h"
+#include "seaclaw/plugin.h"
 #include "seaclaw/provider.h"
 #include "seaclaw/providers/factory.h"
 #include "seaclaw/runtime.h"
@@ -477,18 +477,24 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
     }
 
     if (cfg.agent.default_profile) {
-        const sc_agent_profile_t *prof = sc_agent_profile_by_name(cfg.agent.default_profile, strlen(cfg.agent.default_profile));
+        const sc_agent_profile_t *prof =
+            sc_agent_profile_by_name(cfg.agent.default_profile, strlen(cfg.agent.default_profile));
         if (prof) {
             if (prof->preferred_model && prof->preferred_model[0] && !"") {
                 char *old = agent.model_name;
                 size_t old_len = agent.model_name_len;
-                agent.model_name = sc_strndup(alloc, prof->preferred_model, strlen(prof->preferred_model));
+                agent.model_name =
+                    sc_strndup(alloc, prof->preferred_model, strlen(prof->preferred_model));
                 agent.model_name_len = strlen(prof->preferred_model);
-                if (old) alloc->free(alloc->ctx, old, old_len + 1);
+                if (old)
+                    alloc->free(alloc->ctx, old, old_len + 1);
             }
-            if (prof->temperature > 0) agent.temperature = prof->temperature;
-            if (prof->max_iterations > 0) agent.max_tool_iterations = prof->max_iterations;
-            if (prof->max_history > 0) agent.max_history_messages = prof->max_history;
+            if (prof->temperature > 0)
+                agent.temperature = prof->temperature;
+            if (prof->max_iterations > 0)
+                agent.max_tool_iterations = prof->max_iterations;
+            if (prof->max_history > 0)
+                agent.max_history_messages = prof->max_history;
         }
     }
 
@@ -497,11 +503,16 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
         sc_otel_config_t otel_cfg = {
             .endpoint = cfg.diagnostics.otel_endpoint,
             .endpoint_len = strlen(cfg.diagnostics.otel_endpoint),
-            .service_name = cfg.diagnostics.otel_service_name ? cfg.diagnostics.otel_service_name : "seaclaw",
-            .service_name_len = cfg.diagnostics.otel_service_name ? strlen(cfg.diagnostics.otel_service_name) : 7,
-            .enable_traces = true, .enable_metrics = true, .enable_logs = true,
+            .service_name =
+                cfg.diagnostics.otel_service_name ? cfg.diagnostics.otel_service_name : "seaclaw",
+            .service_name_len =
+                cfg.diagnostics.otel_service_name ? strlen(cfg.diagnostics.otel_service_name) : 7,
+            .enable_traces = true,
+            .enable_metrics = true,
+            .enable_logs = true,
         };
-        if (sc_otel_observer_create(alloc, &otel_cfg, &otel_observer) == SC_OK && otel_observer.vtable) {
+        if (sc_otel_observer_create(alloc, &otel_cfg, &otel_observer) == SC_OK &&
+            otel_observer.vtable) {
             agent.observer = &otel_observer;
         }
     }

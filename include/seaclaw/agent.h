@@ -1,6 +1,8 @@
 #ifndef SC_AGENT_H
 #define SC_AGENT_H
 
+#include "seaclaw/agent/mailbox.h"
+#include "seaclaw/agent/spawn.h"
 #include "seaclaw/channel.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/arena.h"
@@ -12,14 +14,9 @@
 #include "seaclaw/observer.h"
 #include "seaclaw/provider.h"
 #include "seaclaw/security.h"
+#include "seaclaw/security/policy_engine.h"
 #include "seaclaw/tool.h"
 #include "seaclaw/voice.h"
-#include "seaclaw/agent/spawn.h"
-#include "seaclaw/agent/mailbox.h"
-#include "seaclaw/security/policy_engine.h"
-#include "seaclaw/agent/spawn.h"
-#include "seaclaw/agent/mailbox.h"
-#include "seaclaw/security/policy_engine.h"
 #include <signal.h>
 #include <stdbool.h>
 #include <stddef.h>

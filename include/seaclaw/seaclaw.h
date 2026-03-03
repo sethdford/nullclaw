@@ -32,24 +32,22 @@
 #include "runtime.h"
 #include "tool.h"
 
-
-#include "agent/spawn.h"
 #include "agent/mailbox.h"
 #include "agent/profile.h"
+#include "agent/spawn.h"
 #include "channels/thread_binding.h"
-#include "security/policy_engine.h"
-#include "security/replay.h"
 #include "observability/otel.h"
 #include "plugin.h"
+#include "security/policy_engine.h"
+#include "security/replay.h"
 
-
-#include "agent/spawn.h"
 #include "agent/mailbox.h"
 #include "agent/profile.h"
+#include "agent/spawn.h"
 #include "channels/thread_binding.h"
-#include "security/policy_engine.h"
-#include "security/replay.h"
 #include "observability/otel.h"
 #include "plugin.h"
+#include "security/policy_engine.h"
+#include "security/replay.h"
 
 #endif /* SC_SEACLAW_H */

@@ -9,7 +9,6 @@
 #include "seaclaw/memory.h"
 #include "seaclaw/security.h"
 #include "seaclaw/tool.h"
-#include "seaclaw/agent/spawn.h"
 #include <stddef.h>
 
 sc_error_t sc_tools_create_default(sc_allocator_t *alloc, const char *workspace_dir,
