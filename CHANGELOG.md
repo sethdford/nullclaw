@@ -1,7 +1,58 @@
 # Changelog
 
 All notable changes to seaclaw are documented here.
-Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning is CalVer (`YYYY.M.D`).
+Format follows [Keep a Changelog](https://keepachangelog.com/).
+
+## [0.2.0] - 2026-03-03
+
+### Added
+
+- **Feature gating**: 12 CMake options (`SC_ENABLE_CRON`, `SC_ENABLE_PUSH`, `SC_ENABLE_UPDATE`,
+  `SC_ENABLE_SKILLS`, `SC_ENABLE_PERIPHERALS`, `SC_ENABLE_TUNNELS`, `SC_ENABLE_RUNTIME_EXOTIC`,
+  `SC_ENABLE_TOOLS_BROWSER`, `SC_ENABLE_TOOLS_ADVANCED`, `SC_ENABLE_OTEL`, etc.) for conditional
+  compilation — minimal binary drops from 431 KB to 365 KB
+- **CMake presets**: `minimal`, `default`, `full`, `release`, `dev` build profiles in
+  `CMakePresets.json`
+- **10 business tools**: analytics, broadcast, calendar, CRM, invoice, jira, report, social,
+  spreadsheet, workflow — all security-hardened
+- **3 new channels**: Teams (incoming webhook), Twilio SMS (Messages API + Basic auth),
+  Google Chat (webhook) — all with `SC_IS_TEST` mocks and HTTPS enforcement
+- **Config schema validation**: `sc_config_validate_strict` checks unknown keys, type mismatches,
+  invalid URLs (`http://` rejected), path traversal (`..`), numeric range limits; strict mode via
+  `SEACLAW_STRICT_CONFIG=1`
+- **Fuzz testing**: libFuzzer harnesses for JSON parsing, config loading, and tool parameter
+  handling (`fuzz/` directory, `SC_ENABLE_FUZZ=ON`)
+- **Benchmark suite**: JSON, memory backend, and config parsing benchmarks with
+  `clock_gettime`/`mach_absolute_time` timing (`bench/`, `SC_ENABLE_BENCH=ON`)
+- **Unified memory factory**: `sc_memory_create_from_config()` replaces 3 duplicated memory
+  creation paths in `cli.c`, `main.c`, and `cli_commands.c`
+- **Channel integration tests**: full lifecycle + negative cases for Teams, Twilio, Google Chat
+- **Peripheral mock tests**: 15 tests for Arduino, STM32/Nucleo, RPi (create/read/write/deinit +
+  error cases)
+- **Provider test coverage**: 21 new tests covering all 9 providers — chat mocks, NULL request
+  handling, empty message graceful errors
+- **Config validation tests**: unknown key detection, type checking, URL validation, path traversal
+- **Minimal preset CI job**: `minimal-build` in GitHub Actions catches feature gating regressions
+- **10 documentation pages**: cron, skills, tunnels, MCP, TUI, migrate, vector memory, hardware
+  peripherals, gateway API, Docker deployment — all written from source code
+
+### Fixed
+
+- **Jira tool**: user-controlled `base_url` accepted HTTP (now HTTPS-only enforced)
+- **Spreadsheet tool**: no data size limit (now 1 MB cap against DoS)
+- **Calendar tool**: unbounded `calendar_id`/`event_id` (now 200/100 char limits)
+- **5 tools**: empty credential acceptance (analytics, CRM, social, broadcast, invoice)
+- **5 compiler warnings**: seatbelt unused variable, pdf unused result, 3 provider const-discard
+- `config.c` split into `config_serialize.c` + `config_getters.c` (was 74 KB object)
+- `-Werror` enabled on `seaclaw_core` and `seaclaw` targets
+
+### Changed
+
+- STUBS.md audited: channels 20→22, tools 36→54, sandbox backends 4→11
+- Test count: 1,834 → **2,198** (364 new tests)
+- Binary size (full release): 398 KB → 431 KB (new tools/channels), minimal: **365 KB**
+
+---
 
 ## [2026.3.3d] - 2026-03-03
 
