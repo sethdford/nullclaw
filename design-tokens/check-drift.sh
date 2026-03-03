@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Compares generated token outputs against committed versions to detect manual edits/drift.
+# Exit 1 if drift detected, 0 if clean.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Rebuild tokens into a temp directory
+TMPDIR=$(mktemp -d)
+trap "rm -rf $TMPDIR" EXIT
+
+cd "$SCRIPT_DIR"
+npx tsx build.ts --outdir "$TMPDIR" 2>/dev/null || {
+  echo "Error: Token build failed"
+  exit 1
+}
+
+DRIFT=0
+
+# Check CSS output
+if ! diff -q "$TMPDIR/_tokens.css" "$REPO_ROOT/ui/src/styles/_tokens.css" >/dev/null 2>&1; then
+  echo "DRIFT: ui/src/styles/_tokens.css differs from generated output"
+  diff "$TMPDIR/_tokens.css" "$REPO_ROOT/ui/src/styles/_tokens.css" || true
+  DRIFT=1
+fi
+
+# Check website CSS output
+if ! diff -q "$TMPDIR/_tokens.css" "$REPO_ROOT/website/src/styles/_tokens.css" >/dev/null 2>&1; then
+  echo "DRIFT: website/src/styles/_tokens.css differs from generated output"
+  DRIFT=1
+fi
+
+# Check C header output
+if ! diff -q "$TMPDIR/design_tokens.h" "$REPO_ROOT/include/seaclaw/design_tokens.h" >/dev/null 2>&1; then
+  echo "DRIFT: include/seaclaw/design_tokens.h differs from generated output"
+  DRIFT=1
+fi
+
+# Check Swift output
+if [ -f "$TMPDIR/DesignTokens.swift" ] && [ -f "$REPO_ROOT/apps/shared/SeaClawKit/Sources/SeaClawChatUI/DesignTokens.swift" ]; then
+  if ! diff -q "$TMPDIR/DesignTokens.swift" "$REPO_ROOT/apps/shared/SeaClawKit/Sources/SeaClawChatUI/DesignTokens.swift" >/dev/null 2>&1; then
+    echo "DRIFT: apps/shared/.../DesignTokens.swift differs from generated output"
+    DRIFT=1
+  fi
+fi
+
+# Check Kotlin output
+if [ -f "$TMPDIR/DesignTokens.kt" ] && [ -f "$REPO_ROOT/apps/android/app/src/main/java/ai/seaclaw/app/ui/DesignTokens.kt" ]; then
+  if ! diff -q "$TMPDIR/DesignTokens.kt" "$REPO_ROOT/apps/android/app/src/main/java/ai/seaclaw/app/ui/DesignTokens.kt" >/dev/null 2>&1; then
+    echo "DRIFT: apps/android/.../DesignTokens.kt differs from generated output"
+    DRIFT=1
+  fi
+fi
+
+if [ "$DRIFT" -eq 1 ]; then
+  echo ""
+  echo "Token drift detected! Run 'cd design-tokens && npm run build' to regenerate."
+  exit 1
+else
+  echo "No token drift detected."
+  exit 0
+fi

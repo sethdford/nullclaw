@@ -1,0 +1,15 @@
+---
+description: iOS and macOS native app standards
+globs:
+  - "apps/ios/**"
+  - "apps/macos/**"
+  - "apps/shared/**"
+---
+
+- Import and use `SCTokens` from `DesignTokens.swift` for all colors, spacing, radius, fonts, springs
+- Colors: `SCTokens.Dark.*` or `SCTokens.Light.*` — never hardcode `Color(red:green:blue:)` or `Color(hex:)`
+- Spacing: `SCTokens.spaceXs` through `SCTokens.space2xl` — never hardcode `CGFloat` spacing values
+- Radius: `SCTokens.radiusSm` through `SCTokens.radiusXl` — never hardcode `.cornerRadius(12)`
+- Font: `Font.custom(SCTokens.fontSans + "-Book", size:)` — never use `.font(.system(...))`
+- Animation: `SCTokens.springMicro`, `SCTokens.springStandard`, `SCTokens.springExpressive`, `SCTokens.springDramatic`
+- Accessibility: support Dynamic Type, VoiceOver, reduce motion

@@ -1,0 +1,15 @@
+---
+description: Animation and motion standards for all UI surfaces
+globs:
+  - "ui/src/**"
+  - "apps/**"
+  - "website/src/**"
+---
+
+- Use `var(--sc-duration-fast)`, `var(--sc-duration-normal)`, `var(--sc-duration-slow)` — never hardcode `100ms`, `200ms`, `0.2s`, etc.
+- Use `var(--sc-ease-out)`, `var(--sc-ease-in-out)` — never hardcode `cubic-bezier(...)` or `ease`
+- Use spring tokens: `--sc-spring-micro` for button/toggle, `--sc-spring-standard` for panels, `--sc-spring-expressive` for page transitions, `--sc-spring-dramatic` for hero reveals
+- Native iOS: use `SCTokens.springMicro`, `SCTokens.springStandard`, `SCTokens.springExpressive`, `SCTokens.springDramatic`
+- Every animation/transition must work with `prefers-reduced-motion: reduce`
+- Keyframe names: `sc-` prefix (e.g. `sc-fade-in`, `sc-slide-up`)
+- Never use `setTimeout` for animation timing — use CSS transitions or `requestAnimationFrame`

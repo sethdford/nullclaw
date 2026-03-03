@@ -69,3 +69,8 @@ ui/node_modules/
 ui/test-results/
 ui/playwright-report/
 ui/blob-report/
+ui/visual-regression/
+
+# E2E test artifacts (screenshots, ad-hoc scripts)
+ui/e2e-*.png
+ui/e2e-*.mjs

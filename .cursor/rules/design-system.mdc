@@ -1,0 +1,70 @@
+---
+description: UI and design system standards for all frontend surfaces
+globs:
+  - "ui/**"
+  - "website/**"
+  - "apps/**"
+---
+
+# SeaClaw Design System — Agent Rules
+
+## Typography
+
+- **Canonical typeface**: Avenir (all platforms).
+- Web (dashboard + website): use `var(--sc-font)` or `var(--sc-font-mono)`. Never set `font-family` directly.
+- Apple native (iOS/macOS): use `Font.custom("Avenir-Book", size:)`, `Font.custom("Avenir-Medium", size:)`, `Font.custom("Avenir-Heavy", size:)`, `Font.custom("Avenir-Black", size:)`.
+- Android: use `AvenirFontFamily` from `Theme.kt`. Never reference system fonts directly.
+- **Never** import Google Fonts or any external font CDN.
+- **Never** use raw `font-family:` declarations — always reference the design token.
+
+## Icons
+
+- **Canonical icon library**: Phosphor Regular.
+- Web dashboard: import from `ui/src/icons.ts` — e.g. `import { icons } from '../icons.js'` then `${icons.house(20)}`.
+- Website (Astro): use inline Phosphor SVGs with `viewBox="0 0 256 256" fill="currentColor"`.
+- Native apps: use SF Symbols (Apple) or Material Icons (Android) where Phosphor equivalents are unavailable.
+- **Never** use emoji characters (e.g. ⚠️, 💬, 🔧, ⚡, ⚙) as UI icons.
+- **Never** create one-off inline SVGs when a Phosphor icon exists in the icon module.
+- To add a new icon, add it to `ui/src/icons.ts` using Phosphor Regular paths with `viewBox="0 0 256 256"`.
+
+## Design Tokens
+
+- All values must reference `--sc-*` CSS custom properties from `design-tokens/`.
+- **Never** use raw hex color values in CSS — use `var(--sc-accent)`, `var(--sc-text)`, etc.
+- **Never** use raw pixel values for spacing — use `var(--sc-space-sm)`, `var(--sc-space-md)`, etc.
+- **Never** use raw pixel values for border-radius — use `var(--sc-radius)`, `var(--sc-radius-lg)`, etc.
+- Shadow values must use `var(--sc-shadow-sm)`, `var(--sc-shadow-md)`, `var(--sc-shadow-lg)`.
+- Token namespace: `--sc-` prefix for all custom properties.
+
+## Motion & Animation
+
+- Always use `var(--sc-duration-fast)`, `var(--sc-duration-normal)`, `var(--sc-duration-slow)` for timing.
+- Always use `var(--sc-ease-out)`, `var(--sc-ease-in-out)` for easing.
+- Use spring tokens (`--sc-spring-micro`, `--sc-spring-standard`, `--sc-spring-expressive`, `--sc-spring-dramatic`) for physics-based motion.
+- **Every animation must respect `prefers-reduced-motion`**. Use the global media query in `theme.css` or add component-level `@media (prefers-reduced-motion: reduce)` overrides.
+- Keyframe names use `sc-` prefix (e.g. `sc-fade-in`, `sc-slide-up`).
+
+## Accessibility
+
+- All interactive elements must have visible focus rings using `--sc-accent`.
+- Modals must trap focus and support Escape to close.
+- Tooltips must be keyboard-accessible (show on focus, not just hover).
+- Use semantic HTML and ARIA attributes: `role`, `aria-label`, `aria-labelledby`, `aria-modal`.
+- Color contrast must meet WCAG 2.1 AA (4.5:1 for text, 3:1 for large text/UI).
+- `prefers-color-scheme` and `prefers-reduced-motion` must both be supported.
+
+## Component Patterns
+
+- Web components use LitElement with `@customElement` decorator.
+- Component names: `sc-<name>` prefix (e.g. `sc-button`, `sc-card`, `sc-modal`).
+- Styles: `static styles = css\`...\`` using `--sc-*` tokens exclusively.
+- Slots for composition; properties for data; events for communication upward.
+- New components must have corresponding test files in `ui/src/` or `ui/tests/`.
+
+## File Organization
+
+- Shared components: `ui/src/components/`
+- View pages: `ui/src/views/`
+- Styles: `ui/src/styles/` (tokens generated from `design-tokens/`)
+- Icons: `ui/src/icons.ts` (single source for all web dashboard icons)
+- Design tokens source of truth: `design-tokens/` (W3C format)

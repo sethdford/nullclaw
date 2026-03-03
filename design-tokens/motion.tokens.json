@@ -1,11 +1,36 @@
 {
-  "$description": "Motion tokens — duration, easing, and spring configurations",
+  "$description": "Motion tokens — duration, easing, spring, choreography, and purpose-based transitions",
   "duration": {
-    "instant": { "$value": "50ms", "$type": "duration" },
-    "fast": { "$value": "100ms", "$type": "duration" },
-    "normal": { "$value": "200ms", "$type": "duration" },
-    "slow": { "$value": "350ms", "$type": "duration" },
-    "slower": { "$value": "500ms", "$type": "duration" }
+    "instant": {
+      "$value": "0ms",
+      "$type": "duration",
+      "$description": "No perceptible delay"
+    },
+    "fast": {
+      "$value": "100ms",
+      "$type": "duration",
+      "$description": "Micro-interactions"
+    },
+    "normal": {
+      "$value": "200ms",
+      "$type": "duration",
+      "$description": "Standard transitions"
+    },
+    "slow": {
+      "$value": "350ms",
+      "$type": "duration",
+      "$description": "Complex transitions"
+    },
+    "slower": {
+      "$value": "500ms",
+      "$type": "duration",
+      "$description": "Dramatic reveals"
+    },
+    "slowest": {
+      "$value": "700ms",
+      "$type": "duration",
+      "$description": "Hero/page transitions"
+    }
   },
   "easing": {
     "linear": { "$value": "linear", "$type": "cubicBezier" },
@@ -25,6 +50,16 @@
       "$value": "linear(0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%, 0.721 25.3%, 0.849 31.5%, 0.937 38.1%, 0.968 41.8%, 0.991 45.7%, 1.006 50.1%, 1.015 55%, 1.017 63.9%, 1.001 85.9%, 1)",
       "$type": "cubicBezier",
       "$description": "CSS linear() approximation of spring(stiffness:200, damping:20)"
+    },
+    "spring-bounce": {
+      "$value": "linear(0, 0.004, 0.016, 0.035 4%, 0.147 8%, 0.51 17.2%, 0.726 23.1%, 0.884 28.9%, 0.976 34%, 1.019 38.3%, 1.045 42.5%, 1.054 47.7%, 1.04 56.7%, 1.017 64.3%, 1.003 76%, 1)",
+      "$type": "cubicBezier",
+      "$description": "CSS linear() with slight bounce overshoot"
+    },
+    "emphasize": {
+      "$value": "cubic-bezier(0.2, 0, 0, 1)",
+      "$type": "cubicBezier",
+      "$description": "Dramatic deceleration for emphasis animations"
     }
   },
   "spring": {
@@ -52,6 +87,60 @@
       "damping": { "$value": 10, "$type": "number" },
       "mass": { "$value": 1, "$type": "number" },
       "$description": "Hero reveal, onboarding (~600ms settle)"
+    }
+  },
+  "purpose": {
+    "$description": "Purpose-based motion presets for specific interaction types",
+    "enter": {
+      "duration": { "$value": "{duration.normal}", "$type": "duration" },
+      "easing": { "$value": "{easing.ease-out}", "$type": "cubicBezier" },
+      "$description": "Element enters viewport or DOM"
+    },
+    "exit": {
+      "duration": { "$value": "{duration.fast}", "$type": "duration" },
+      "easing": { "$value": "{easing.ease-in}", "$type": "cubicBezier" },
+      "$description": "Element leaves viewport or DOM"
+    },
+    "emphasize": {
+      "duration": { "$value": "{duration.slow}", "$type": "duration" },
+      "easing": { "$value": "{easing.emphasize}", "$type": "cubicBezier" },
+      "$description": "Attention-drawing animation"
+    },
+    "move": {
+      "duration": { "$value": "{duration.normal}", "$type": "duration" },
+      "easing": { "$value": "{easing.ease-in-out}", "$type": "cubicBezier" },
+      "$description": "Element repositioning (layout shift, reorder)"
+    },
+    "page-enter": {
+      "duration": { "$value": "{duration.slow}", "$type": "duration" },
+      "easing": { "$value": "{easing.ease-out}", "$type": "cubicBezier" },
+      "$description": "Page/view entering"
+    },
+    "page-exit": {
+      "duration": { "$value": "{duration.fast}", "$type": "duration" },
+      "easing": { "$value": "{easing.ease-in}", "$type": "cubicBezier" },
+      "$description": "Page/view exiting"
+    },
+    "shared-element": {
+      "duration": { "$value": "{duration.slow}", "$type": "duration" },
+      "easing": { "$value": "{easing.spring-out}", "$type": "cubicBezier" },
+      "$description": "Shared element transition between views"
+    }
+  },
+  "choreography": {
+    "$description": "Stagger and cascade timing",
+    "stagger-delay": { "$value": "50ms", "$type": "duration" },
+    "stagger-max": { "$value": "300ms", "$type": "duration" },
+    "cascade-delay": { "$value": "30ms", "$type": "duration" },
+    "cascade-max": { "$value": "200ms", "$type": "duration" }
+  },
+  "reduced-motion": {
+    "$description": "Alternative values when prefers-reduced-motion: reduce is active",
+    "duration-override": { "$value": "0ms", "$type": "duration" },
+    "spring-override-damping": {
+      "$value": 100,
+      "$type": "number",
+      "$description": "Overdamped — no bounce"
     }
   },
   "transition": {

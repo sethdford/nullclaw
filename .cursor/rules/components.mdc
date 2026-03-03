@@ -1,0 +1,15 @@
+---
+description: Web component architecture standards
+globs:
+  - "ui/src/components/**"
+---
+
+- Component tag: `sc-<name>` prefix, registered with `@customElement("sc-<name>")`
+- Base class: LitElement with `static styles = css\`...\``
+- All styles must use `--sc-*` tokens — no raw hex, px spacing, or font-family
+- ARIA: every interactive component needs `role`, `aria-label` or `aria-labelledby`
+- Focus: visible focus ring using `outline: 2px solid var(--sc-accent)` on `:focus-visible`
+- Keyboard: support Tab, Escape (for overlays), Enter/Space (for buttons), Arrow keys (for lists/tabs)
+- Every new component MUST have: (1) test in `components.test.ts`, (2) entry in `catalog.html`, (3) TypeScript types in `HTMLElementTagNameMap`
+- Events fire upward via `CustomEvent`; data flows down via `@property`
+- Use slots for composition, not string props for content
