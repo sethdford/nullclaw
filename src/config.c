@@ -28,7 +28,7 @@ static void set_defaults(sc_config_t *cfg, sc_allocator_t *a) {
     cfg->providers_len = 0;
     cfg->api_key = NULL;
     cfg->default_provider = sc_strdup(a, "openai");
-    cfg->default_model = sc_strdup(a, "claude-sonnet-4-20250514");
+    cfg->default_model = sc_strdup(a, "gpt-4o");
     cfg->default_temperature = 0.7;
     cfg->temperature = 0.7;
     cfg->max_tokens = 0;
