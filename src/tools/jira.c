@@ -32,9 +32,10 @@ typedef struct {
 static sc_error_t jira_execute(void *ctx, sc_allocator_t *alloc, const sc_json_value_t *args,
                                sc_tool_result_t *out) {
     (void)ctx;
-    if (!args || !out) {
+    if (!out) return SC_ERR_INVALID_ARGUMENT;
+    if (!args) {
         *out = sc_tool_result_fail("invalid args", 12);
-        return SC_OK;
+        return SC_ERR_INVALID_ARGUMENT;
     }
     const char *action = sc_json_get_string(args, "action");
     if (!action) {
@@ -99,8 +100,12 @@ static sc_error_t jira_execute(void *ctx, sc_allocator_t *alloc, const sc_json_v
             *out = sc_tool_result_fail("jql too long", 12);
             return SC_OK;
         }
-        char url[1024];
-        snprintf(url, sizeof(url), "%s/rest/api/3/search?jql=%s&maxResults=20", base_url, jql);
+        char url[2048];
+        int url_n = snprintf(url, sizeof(url), "%s/rest/api/3/search?jql=%s&maxResults=20", base_url, jql);
+        if (url_n < 0 || (size_t)url_n >= sizeof(url)) {
+            *out = sc_tool_result_fail("URL too long", 12);
+            return SC_OK;
+        }
         sc_http_response_t resp = {0};
         sc_error_t err = sc_http_get(alloc, url, auth, &resp);
         if (err != SC_OK || resp.status_code != 200) {

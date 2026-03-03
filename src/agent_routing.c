@@ -237,6 +237,8 @@ static bool all_constraints_match(const sc_agent_binding_t *b, const sc_route_in
             return false;
         if (b->match.peer->kind != check_peer->kind)
             return false;
+        if (!b->match.peer->id || !check_peer->id)
+            return false;
         size_t al = b->match.peer->id_len ? b->match.peer->id_len : strlen(b->match.peer->id);
         size_t bl = check_peer->id_len ? check_peer->id_len : strlen(check_peer->id);
         if (!str_eq(b->match.peer->id, al, check_peer->id, bl))

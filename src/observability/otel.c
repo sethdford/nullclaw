@@ -79,7 +79,8 @@ static void otel_record_event(void *ctx, const sc_observer_event_t *event) {
     char url[512];
     snprintf(url, sizeof(url), "%s/v1/logs", c->endpoint);
     sc_http_response_t resp = {0};
-    sc_http_post_json(c->alloc, url, NULL, body, (size_t)n, &resp);
+    sc_error_t herr = sc_http_post_json(c->alloc, url, NULL, body, (size_t)n, &resp);
+    (void)herr;
     if (resp.owned && resp.body)
         sc_http_response_free(c->alloc, &resp);
 #else
@@ -107,7 +108,8 @@ static void otel_record_metric(void *ctx, const sc_observer_metric_t *metric) {
     char url[512];
     snprintf(url, sizeof(url), "%s/v1/metrics", c->endpoint);
     sc_http_response_t resp = {0};
-    sc_http_post_json(c->alloc, url, NULL, body, (size_t)n, &resp);
+    sc_error_t merr = sc_http_post_json(c->alloc, url, NULL, body, (size_t)n, &resp);
+    (void)merr;
     if (resp.owned && resp.body)
         sc_http_response_free(c->alloc, &resp);
 #else

@@ -224,8 +224,8 @@ static const char *http_request_params(void *ctx) {
     return SC_HTTP_REQUEST_PARAMS;
 }
 static void http_request_deinit(void *ctx, sc_allocator_t *alloc) {
-    (void)alloc;
-    free(ctx);
+    if (ctx)
+        alloc->free(alloc->ctx, ctx, sizeof(sc_http_request_ctx_t));
 }
 
 static const sc_tool_vtable_t http_request_vtable = {
@@ -237,11 +237,10 @@ static const sc_tool_vtable_t http_request_vtable = {
 };
 
 sc_error_t sc_http_request_create(sc_allocator_t *alloc, bool allow_http, sc_tool_t *out) {
-    (void)alloc;
-    (void)allow_http;
-    sc_http_request_ctx_t *c = (sc_http_request_ctx_t *)calloc(1, sizeof(*c));
+    sc_http_request_ctx_t *c = (sc_http_request_ctx_t *)alloc->alloc(alloc->ctx, sizeof(*c));
     if (!c)
         return SC_ERR_OUT_OF_MEMORY;
+    memset(c, 0, sizeof(*c));
     c->allow_http = allow_http;
     out->ctx = c;
     out->vtable = &http_request_vtable;

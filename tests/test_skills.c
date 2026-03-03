@@ -98,12 +98,12 @@ static void test_skill_registry_search_mock(void) {
 static void test_skill_registry_install_mock(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_error_t err = sc_skill_registry_install(&alloc, "code-review");
-    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(err, SC_ERR_NOT_SUPPORTED);
 }
 
 static void test_skill_registry_uninstall_mock(void) {
     sc_error_t err = sc_skill_registry_uninstall("nonexistent");
-    SC_ASSERT_EQ(err, SC_OK);  /* SC_IS_TEST returns OK */
+    SC_ASSERT_EQ(err, SC_ERR_NOT_SUPPORTED);
 }
 
 static void test_skill_registry_get_installed_dir(void) {
@@ -116,7 +116,7 @@ static void test_skill_registry_get_installed_dir(void) {
 static void test_skill_registry_publish_mock(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_error_t err = sc_skill_registry_publish(&alloc, "/tmp/skill");
-    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(err, SC_ERR_NOT_SUPPORTED);
 }
 
 static void test_skill_registry_publish_null_dir(void) {
@@ -150,23 +150,23 @@ static void test_skill_registry_search_null_query(void) {
 static void test_skill_registry_install_null_name(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_error_t err = sc_skill_registry_install(&alloc, NULL);
-    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(err, SC_ERR_NOT_SUPPORTED);
 }
 
 static void test_skill_registry_install_empty_name(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_error_t err = sc_skill_registry_install(&alloc, "");
-    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(err, SC_ERR_NOT_SUPPORTED);
 }
 
 static void test_skill_registry_uninstall_null_name(void) {
     sc_error_t err = sc_skill_registry_uninstall(NULL);
-    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(err, SC_ERR_NOT_SUPPORTED);
 }
 
 static void test_skill_registry_update_null_alloc(void) {
     sc_error_t err = sc_skill_registry_update(NULL);
-    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(err, SC_ERR_NOT_SUPPORTED);
 }
 
 static void test_skill_registry_get_installed_dir_writes_path(void) {

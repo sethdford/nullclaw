@@ -21,9 +21,10 @@ static sc_error_t agent_query_execute(void *ctx, sc_allocator_t *alloc, const sc
                                       sc_tool_result_t *out) {
     agent_query_ctx_t *c = (agent_query_ctx_t *)ctx;
     (void)alloc;
-    if (!args || !out) {
+    if (!out) return SC_ERR_INVALID_ARGUMENT;
+    if (!args) {
         *out = sc_tool_result_fail("invalid args", 12);
-        return SC_OK;
+        return SC_ERR_INVALID_ARGUMENT;
     }
 
     double id_d = sc_json_get_number(args, "agent_id", -1.0);

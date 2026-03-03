@@ -21,9 +21,10 @@ typedef struct {
 static sc_error_t apply_patch_execute(void *ctx, sc_allocator_t *alloc, const sc_json_value_t *args,
                                       sc_tool_result_t *out) {
     (void)ctx;
-    if (!args || !out) {
+    if (!out) return SC_ERR_INVALID_ARGUMENT;
+    if (!args) {
         *out = sc_tool_result_fail("invalid args", 12);
-        return SC_OK;
+        return SC_ERR_INVALID_ARGUMENT;
     }
     const char *file = sc_json_get_string(args, "file");
     const char *patch = sc_json_get_string(args, "patch");

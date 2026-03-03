@@ -78,26 +78,29 @@ void sc_skill_registry_entries_free(sc_allocator_t *alloc, sc_skill_registry_ent
     alloc->free(alloc->ctx, entries, count * sizeof(sc_skill_registry_entry_t));
 }
 
+/* install/uninstall/update/publish: reserved for future remote registry support.
+   Currently no-ops — skills are loaded from disk via sc_skill_registry_list(). */
+
 sc_error_t sc_skill_registry_install(sc_allocator_t *alloc, const char *name) {
     (void)alloc;
     (void)name;
-    return SC_OK;
+    return SC_ERR_NOT_SUPPORTED;
 }
 
 sc_error_t sc_skill_registry_uninstall(const char *name) {
     (void)name;
-    return SC_OK;
+    return SC_ERR_NOT_SUPPORTED;
 }
 
 sc_error_t sc_skill_registry_update(sc_allocator_t *alloc) {
     (void)alloc;
-    return SC_OK;
+    return SC_ERR_NOT_SUPPORTED;
 }
 
 sc_error_t sc_skill_registry_publish(sc_allocator_t *alloc, const char *skill_dir) {
     if (!alloc || !skill_dir)
         return SC_ERR_INVALID_ARGUMENT;
-    return SC_OK;
+    return SC_ERR_NOT_SUPPORTED;
 }
 
 size_t sc_skill_registry_get_installed_dir(char *out, size_t out_len) {

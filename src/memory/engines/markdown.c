@@ -372,11 +372,11 @@ static sc_error_t impl_forget(void *ctx, const char *key, size_t key_len, bool *
     *deleted = false;
     char *filename = key_to_filename(key, key_len, self->alloc);
     if (!filename)
-        return SC_OK;
+        return SC_ERR_OUT_OF_MEMORY;
     char *fullpath = sc_sprintf(self->alloc, "%s/%s", self->dir, filename);
     self->alloc->free(self->alloc->ctx, filename, strlen(filename) + 1);
     if (!fullpath)
-        return SC_OK;
+        return SC_ERR_OUT_OF_MEMORY;
     if (remove(fullpath) == 0)
         *deleted = true;
     self->alloc->free(self->alloc->ctx, fullpath, strlen(fullpath) + 1);
