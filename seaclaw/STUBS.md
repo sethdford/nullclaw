@@ -1,8 +1,8 @@
 # SeaClaw (Swift/SeaClawKit) — Project Status
 
-This file documents the **Swift/SeaClawKit** module — a Swift wrapper around the C core. Metrics below are for the Swift codebase; the main C codebase has different scale (~466 source files, ~70K+ lines of C, 2,258 tests, 430 KB binary).
+This file documents the **Swift/SeaClawKit** module — a Swift wrapper around the C core. Metrics below are for the Swift codebase; the main C codebase has different scale (~466 source files, ~70K+ lines of C, 2,266 tests, 430 KB binary).
 
-Last updated: 2026-03-01
+Last updated: 2026-03-03
 
 ## Summary
 
@@ -20,8 +20,8 @@ Last updated: 2026-03-01
 | Subsystem        | Baseline | SeaClaw | Status                      |
 | ---------------- | -------- | ------- | --------------------------- |
 | Providers        | 18       | 18      | **Full parity**             |
-| Channels         | 20       | 20      | **Full parity**             |
-| Tools            | 36       | 38      | **Full parity** (+2 extras) |
+| Channels         | 22       | 22      | **Full parity**             |
+| Tools            | 54       | 54      | **Full parity**             |
 | Security         | 11       | 13      | **Full parity** (+2 extras) |
 | Agent            | 8        | 11      | **Full parity** (+3 extras) |
 | Memory Engines   | 10       | 10      | **Full parity**             |
@@ -37,8 +37,8 @@ Last updated: 2026-03-01
 
 - **Full agent loop**: `seaclaw agent` — interactive turn-based conversation
 - **Config loading**: JSON config parsing, env var overrides, validation
-- **34 tools registered**: All execute with proper vtable dispatch
-- **19 channels** (catalog): CLI fully functional, others have send() via HTTP client
+- **50+ tools registered** (build-config dependent): All execute with proper vtable dispatch
+- **22 channels** (catalog): CLI fully functional, others have send() via HTTP client
 - **18 providers**: OpenAI, Anthropic, Gemini, Ollama, OpenRouter, Compatible, Claude CLI, Codex CLI, OpenAI Codex + reliable/router wrappers
 - **HTTP client**: libcurl-based, with SSE streaming support
 - **WebSocket**: basic `ws://` support; `wss://` TLS via OpenSSL when `SC_ENABLE_TLS=ON`
@@ -64,7 +64,7 @@ Last updated: 2026-03-01
 - **Pairing**: Code + token authentication with lockout
 - **Secrets**: ChaCha20 + HMAC-SHA256 encryption
 - **Audit logging**: Event-based security audit trail
-- **Sandbox**: Abstraction for bubblewrap, firejail, landlock, docker
+- **Sandbox**: Abstraction for bubblewrap, firejail, landlock, landlock_seccomp, seccomp, firecracker, appcontainer, seatbelt, docker, wasi, noop
 - **Rate tracking**: Per-key/per-window rate limiting
 
 ### Infrastructure
@@ -86,7 +86,7 @@ Last updated: 2026-03-01
 
 ## What's Stubbed (Interface Defined, Returns SC_ERR_NOT_SUPPORTED)
 
-- **postgres.c, redis.c, lancedb.c, lucid.c, api.c**: Memory engines — stubs present, need external libs for real backend
+- **postgres.c, redis.c, lancedb.c, lucid.c**: Memory engines — stubs present, need external libs for real backend (api.c is real — HTTP API with in-memory mock for tests)
 - **store_pgvector.c**: Vector store stub (needs libpq + pgvector)
 - **MCP client**: Protocol defined, transport not implemented
 - **Sub-agent spawning**: Interface defined, not wired to process management
@@ -104,3 +104,18 @@ Last updated: 2026-03-01
 | libpq              | Optional (OFF) | PostgreSQL memory engine          |
 | OpenSSL            | Optional (ON)  | WSS, TLS for WebSocket            |
 | math (-lm)         | Linked         | Vector math, retrieval algorithms |
+
+## Audit (2026-03-03)
+
+Source file counts verified against `src/` and `include/`:
+
+| Category         | Files | Notes                                                                                                                                                                                                  |
+| ---------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Providers        | 18    | anthropic, claude_cli, codex_cli, compatible, gemini, ollama, openai, openai_codex, openrouter, reliable, router + factory/helpers                                                                     |
+| Channels         | 24    | cli, web, discord, mattermost, google_chat, dingtalk, irc, email, teams, slack, onebot, matrix, whatsapp, nostr, imessage, line, signal, telegram, maixcam, qq, lark, twilio, dispatch, thread_binding |
+| Tools            | 66    | 56 tool impls + factory + 9 web_search_providers (exa, brave, etc.)                                                                                                                                    |
+| Memory engines   | 10    | none, markdown, memory_lru, sqlite, postgres, api, redis, lucid, lancedb, registry                                                                                                                     |
+| Peripherals      | 4     | arduino, stm32, rpi, factory                                                                                                                                                                           |
+| Runtime adapters | 5     | native, docker, cloudflare, wasm_rt, factory                                                                                                                                                           |
+| Sandbox backends | 11    | bubblewrap, firejail, landlock, landlock_seccomp, seccomp, firecracker, appcontainer, seatbelt, docker, wasi, noop_sandbox                                                                             |
+| Observability    | 4     | log_observer, metrics_observer, otel, multi_observer                                                                                                                                                   |
