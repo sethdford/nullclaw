@@ -32,6 +32,7 @@ struct sc_span {
     size_t attr_count;
 };
 
+#if !SC_IS_TEST && defined(SC_HTTP_CURL)
 static const char *event_tag_str(sc_observer_event_tag_t tag) {
     switch (tag) {
     case SC_OBSERVER_EVENT_AGENT_START: return "agent.start";
@@ -58,6 +59,7 @@ static const char *metric_tag_str(sc_observer_metric_tag_t tag) {
     default: return "unknown";
     }
 }
+#endif
 
 static void otel_record_event(void *ctx, const sc_observer_event_t *event) {
     sc_otel_ctx_t *c = (sc_otel_ctx_t *)ctx;

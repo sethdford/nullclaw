@@ -1259,6 +1259,14 @@ sc_error_t sc_config_load(sc_allocator_t *backing, sc_config_t *out) {
     sc_config_apply_env_overrides(out);
     sync_autonomy_level_from_string(out);
     sync_flat_fields(out);
+    /* Strict validation: warnings by default; fail if SEACLAW_STRICT_CONFIG=1 */
+    {
+        const char *strict_env = getenv("SEACLAW_STRICT_CONFIG");
+        bool strict = (strict_env != NULL && strict_env[0] != '\0' && strict_env[0] != '0');
+        sc_error_t verr = sc_config_validate_strict(out, NULL, strict);
+        if (verr != SC_OK)
+            return verr;
+    }
     return sc_config_validate(out);
 }
 

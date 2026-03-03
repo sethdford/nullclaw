@@ -33,8 +33,6 @@ static sc_error_t pdf_execute(void *ctx, sc_allocator_t *alloc, const sc_json_va
         *out = sc_tool_result_fail("missing path", 12);
         return SC_OK;
     }
-    int max_pages = (int)sc_json_get_number(args, "max_pages", 0);
-
 #if SC_IS_TEST
     {
         size_t need = 64 + strlen(path);
@@ -52,6 +50,7 @@ static sc_error_t pdf_execute(void *ctx, sc_allocator_t *alloc, const sc_json_va
     }
     return SC_OK;
 #else
+    int max_pages = (int)sc_json_get_number(args, "max_pages", 0);
     FILE *f = fopen(path, "rb");
     if (!f) {
         *out = sc_tool_result_fail("file not found", 14);

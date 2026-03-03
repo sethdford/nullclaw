@@ -29,12 +29,7 @@ bool sc_config_provider_requires_api_key(const char *provider) {
     return true;
 }
 
-sc_error_t sc_config_validate_strict(const sc_config_t *cfg, const sc_json_value_t *root,
-                                     bool strict) {
-    (void)root;
-    (void)strict;
-    return sc_config_validate(cfg);
-}
+/* sc_config_validate_strict implemented in config_validate.c */
 
 sc_error_t sc_config_validate(const sc_config_t *cfg) {
     if (!cfg)

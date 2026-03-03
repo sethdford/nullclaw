@@ -40,6 +40,7 @@ static sc_error_t analytics_execute(void *ctx, sc_allocator_t *alloc, const sc_j
     }
 
 #if SC_IS_TEST
+    (void)alloc;
     if (strcmp(action, "overview") == 0) {
         *out = sc_tool_result_ok("{\"pageviews\":12540,\"visitors\":3210,\"bounce_rate\":0.42,"
                                  "\"avg_session_duration\":185,\"period\":\"30d\"}",

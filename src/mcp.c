@@ -639,6 +639,7 @@ sc_error_t sc_mcp_init_tools(sc_allocator_t *alloc, const sc_mcp_server_config_t
         total += n;
 
         for (size_t j = 0; j < n; j++) {
+            if (!names[j]) continue;
             size_t pref_len = 32 + strlen(names[j]);
             char *prefixed = (char *)alloc->alloc(alloc->ctx, pref_len);
             if (!prefixed) {

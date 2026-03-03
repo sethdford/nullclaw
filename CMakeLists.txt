@@ -215,6 +215,7 @@ set(SC_CORE_SOURCES
     src/config.c
     src/config_serialize.c
     src/config_getters.c
+    src/config_validate.c
     src/config_types.c
     src/config_mutator.c
     src/config_parse.c
@@ -1115,6 +1116,7 @@ set(SC_TEST_SOURCES
     tests/test_channel_all.c
     tests/test_channel_integration.c
     tests/test_config_extended.c
+    tests/test_config_validation.c
     tests/test_json_extended.c
     tests/test_security_extended.c
     tests/test_core_extended.c
@@ -1132,7 +1134,6 @@ set(SC_TEST_SOURCES
     tests/test_util_modules.c
     tests/test_roadmap.c
     tests/test_new_features.c
-    tests/test_channel_integration.c
 )
 
 add_executable(seaclaw_tests ${SC_TEST_SOURCES} wasm/wasm_alloc.c)
