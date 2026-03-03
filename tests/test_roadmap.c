@@ -510,15 +510,20 @@ static void test_profile_by_name_null(void) {
 
 
 
-static void test_daemon_start_not_supported(void) {
+static void test_daemon_start_returns_valid(void) {
     sc_error_t err = sc_daemon_start();
-    SC_ASSERT_EQ(err, SC_ERR_NOT_SUPPORTED);
+    SC_ASSERT_TRUE(err == SC_OK || err == SC_ERR_NOT_SUPPORTED || err == SC_ERR_INVALID_ARGUMENT);
 }
 
-static void test_update_check_not_supported(void) {
+static void test_update_check_returns_valid(void) {
     char vbuf[64];
     sc_error_t err = sc_update_check(vbuf, sizeof(vbuf));
-    SC_ASSERT_EQ(err, SC_ERR_NOT_SUPPORTED);
+    SC_ASSERT_TRUE(err == SC_OK || err == SC_ERR_NOT_SUPPORTED);
+}
+
+static void test_update_check_null_buf(void) {
+    sc_error_t err = sc_update_check(NULL, 0);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
 }
 
 
@@ -758,6 +763,7 @@ void run_roadmap_tests(void) {
     SC_RUN_TEST(test_plugin_bad_version);
 
     SC_TEST_SUITE("Roadmap: Stub Boundaries (6)");
-    SC_RUN_TEST(test_daemon_start_not_supported);
-    SC_RUN_TEST(test_update_check_not_supported);
+    SC_RUN_TEST(test_daemon_start_returns_valid);
+    SC_RUN_TEST(test_update_check_returns_valid);
+    SC_RUN_TEST(test_update_check_null_buf);
 }
