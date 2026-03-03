@@ -11,6 +11,13 @@ sc_error_t sc_qq_create(sc_allocator_t *alloc, const char *app_id, size_t app_id
                         const char *bot_token, size_t bot_token_len, bool sandbox,
                         sc_channel_t *out);
 
+sc_error_t sc_qq_create_ex(sc_allocator_t *alloc, const char *app_id, size_t app_id_len,
+                          const char *bot_token, size_t bot_token_len,
+                          const char *channel_id, size_t channel_id_len, bool sandbox,
+                          sc_channel_t *out);
+
+bool sc_qq_is_configured(sc_channel_t *ch);
+
 sc_error_t sc_qq_on_webhook(void *channel_ctx, sc_allocator_t *alloc, const char *body,
                             size_t body_len);
 

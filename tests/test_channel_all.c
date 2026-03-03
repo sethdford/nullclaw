@@ -929,7 +929,7 @@ static void test_qq_create(void) {
 static void test_qq_send(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_channel_t ch;
-    sc_qq_create(&alloc, "app", 3, "t", 1, false, &ch);
+    sc_qq_create_ex(&alloc, "app", 3, "t", 1, "ch123", 5, false, &ch);
     sc_error_t err = ch.vtable->send(ch.ctx, NULL, 0, "h", 1, NULL, 0);
     SC_ASSERT_EQ(err, SC_OK);
     sc_qq_destroy(&ch);

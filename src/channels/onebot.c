@@ -1,5 +1,6 @@
 #include "seaclaw/channel.h"
 #include "seaclaw/channel_loop.h"
+#include "seaclaw/channels/onebot.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
 #include "seaclaw/core/http.h"
@@ -23,6 +24,8 @@ typedef struct sc_onebot_ctx {
     size_t api_base_len;
     char *access_token;
     size_t access_token_len;
+    char *user_id;
+    size_t user_id_len;
     bool running;
     sc_onebot_queued_msg_t queue[ONEBOT_QUEUE_MAX];
     size_t queue_head;
@@ -44,22 +47,43 @@ static void onebot_stop(void *ctx) {
         c->running = false;
 }
 
+static void onebot_queue_push(sc_onebot_ctx_t *c, const char *from, size_t from_len,
+                              const char *body, size_t body_len) {
+    if (c->queue_count >= ONEBOT_QUEUE_MAX)
+        return;
+    sc_onebot_queued_msg_t *slot = &c->queue[c->queue_tail];
+    size_t sk = from_len < ONEBOT_SESSION_KEY_MAX ? from_len : ONEBOT_SESSION_KEY_MAX;
+    memcpy(slot->session_key, from, sk);
+    slot->session_key[sk] = '\0';
+    size_t ct = body_len < ONEBOT_CONTENT_MAX ? body_len : ONEBOT_CONTENT_MAX;
+    memcpy(slot->content, body, ct);
+    slot->content[ct] = '\0';
+    c->queue_tail = (c->queue_tail + 1) % ONEBOT_QUEUE_MAX;
+    c->queue_count++;
+}
+
 static sc_error_t onebot_send(void *ctx, const char *target, size_t target_len, const char *message,
                               size_t message_len, const char *const *media, size_t media_count) {
     (void)media;
     (void)media_count;
+    sc_onebot_ctx_t *c = (sc_onebot_ctx_t *)ctx;
+
 #if SC_IS_TEST
-    (void)ctx;
-    (void)target;
-    (void)target_len;
-    (void)message;
-    (void)message_len;
+    if (!c || !message)
+        return SC_ERR_INVALID_ARGUMENT;
+    if (!c->api_base || c->api_base_len == 0)
+        return SC_ERR_CHANNEL_NOT_CONFIGURED;
+    if ((!target || target_len == 0) && (!c->user_id || c->user_id_len == 0))
+        return SC_ERR_CHANNEL_NOT_CONFIGURED;
+    onebot_queue_push(c, "test-sender", 11, message, message_len);
     return SC_OK;
 #else
-    sc_onebot_ctx_t *c = (sc_onebot_ctx_t *)ctx;
+    const char *uid = (target && target_len > 0) ? target : c->user_id;
+    size_t uid_len = (target && target_len > 0) ? target_len : c->user_id_len;
+
     if (!c || !c->alloc || !c->api_base || c->api_base_len == 0)
         return SC_ERR_CHANNEL_NOT_CONFIGURED;
-    if (!target || target_len == 0 || !message)
+    if (!uid || uid_len == 0 || !message)
         return SC_ERR_INVALID_ARGUMENT;
 
     sc_json_buf_t jbuf;
@@ -67,11 +91,11 @@ static sc_error_t onebot_send(void *ctx, const char *target, size_t target_len, 
     if (err)
         return err;
 
-    /* OneBot 11: group message by default */
-    err = sc_json_buf_append_raw(&jbuf, "{\"message_type\":\"group\",", 26);
+    /* OneBot 11: private message */
+    err = sc_json_buf_append_raw(&jbuf, "{\"message_type\":\"private\",", 27);
     if (err)
         goto fail;
-    err = sc_json_append_key_value(&jbuf, "group_id", 8, target, target_len);
+    err = sc_json_append_key_value(&jbuf, "user_id", 7, uid, uid_len);
     if (err)
         goto fail;
     err = sc_json_buf_append_raw(&jbuf, ",\"message\":", 11);
@@ -146,21 +170,6 @@ static const sc_channel_vtable_t onebot_vtable = {
     .stop_typing = NULL,
 };
 
-static void onebot_queue_push(sc_onebot_ctx_t *c, const char *from, size_t from_len,
-                              const char *body, size_t body_len) {
-    if (c->queue_count >= ONEBOT_QUEUE_MAX)
-        return;
-    sc_onebot_queued_msg_t *slot = &c->queue[c->queue_tail];
-    size_t sk = from_len < ONEBOT_SESSION_KEY_MAX ? from_len : ONEBOT_SESSION_KEY_MAX;
-    memcpy(slot->session_key, from, sk);
-    slot->session_key[sk] = '\0';
-    size_t ct = body_len < ONEBOT_CONTENT_MAX ? body_len : ONEBOT_CONTENT_MAX;
-    memcpy(slot->content, body, ct);
-    slot->content[ct] = '\0';
-    c->queue_tail = (c->queue_tail + 1) % ONEBOT_QUEUE_MAX;
-    c->queue_count++;
-}
-
 sc_error_t sc_onebot_on_webhook(void *channel_ctx, sc_allocator_t *alloc, const char *body,
                                 size_t body_len) {
     sc_onebot_ctx_t *c = (sc_onebot_ctx_t *)channel_ctx;
@@ -215,6 +224,13 @@ sc_error_t sc_onebot_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_l
 
 sc_error_t sc_onebot_create(sc_allocator_t *alloc, const char *api_base, size_t api_base_len,
                             const char *access_token, size_t access_token_len, sc_channel_t *out) {
+    return sc_onebot_create_ex(alloc, api_base, api_base_len, access_token, access_token_len, NULL,
+                               0, out);
+}
+
+sc_error_t sc_onebot_create_ex(sc_allocator_t *alloc, const char *api_base, size_t api_base_len,
+                               const char *access_token, size_t access_token_len,
+                               const char *user_id, size_t user_id_len, sc_channel_t *out) {
     if (!alloc || !out)
         return SC_ERR_INVALID_ARGUMENT;
     sc_onebot_ctx_t *c = (sc_onebot_ctx_t *)calloc(1, sizeof(*c));
@@ -243,9 +259,31 @@ sc_error_t sc_onebot_create(sc_allocator_t *alloc, const char *api_base, size_t 
         c->access_token[access_token_len] = '\0';
         c->access_token_len = access_token_len;
     }
+    if (user_id && user_id_len > 0) {
+        c->user_id = (char *)malloc(user_id_len + 1);
+        if (!c->user_id) {
+            if (c->access_token)
+                free(c->access_token);
+            if (c->api_base)
+                free(c->api_base);
+            free(c);
+            return SC_ERR_OUT_OF_MEMORY;
+        }
+        memcpy(c->user_id, user_id, user_id_len);
+        c->user_id[user_id_len] = '\0';
+        c->user_id_len = user_id_len;
+    }
     out->ctx = c;
     out->vtable = &onebot_vtable;
     return SC_OK;
+}
+
+bool sc_onebot_is_configured(sc_channel_t *ch) {
+    if (!ch || !ch->ctx)
+        return false;
+    sc_onebot_ctx_t *c = (sc_onebot_ctx_t *)ch->ctx;
+    return c->api_base != NULL && c->api_base_len > 0 &&
+           (c->user_id != NULL && c->user_id_len > 0);
 }
 
 void sc_onebot_destroy(sc_channel_t *ch) {
@@ -255,6 +293,8 @@ void sc_onebot_destroy(sc_channel_t *ch) {
             free(c->api_base);
         if (c->access_token)
             free(c->access_token);
+        if (c->user_id)
+            free(c->user_id);
         free(c);
         ch->ctx = NULL;
         ch->vtable = NULL;

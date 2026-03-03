@@ -16,6 +16,7 @@ sc_error_t sc_lark_on_webhook(void *channel_ctx, sc_allocator_t *alloc, const ch
 sc_error_t sc_lark_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_loop_msg_t *msgs,
                         size_t max_msgs, size_t *out_count);
 
+bool sc_lark_is_configured(sc_channel_t *ch);
 void sc_lark_destroy(sc_channel_t *ch);
 
 #endif /* SC_CHANNELS_LARK_H */

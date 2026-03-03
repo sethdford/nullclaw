@@ -22,6 +22,8 @@ typedef struct sc_qq_ctx {
     sc_allocator_t *alloc;
     char *app_id;
     char *bot_token;
+    char *channel_id;
+    size_t channel_id_len;
     bool sandbox;
     bool running;
     sc_qq_queued_msg_t queue[QQ_QUEUE_MAX];
@@ -44,29 +46,49 @@ static void qq_stop(void *ctx) {
         c->running = false;
 }
 
+static void qq_queue_push(sc_qq_ctx_t *c, const char *from, size_t from_len, const char *body,
+                          size_t body_len) {
+    if (c->queue_count >= QQ_QUEUE_MAX)
+        return;
+    sc_qq_queued_msg_t *slot = &c->queue[c->queue_tail];
+    size_t sk = from_len < QQ_SESSION_KEY_MAX ? from_len : QQ_SESSION_KEY_MAX;
+    memcpy(slot->session_key, from, sk);
+    slot->session_key[sk] = '\0';
+    size_t ct = body_len < QQ_CONTENT_MAX ? body_len : QQ_CONTENT_MAX;
+    memcpy(slot->content, body, ct);
+    slot->content[ct] = '\0';
+    c->queue_tail = (c->queue_tail + 1) % QQ_QUEUE_MAX;
+    c->queue_count++;
+}
+
 static sc_error_t qq_send(void *ctx, const char *target, size_t target_len, const char *message,
                           size_t message_len, const char *const *media, size_t media_count) {
     (void)media;
     (void)media_count;
     sc_qq_ctx_t *c = (sc_qq_ctx_t *)ctx;
-    if (!c || !c->alloc)
-        return SC_ERR_INVALID_ARGUMENT;
-    if (!c->bot_token || !target || target_len == 0 || !message)
-        return SC_ERR_INVALID_ARGUMENT;
 
 #if SC_IS_TEST
-    (void)target;
-    (void)target_len;
-    (void)message;
-    (void)message_len;
-    (void)media;
-    (void)media_count;
+    if (!c || !message)
+        return SC_ERR_INVALID_ARGUMENT;
+    if (!c->bot_token)
+        return SC_ERR_CHANNEL_NOT_CONFIGURED;
+    if ((!target || target_len == 0) && (!c->channel_id || c->channel_id_len == 0))
+        return SC_ERR_CHANNEL_NOT_CONFIGURED;
+    qq_queue_push(c, "test-sender", 11, message, message_len);
     return SC_OK;
 #else
+    const char *ch_id = (target && target_len > 0) ? target : c->channel_id;
+    size_t ch_id_len = (target && target_len > 0) ? target_len : c->channel_id_len;
+
+    if (!c || !c->alloc)
+        return SC_ERR_INVALID_ARGUMENT;
+    if (!c->bot_token || !ch_id || ch_id_len == 0 || !message)
+        return SC_ERR_INVALID_ARGUMENT;
+
     const char *base = c->sandbox ? QQ_SANDBOX_BASE : QQ_API_BASE;
     char url_buf[512];
-    int n = snprintf(url_buf, sizeof(url_buf), "%s/channels/%.*s/messages", base, (int)target_len,
-                     target);
+    int n = snprintf(url_buf, sizeof(url_buf), "%s/channels/%.*s/messages", base, (int)ch_id_len,
+                     ch_id);
     if (n < 0 || (size_t)n >= sizeof(url_buf))
         return SC_ERR_INTERNAL;
 
@@ -94,9 +116,12 @@ static sc_error_t qq_send(void *ctx, const char *target, size_t target_len, cons
     sc_json_buf_free(&jbuf);
 
     char auth_buf[256];
-    int ab = snprintf(auth_buf, sizeof(auth_buf), "Authorization: Bot %s.%s",
-                      c->app_id ? c->app_id : "", c->bot_token);
-    (void)ab;
+    int ab = snprintf(auth_buf, sizeof(auth_buf), "Bot %s.%s",
+                      c->app_id ? c->app_id : "", c->bot_token ? c->bot_token : "");
+    if (ab <= 0 || (size_t)ab >= sizeof(auth_buf)) {
+        c->alloc->free(c->alloc->ctx, body, body_len + 1);
+        return SC_ERR_INTERNAL;
+    }
 
     sc_http_response_t resp = {0};
     err = sc_http_post_json(c->alloc, url_buf, auth_buf, body, body_len, &resp);
@@ -134,21 +159,6 @@ static const sc_channel_vtable_t qq_vtable = {
     .start_typing = NULL,
     .stop_typing = NULL,
 };
-
-static void qq_queue_push(sc_qq_ctx_t *c, const char *from, size_t from_len, const char *body,
-                          size_t body_len) {
-    if (c->queue_count >= QQ_QUEUE_MAX)
-        return;
-    sc_qq_queued_msg_t *slot = &c->queue[c->queue_tail];
-    size_t sk = from_len < QQ_SESSION_KEY_MAX ? from_len : QQ_SESSION_KEY_MAX;
-    memcpy(slot->session_key, from, sk);
-    slot->session_key[sk] = '\0';
-    size_t ct = body_len < QQ_CONTENT_MAX ? body_len : QQ_CONTENT_MAX;
-    memcpy(slot->content, body, ct);
-    slot->content[ct] = '\0';
-    c->queue_tail = (c->queue_tail + 1) % QQ_QUEUE_MAX;
-    c->queue_count++;
-}
 
 sc_error_t sc_qq_on_webhook(void *channel_ctx, sc_allocator_t *alloc, const char *body,
                             size_t body_len) {
@@ -200,6 +210,14 @@ sc_error_t sc_qq_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_loop_
 sc_error_t sc_qq_create(sc_allocator_t *alloc, const char *app_id, size_t app_id_len,
                         const char *bot_token, size_t bot_token_len, bool sandbox,
                         sc_channel_t *out) {
+    return sc_qq_create_ex(alloc, app_id, app_id_len, bot_token, bot_token_len, NULL, 0, sandbox,
+                           out);
+}
+
+sc_error_t sc_qq_create_ex(sc_allocator_t *alloc, const char *app_id, size_t app_id_len,
+                          const char *bot_token, size_t bot_token_len,
+                          const char *channel_id, size_t channel_id_len, bool sandbox,
+                          sc_channel_t *out) {
     if (!alloc || !out)
         return SC_ERR_INVALID_ARGUMENT;
     sc_qq_ctx_t *c = (sc_qq_ctx_t *)calloc(1, sizeof(*c));
@@ -227,9 +245,30 @@ sc_error_t sc_qq_create(sc_allocator_t *alloc, const char *app_id, size_t app_id
         memcpy(c->bot_token, bot_token, bot_token_len);
         c->bot_token[bot_token_len] = '\0';
     }
+    if (channel_id && channel_id_len > 0) {
+        c->channel_id = (char *)malloc(channel_id_len + 1);
+        if (!c->channel_id) {
+            if (c->bot_token)
+                free(c->bot_token);
+            if (c->app_id)
+                free(c->app_id);
+            free(c);
+            return SC_ERR_OUT_OF_MEMORY;
+        }
+        memcpy(c->channel_id, channel_id, channel_id_len);
+        c->channel_id[channel_id_len] = '\0';
+        c->channel_id_len = channel_id_len;
+    }
     out->ctx = c;
     out->vtable = &qq_vtable;
     return SC_OK;
+}
+
+bool sc_qq_is_configured(sc_channel_t *ch) {
+    if (!ch || !ch->ctx)
+        return false;
+    sc_qq_ctx_t *c = (sc_qq_ctx_t *)ch->ctx;
+    return c->bot_token != NULL && (c->channel_id != NULL && c->channel_id_len > 0);
 }
 
 void sc_qq_destroy(sc_channel_t *ch) {
@@ -239,6 +278,8 @@ void sc_qq_destroy(sc_channel_t *ch) {
             free(c->app_id);
         if (c->bot_token)
             free(c->bot_token);
+        if (c->channel_id)
+            free(c->channel_id);
         free(c);
         ch->ctx = NULL;
         ch->vtable = NULL;

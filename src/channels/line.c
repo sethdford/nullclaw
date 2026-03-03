@@ -1,5 +1,6 @@
 #include "seaclaw/channel.h"
 #include "seaclaw/channel_loop.h"
+#include "seaclaw/channels/line.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
 #include "seaclaw/core/http.h"
@@ -23,6 +24,8 @@ typedef struct sc_line_ctx {
     sc_allocator_t *alloc;
     char *channel_token;
     size_t channel_token_len;
+    char *user_id;
+    size_t user_id_len;
     bool running;
     sc_line_queued_msg_t queue[LINE_QUEUE_MAX];
     size_t queue_head;
@@ -44,25 +47,45 @@ static void line_stop(void *ctx) {
         c->running = false;
 }
 
+static void line_queue_push(sc_line_ctx_t *c, const char *from, size_t from_len, const char *body,
+                            size_t body_len) {
+    if (c->queue_count >= LINE_QUEUE_MAX)
+        return;
+    sc_line_queued_msg_t *slot = &c->queue[c->queue_tail];
+    size_t sk = from_len < LINE_SESSION_KEY_MAX ? from_len : LINE_SESSION_KEY_MAX;
+    memcpy(slot->session_key, from, sk);
+    slot->session_key[sk] = '\0';
+    size_t ct = body_len < LINE_CONTENT_MAX ? body_len : LINE_CONTENT_MAX;
+    memcpy(slot->content, body, ct);
+    slot->content[ct] = '\0';
+    c->queue_tail = (c->queue_tail + 1) % LINE_QUEUE_MAX;
+    c->queue_count++;
+}
+
 static sc_error_t line_send(void *ctx, const char *target, size_t target_len, const char *message,
                             size_t message_len, const char *const *media, size_t media_count) {
-    (void)target;
-    (void)target_len;
-    (void)message;
-    (void)message_len;
     (void)media;
     (void)media_count;
     sc_line_ctx_t *c = (sc_line_ctx_t *)ctx;
 
 #if SC_IS_TEST
-    (void)c;
+    if (!c || !message)
+        return SC_ERR_INVALID_ARGUMENT;
+    if (!c->channel_token || c->channel_token_len == 0)
+        return SC_ERR_CHANNEL_NOT_CONFIGURED;
+    if ((!target || target_len == 0) && (!c->user_id || c->user_id_len == 0))
+        return SC_ERR_CHANNEL_NOT_CONFIGURED;
+    line_queue_push(c, "test-sender", 11, message, message_len);
     return SC_OK;
 #else
+    const char *to = (target && target_len > 0) ? target : c->user_id;
+    size_t to_len = (target && target_len > 0) ? target_len : c->user_id_len;
+
     if (!c || !c->alloc)
         return SC_ERR_INVALID_ARGUMENT;
     if (!c->channel_token || c->channel_token_len == 0)
         return SC_ERR_CHANNEL_NOT_CONFIGURED;
-    if (!target || target_len == 0 || !message)
+    if (!to || to_len == 0 || !message)
         return SC_ERR_INVALID_ARGUMENT;
 
     sc_json_buf_t jbuf;
@@ -70,7 +93,7 @@ static sc_error_t line_send(void *ctx, const char *target, size_t target_len, co
     if (err)
         return err;
 
-    err = sc_json_append_key_value(&jbuf, "to", 2, target, target_len);
+    err = sc_json_append_key_value(&jbuf, "to", 2, to, to_len);
     if (err)
         goto jfail;
     err = sc_json_buf_append_raw(&jbuf, ",\"messages\":[{\"type\":\"text\",", 30);
@@ -129,21 +152,6 @@ static const sc_channel_vtable_t line_vtable = {
     .start_typing = NULL,
     .stop_typing = NULL,
 };
-
-static void line_queue_push(sc_line_ctx_t *c, const char *from, size_t from_len, const char *body,
-                            size_t body_len) {
-    if (c->queue_count >= LINE_QUEUE_MAX)
-        return;
-    sc_line_queued_msg_t *slot = &c->queue[c->queue_tail];
-    size_t sk = from_len < LINE_SESSION_KEY_MAX ? from_len : LINE_SESSION_KEY_MAX;
-    memcpy(slot->session_key, from, sk);
-    slot->session_key[sk] = '\0';
-    size_t ct = body_len < LINE_CONTENT_MAX ? body_len : LINE_CONTENT_MAX;
-    memcpy(slot->content, body, ct);
-    slot->content[ct] = '\0';
-    c->queue_tail = (c->queue_tail + 1) % LINE_QUEUE_MAX;
-    c->queue_count++;
-}
 
 sc_error_t sc_line_on_webhook(void *channel_ctx, sc_allocator_t *alloc, const char *body,
                               size_t body_len) {
@@ -210,6 +218,12 @@ sc_error_t sc_line_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_loo
 
 sc_error_t sc_line_create(sc_allocator_t *alloc, const char *channel_token,
                           size_t channel_token_len, sc_channel_t *out) {
+    return sc_line_create_ex(alloc, channel_token, channel_token_len, NULL, 0, out);
+}
+
+sc_error_t sc_line_create_ex(sc_allocator_t *alloc, const char *channel_token,
+                             size_t channel_token_len, const char *user_id, size_t user_id_len,
+                             sc_channel_t *out) {
     if (!alloc || !out)
         return SC_ERR_INVALID_ARGUMENT;
     sc_line_ctx_t *c = (sc_line_ctx_t *)calloc(1, sizeof(*c));
@@ -226,9 +240,29 @@ sc_error_t sc_line_create(sc_allocator_t *alloc, const char *channel_token,
         c->channel_token[channel_token_len] = '\0';
         c->channel_token_len = channel_token_len;
     }
+    if (user_id && user_id_len > 0) {
+        c->user_id = (char *)malloc(user_id_len + 1);
+        if (!c->user_id) {
+            if (c->channel_token)
+                free(c->channel_token);
+            free(c);
+            return SC_ERR_OUT_OF_MEMORY;
+        }
+        memcpy(c->user_id, user_id, user_id_len);
+        c->user_id[user_id_len] = '\0';
+        c->user_id_len = user_id_len;
+    }
     out->ctx = c;
     out->vtable = &line_vtable;
     return SC_OK;
+}
+
+bool sc_line_is_configured(sc_channel_t *ch) {
+    if (!ch || !ch->ctx)
+        return false;
+    sc_line_ctx_t *c = (sc_line_ctx_t *)ch->ctx;
+    return c->channel_token != NULL && c->channel_token_len > 0 &&
+           (c->user_id != NULL && c->user_id_len > 0);
 }
 
 void sc_line_destroy(sc_channel_t *ch) {
@@ -236,6 +270,8 @@ void sc_line_destroy(sc_channel_t *ch) {
         sc_line_ctx_t *c = (sc_line_ctx_t *)ch->ctx;
         if (c->channel_token)
             free(c->channel_token);
+        if (c->user_id)
+            free(c->user_id);
         free(c);
         ch->ctx = NULL;
         ch->vtable = NULL;

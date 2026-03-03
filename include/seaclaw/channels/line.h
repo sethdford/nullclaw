@@ -10,6 +10,12 @@
 sc_error_t sc_line_create(sc_allocator_t *alloc, const char *channel_token,
                           size_t channel_token_len, sc_channel_t *out);
 
+sc_error_t sc_line_create_ex(sc_allocator_t *alloc, const char *channel_token,
+                             size_t channel_token_len, const char *user_id, size_t user_id_len,
+                             sc_channel_t *out);
+
+bool sc_line_is_configured(sc_channel_t *ch);
+
 sc_error_t sc_line_on_webhook(void *channel_ctx, sc_allocator_t *alloc, const char *body,
                               size_t body_len);
 

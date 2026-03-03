@@ -11,6 +11,7 @@
 #define DINGTALK_QUEUE_MAX       32
 #define DINGTALK_SESSION_KEY_MAX 127
 #define DINGTALK_CONTENT_MAX     4095
+#define DINGTALK_WEBHOOK_BASE    "https://oapi.dingtalk.com/robot/send?access_token="
 
 typedef struct sc_dingtalk_queued_msg {
     char session_key[128];
@@ -19,10 +20,8 @@ typedef struct sc_dingtalk_queued_msg {
 
 typedef struct sc_dingtalk_ctx {
     sc_allocator_t *alloc;
-    char *app_key;
-    size_t app_key_len;
-    char *app_secret;
-    size_t app_secret_len;
+    char *webhook_url;
+    size_t webhook_url_len;
     bool running;
     sc_dingtalk_queued_msg_t queue[DINGTALK_QUEUE_MAX];
     size_t queue_head;
@@ -44,44 +43,78 @@ static void dingtalk_stop(void *ctx) {
         c->running = false;
 }
 
+static void dingtalk_queue_push(sc_dingtalk_ctx_t *c, const char *from, size_t from_len,
+                                const char *body, size_t body_len) {
+    if (c->queue_count >= DINGTALK_QUEUE_MAX)
+        return;
+    sc_dingtalk_queued_msg_t *slot = &c->queue[c->queue_tail];
+    size_t sk = from_len < DINGTALK_SESSION_KEY_MAX ? from_len : DINGTALK_SESSION_KEY_MAX;
+    memcpy(slot->session_key, from, sk);
+    slot->session_key[sk] = '\0';
+    size_t ct = body_len < DINGTALK_CONTENT_MAX ? body_len : DINGTALK_CONTENT_MAX;
+    memcpy(slot->content, body, ct);
+    slot->content[ct] = '\0';
+    c->queue_tail = (c->queue_tail + 1) % DINGTALK_QUEUE_MAX;
+    c->queue_count++;
+}
+
 static sc_error_t dingtalk_send(void *ctx, const char *target, size_t target_len,
                                 const char *message, size_t message_len, const char *const *media,
                                 size_t media_count) {
     (void)target;
     (void)target_len;
-    (void)message;
-    (void)message_len;
     (void)media;
     (void)media_count;
     sc_dingtalk_ctx_t *c = (sc_dingtalk_ctx_t *)ctx;
 
 #if SC_IS_TEST
-    (void)c;
+    if (!c || !message)
+        return SC_ERR_INVALID_ARGUMENT;
+    if (!c->webhook_url || c->webhook_url_len == 0)
+        return SC_ERR_CHANNEL_NOT_CONFIGURED;
+    dingtalk_queue_push(c, "test-sender", 11, message, message_len);
     return SC_OK;
 #else
     if (!c || !c->alloc)
         return SC_ERR_INVALID_ARGUMENT;
-    if (!target || target_len == 0 || !message)
+    if (!c->webhook_url || c->webhook_url_len == 0)
+        return SC_ERR_CHANNEL_NOT_CONFIGURED;
+    if (!message)
         return SC_ERR_INVALID_ARGUMENT;
+    if (c->webhook_url_len < 9 || strncmp(c->webhook_url, "https://", 8) != 0)
+        return SC_ERR_CHANNEL_NOT_CONFIGURED;
 
-    sc_json_buf_t jbuf;
-    sc_error_t err = sc_json_buf_init(&jbuf, c->alloc);
+    sc_json_buf_t inner;
+    sc_error_t err = sc_json_buf_init(&inner, c->alloc);
     if (err)
         return err;
+    err = sc_json_buf_append_raw(&inner, "{\"content\":", 11);
+    if (err)
+        goto inner_fail;
+    err = sc_json_append_string(&inner, message, message_len);
+    if (err)
+        goto inner_fail;
+    err = sc_json_buf_append_raw(&inner, "}", 1);
+    if (err)
+        goto inner_fail;
 
-    err = sc_json_buf_append_raw(
-        &jbuf, "{\"msgtype\":\"markdown\",\"markdown\":{\"title\":\"seaclaw\",", 47);
+    sc_json_buf_t jbuf;
+    err = sc_json_buf_init(&jbuf, c->alloc);
+    if (err)
+        goto inner_fail;
+    err = sc_json_buf_append_raw(&jbuf, "{\"msgtype\":\"text\",\"text\":", 24);
     if (err)
         goto jfail;
-    err = sc_json_append_key_value(&jbuf, "text", 4, message, message_len);
+    err = sc_json_buf_append_raw(&jbuf, inner.ptr, inner.len);
     if (err)
         goto jfail;
-    err = sc_json_buf_append_raw(&jbuf, "}}", 2);
+    err = sc_json_buf_append_raw(&jbuf, "}", 1);
     if (err)
         goto jfail;
+    sc_json_buf_free(&inner);
 
     sc_http_response_t resp = {0};
-    err = sc_http_post_json(c->alloc, target, NULL, jbuf.ptr, jbuf.len, &resp);
+    err = sc_http_post_json(c->alloc, c->webhook_url, NULL, jbuf.ptr, jbuf.len, &resp);
     sc_json_buf_free(&jbuf);
     if (err != SC_OK) {
         if (resp.owned && resp.body)
@@ -95,6 +128,8 @@ static sc_error_t dingtalk_send(void *ctx, const char *target, size_t target_len
     return SC_OK;
 jfail:
     sc_json_buf_free(&jbuf);
+inner_fail:
+    sc_json_buf_free(&inner);
     return err;
 #endif
 }
@@ -118,21 +153,6 @@ static const sc_channel_vtable_t dingtalk_vtable = {
     .start_typing = NULL,
     .stop_typing = NULL,
 };
-
-static void dingtalk_queue_push(sc_dingtalk_ctx_t *c, const char *from, size_t from_len,
-                                const char *body, size_t body_len) {
-    if (c->queue_count >= DINGTALK_QUEUE_MAX)
-        return;
-    sc_dingtalk_queued_msg_t *slot = &c->queue[c->queue_tail];
-    size_t sk = from_len < DINGTALK_SESSION_KEY_MAX ? from_len : DINGTALK_SESSION_KEY_MAX;
-    memcpy(slot->session_key, from, sk);
-    slot->session_key[sk] = '\0';
-    size_t ct = body_len < DINGTALK_CONTENT_MAX ? body_len : DINGTALK_CONTENT_MAX;
-    memcpy(slot->content, body, ct);
-    slot->content[ct] = '\0';
-    c->queue_tail = (c->queue_tail + 1) % DINGTALK_QUEUE_MAX;
-    c->queue_count++;
-}
 
 sc_error_t sc_dingtalk_on_webhook(void *channel_ctx, sc_allocator_t *alloc, const char *body,
                                   size_t body_len) {
@@ -182,48 +202,61 @@ sc_error_t sc_dingtalk_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel
     return SC_OK;
 }
 
-sc_error_t sc_dingtalk_create(sc_allocator_t *alloc, const char *app_key, size_t app_key_len,
-                              const char *app_secret, size_t app_secret_len, sc_channel_t *out) {
+sc_error_t sc_dingtalk_create(sc_allocator_t *alloc, const char *webhook_or_token,
+                              size_t webhook_or_token_len, const char *unused_secret,
+                              size_t unused_secret_len, sc_channel_t *out) {
+    (void)unused_secret;
+    (void)unused_secret_len;
     if (!alloc || !out)
         return SC_ERR_INVALID_ARGUMENT;
     sc_dingtalk_ctx_t *c = (sc_dingtalk_ctx_t *)calloc(1, sizeof(*c));
     if (!c)
         return SC_ERR_OUT_OF_MEMORY;
     c->alloc = alloc;
-    if (app_key && app_key_len > 0) {
-        c->app_key = (char *)malloc(app_key_len + 1);
-        if (!c->app_key) {
-            free(c);
-            return SC_ERR_OUT_OF_MEMORY;
-        }
-        memcpy(c->app_key, app_key, app_key_len);
-        c->app_key[app_key_len] = '\0';
-        c->app_key_len = app_key_len;
+    if (!webhook_or_token || webhook_or_token_len == 0) {
+        out->ctx = c;
+        out->vtable = &dingtalk_vtable;
+        return SC_OK;
     }
-    if (app_secret && app_secret_len > 0) {
-        c->app_secret = (char *)malloc(app_secret_len + 1);
-        if (!c->app_secret) {
-            if (c->app_key)
-                free(c->app_key);
+    if (webhook_or_token_len >= 8 &&
+        strncmp(webhook_or_token, "https://", 8) == 0) {
+        c->webhook_url = (char *)malloc(webhook_or_token_len + 1);
+        if (!c->webhook_url) {
             free(c);
             return SC_ERR_OUT_OF_MEMORY;
         }
-        memcpy(c->app_secret, app_secret, app_secret_len);
-        c->app_secret[app_secret_len] = '\0';
-        c->app_secret_len = app_secret_len;
+        memcpy(c->webhook_url, webhook_or_token, webhook_or_token_len);
+        c->webhook_url[webhook_or_token_len] = '\0';
+        c->webhook_url_len = webhook_or_token_len;
+    } else {
+        size_t base_len = sizeof(DINGTALK_WEBHOOK_BASE) - 1;
+        c->webhook_url = (char *)malloc(base_len + webhook_or_token_len + 1);
+        if (!c->webhook_url) {
+            free(c);
+            return SC_ERR_OUT_OF_MEMORY;
+        }
+        memcpy(c->webhook_url, DINGTALK_WEBHOOK_BASE, base_len);
+        memcpy(c->webhook_url + base_len, webhook_or_token, webhook_or_token_len);
+        c->webhook_url[base_len + webhook_or_token_len] = '\0';
+        c->webhook_url_len = base_len + webhook_or_token_len;
     }
     out->ctx = c;
     out->vtable = &dingtalk_vtable;
     return SC_OK;
 }
 
+bool sc_dingtalk_is_configured(sc_channel_t *ch) {
+    if (!ch || !ch->ctx)
+        return false;
+    sc_dingtalk_ctx_t *c = (sc_dingtalk_ctx_t *)ch->ctx;
+    return c->webhook_url != NULL && c->webhook_url_len > 0;
+}
+
 void sc_dingtalk_destroy(sc_channel_t *ch) {
     if (ch && ch->ctx) {
         sc_dingtalk_ctx_t *c = (sc_dingtalk_ctx_t *)ch->ctx;
-        if (c->app_key)
-            free(c->app_key);
-        if (c->app_secret)
-            free(c->app_secret);
+        if (c->webhook_url)
+            free(c->webhook_url);
         free(c);
         ch->ctx = NULL;
         ch->vtable = NULL;
