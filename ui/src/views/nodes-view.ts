@@ -16,6 +16,8 @@ interface NodeItem {
 
 @customElement("sc-nodes-view")
 export class ScNodesView extends GatewayAwareLitElement {
+  override autoRefreshInterval = 30_000;
+
   static override styles = css`
     :host {
       display: block;
@@ -190,9 +192,16 @@ export class ScNodesView extends GatewayAwareLitElement {
     return html`
       <div class="header">
         <h2>Nodes & Devices</h2>
-        <button class="refresh-btn" ?disabled=${this.loading} @click=${() => this.load()}>
-          ${this.loading ? "Refreshing..." : "Refresh"}
-        </button>
+        <div style="display:flex;align-items:center;gap:var(--sc-space-sm)">
+          ${this.lastLoadedAt
+            ? html`<span style="font-size:var(--sc-text-xs);color:var(--sc-text-muted)">
+                Updated ${this.stalenessLabel}
+              </span>`
+            : nothing}
+          <button class="refresh-btn" ?disabled=${this.loading} @click=${() => this.load()}>
+            ${this.loading ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
       </div>
 
       ${this.error ? html`<p class="error">${this.error}</p>` : ""}

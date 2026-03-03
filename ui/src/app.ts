@@ -367,14 +367,21 @@ export class ScApp extends LitElement {
 
   private _onHashChange(): void {
     const hash = window.location.hash.replace("#", "");
-    if (hash && VALID_TABS.includes(hash as TabId)) {
-      this._ensureLoaded(hash as TabId);
+    if (!hash) return;
+    const [tabPart, ...rest] = hash.split(":");
+    const sessionPart = rest.join(":");
+    if (VALID_TABS.includes(tabPart as TabId)) {
+      const targetTab = tabPart as TabId;
+      if (targetTab === "chat" && sessionPart) {
+        this.chatSessionKey = sessionPart;
+      }
+      this._ensureLoaded(targetTab);
       if (!document.startViewTransition) {
-        this.tab = hash as TabId;
+        this.tab = targetTab;
         return;
       }
       document.startViewTransition(() => {
-        this.tab = hash as TabId;
+        this.tab = targetTab;
         return this.updateComplete;
       });
     }
@@ -406,7 +413,8 @@ export class ScApp extends LitElement {
   private async _switchTab(tab: TabId): Promise<void> {
     if (this.tab === tab) return;
     await this._ensureLoaded(tab);
-    window.history.replaceState(null, "", `#${tab}`);
+    const hash = tab === "chat" ? `#chat:${this.chatSessionKey}` : `#${tab}`;
+    window.history.replaceState(null, "", hash);
     if (!document.startViewTransition) {
       this.tab = tab;
       return;

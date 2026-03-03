@@ -80,6 +80,7 @@ void run_new_features_tests(void);
 void run_oauth_tests(void);
 void run_ollama_integration_tests(void);
 void run_plugin_tests(void);
+void run_tenant_tests(void);
 
 int main(void) {
     printf("SeaClaw Test Suite\n"); fflush(stdout);
@@ -160,6 +161,7 @@ int main(void) {
     run_oauth_tests();
     run_ollama_integration_tests();
     run_plugin_tests();
+    run_tenant_tests();
 
     SC_TEST_REPORT();
     SC_TEST_EXIT();

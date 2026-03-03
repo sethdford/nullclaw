@@ -25,6 +25,8 @@ static void test_plugin_load_bad_path_fails(void) {
 }
 
 static sc_error_t test_register_tool_cb(void *ctx, const char *name, void *tool_vtable) {
+    (void)name;
+    (void)tool_vtable;
     int *count = (int *)ctx;
     if (count)
         (*count)++;

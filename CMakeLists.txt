@@ -283,6 +283,7 @@ set(SC_CORE_SOURCES
     src/gateway/ws_server.c
     src/gateway/control_protocol.c
     src/gateway/event_bridge.c
+    src/gateway/tenant.c
     src/runtime/native.c
     src/runtime/docker.c
     src/runtime/factory.c
@@ -1180,6 +1181,7 @@ set(SC_TEST_SOURCES
     tests/test_ollama_integration.c
     tests/test_oauth.c
     tests/test_plugin.c
+    tests/test_tenant.c
 )
 
 add_executable(seaclaw_tests ${SC_TEST_SOURCES} wasm/wasm_alloc.c)

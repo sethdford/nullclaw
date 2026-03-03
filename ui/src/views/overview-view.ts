@@ -13,6 +13,7 @@ import "../components/sc-button.js";
 import "../components/sc-sparkline.js";
 import "../components/sc-animated-number.js";
 import "../components/sc-welcome.js";
+import "../components/sc-tooltip.js";
 import "../components/sc-activity-feed.js";
 
 interface HealthRes {
@@ -51,6 +52,8 @@ interface SessionItem {
 
 @customElement("sc-overview-view")
 export class ScOverviewView extends GatewayAwareLitElement {
+  override autoRefreshInterval = 30_000;
+
   static override styles = css`
     :host {
       display: block;
@@ -405,7 +408,16 @@ export class ScOverviewView extends GatewayAwareLitElement {
 
       <div class="header">
         <h2>Overview</h2>
-        <sc-button variant="secondary" @click=${() => this.load()}>Refresh</sc-button>
+        <div style="display:flex;align-items:center;gap:var(--sc-space-sm)">
+          ${this.lastLoadedAt
+            ? html`<span style="font-size:var(--sc-text-xs);color:var(--sc-text-muted)">
+                Updated ${this.stalenessLabel}
+              </span>`
+            : nothing}
+          <sc-tooltip text="Reload all dashboard data" position="bottom">
+            <sc-button variant="secondary" @click=${() => this.load()}>Refresh</sc-button>
+          </sc-tooltip>
+        </div>
       </div>
       ${this.error ? html`<p class="error">${this.error}</p>` : nothing}
       <div class="bento sc-stagger">
@@ -413,7 +425,12 @@ export class ScOverviewView extends GatewayAwareLitElement {
         <sc-card hoverable accent elevated class="gateway-card">
           <div class="stat-label">Gateway Status</div>
           <div class="gateway-content">
-            <span class="status-dot ${gwOk ? "operational" : "offline"}" aria-hidden="true"></span>
+            <sc-tooltip text=${gwOk ? "All subsystems responding" : "Gateway is unreachable"}>
+              <span
+                class="status-dot ${gwOk ? "operational" : "offline"}"
+                aria-hidden="true"
+              ></span>
+            </sc-tooltip>
             <span class="stat-value">${gwOk ? "Operational" : "Offline"}</span>
           </div>
           <div class="gateway-version">${cap.version ?? "—"}</div>

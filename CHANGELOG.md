@@ -3,6 +3,31 @@
 All notable changes to seaclaw are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.3.0] - 2026-03-03
+
+### Added
+
+- **Structured output**: `response_format` field on `sc_chat_request_t` — OpenAI, Anthropic,
+  Gemini, Compatible, Ollama, OpenRouter providers all emit JSON mode payloads; 6 new tests
+- **Config schema versioning**: `config_version` field with `sc_config_migrate()` — auto-migrates
+  v1 configs (e.g., moves top-level `memory_backend` into `memory.backend`); 4 migration tests
+- **CI ARM64 cross-compile**: `cmake/aarch64-linux-gnu.cmake` toolchain + `cross-arm64` GitHub
+  Actions job verifying ARM64 ELF output
+- **Ollama integration test**: graceful skip when Ollama isn't running, real chat when available;
+  dedicated CI job with `ollama/ollama` service container
+- **Streaming to channels**: daemon uses `sc_agent_turn_stream` + `send_event` for Telegram
+  (edit), Discord (edit), and Slack (update); falls back to non-streaming for others
+- **Plugin system wiring**: `plugin_loader` integrated into `main.c`, config parsing for
+  `plugins.paths[]` and `plugins.enabled`, `register_channel` callback on host, shutdown cleanup;
+  6 plugin tests
+- **Debian packaging**: `packaging/debian/` (control, rules, changelog, copyright),
+  `scripts/build-deb.sh`, CMake install targets
+- **OAuth2 PKCE**: `src/gateway/oauth.c` — PKCE verifier/challenge generation (S256),
+  Google/GitHub authorize URL builder, code exchange, token refresh, session validation; 8 tests
+- **Multi-tenant gateway**: `src/gateway/tenant.c` — in-memory tenant store with CRUD, role-based
+  access (admin/user/readonly), sliding-window rate limiting (RPM), token usage quotas; 10 tests
+- **Voice channel**: `src/channels/voice_channel.c` for audio I/O integration
+
 ## [0.2.0] - 2026-03-03
 
 ### Added

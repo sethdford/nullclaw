@@ -14,6 +14,7 @@ struct sc_oauth_ctx {
     sc_oauth_config_t config;
 };
 
+#if defined(SC_HTTP_CURL) && !SC_IS_TEST
 static int oauth_form_encode_char(char *out, size_t cap, size_t *j, unsigned char c) {
     if (*j + 4 > cap)
         return -1;
@@ -31,8 +32,7 @@ static int oauth_form_encode_char(char *out, size_t cap, size_t *j, unsigned cha
     out[(*j)++] = (char)((c & 0x0f) < 10 ? '0' + (c & 0x0f) : 'A' + ((c & 0x0f) - 10));
     return 0;
 }
-
-
+#endif
 sc_error_t sc_oauth_init(sc_allocator_t *alloc, const sc_oauth_config_t *config,
                          sc_oauth_ctx_t **out) {
     if (!alloc || !config || !out)
