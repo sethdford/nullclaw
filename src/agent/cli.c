@@ -390,7 +390,7 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
     sc_tool_t *tools = NULL;
     size_t tools_count = 0;
     err = sc_tools_create_default(alloc, ws, strlen(ws), &policy, &cfg,
-        memory.vtable ? &memory : NULL, cron, &tools, &tools_count);
+        memory.vtable ? &memory : NULL, cron, NULL, &tools, &tools_count);
     if (err != SC_OK) {
         fprintf(stderr, "[%s] Tools init failed: %s\n", SC_CODENAME, sc_error_string(err));
         if (cron) sc_cron_destroy(cron, alloc);

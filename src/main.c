@@ -9,6 +9,7 @@
 #include "seaclaw/core/error.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/config.h"
+#include "seaclaw/agent/spawn.h"
 #include "seaclaw/agent.h"
 #include "seaclaw/agent/cli.h"
 #include "seaclaw/provider.h"
@@ -523,10 +524,12 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
 
     sc_cron_scheduler_t *cron = sc_cron_create(alloc, 64, true);
 
+    sc_agent_pool_t *agent_pool = sc_agent_pool_create(alloc, 4);
+
     sc_tool_t *tools = NULL;
     size_t tools_count = 0;
     err = sc_tools_create_default(alloc, ws, strlen(ws), &policy, &cfg,
-        memory.vtable ? &memory : NULL, cron, &tools, &tools_count);
+        memory.vtable ? &memory : NULL, cron, agent_pool, &tools, &tools_count);
     if (err != SC_OK) {
         fprintf(stderr, "[%s] Tools init failed: %s\n", SC_CODENAME, sc_error_string(err));
         if (cron) sc_cron_destroy(cron, alloc);
@@ -860,12 +863,15 @@ static sc_error_t cmd_mcp(sc_allocator_t *alloc, int argc, char **argv) {
         return err;
     }
 
+    sc_agent_pool_t *mcp_pool = sc_agent_pool_create(alloc, cfg.agent.pool_max_concurrent);
+
     sc_tool_t *tools = NULL;
     size_t tool_count = 0;
     err = sc_tools_create_default(alloc, ".", 1, NULL, &cfg, NULL, NULL,
-        &tools, &tool_count);
+        mcp_pool, &tools, &tool_count);
     if (err != SC_OK) {
         fprintf(stderr, "[%s] Tools init error: %s\n", SC_CODENAME, sc_error_string(err));
+        if (mcp_pool) sc_agent_pool_destroy(mcp_pool);
         sc_config_deinit(&cfg);
         return err;
     }
@@ -874,6 +880,7 @@ static sc_error_t cmd_mcp(sc_allocator_t *alloc, int argc, char **argv) {
     err = sc_mcp_host_create(alloc, tools, tool_count, NULL, &srv);
     if (err != SC_OK) {
         sc_tools_destroy_default(alloc, tools, tool_count);
+        if (mcp_pool) sc_agent_pool_destroy(mcp_pool);
         sc_config_deinit(&cfg);
         return err;
     }
@@ -882,6 +889,7 @@ static sc_error_t cmd_mcp(sc_allocator_t *alloc, int argc, char **argv) {
 
     sc_mcp_host_destroy(srv);
     sc_tools_destroy_default(alloc, tools, tool_count);
+    if (mcp_pool) sc_agent_pool_destroy(mcp_pool);
     sc_config_deinit(&cfg);
     return err;
 }
@@ -1144,6 +1152,7 @@ cleanup:
     if (gw_sb_storage) sc_sandbox_storage_destroy(gw_sb_storage, &gw_sb_alloc);
     sc_cost_tracker_deinit(&costs);
     sc_session_manager_deinit(&sessions);
+    if (gw_agent_pool) sc_agent_pool_destroy(gw_agent_pool);
     if (cron) sc_cron_destroy(cron, alloc);
     sc_skillforge_destroy(&skills);
     sc_config_deinit(&cfg);

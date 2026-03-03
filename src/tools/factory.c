@@ -70,6 +70,7 @@ sc_error_t sc_tools_create_default(sc_allocator_t *alloc,
     const sc_config_t *config,
     sc_memory_t *memory,
     sc_cron_scheduler_t *cron,
+    sc_agent_pool_t *agent_pool,
     sc_tool_t **out_tools, size_t *out_count)
 {
     if (!alloc || !out_tools || !out_count) return SC_ERR_INVALID_ARGUMENT;
@@ -245,11 +246,11 @@ sc_error_t sc_tools_create_default(sc_allocator_t *alloc,
     if (err != SC_OK) goto fail;
     idx++;
 
-    err = sc_agent_query_tool_create(alloc, NULL, &tools[idx]);
+    err = sc_agent_query_tool_create(alloc, agent_pool, &tools[idx]);
     if (err != SC_OK) goto fail;
     idx++;
 
-    err = sc_agent_spawn_tool_create(alloc, NULL, &tools[idx]);
+    err = sc_agent_spawn_tool_create(alloc, agent_pool, &tools[idx]);
     if (err != SC_OK) goto fail;
     idx++;
 

@@ -7,6 +7,7 @@
 #include "seaclaw/cron.h"
 #include "seaclaw/memory.h"
 #include "seaclaw/security.h"
+#include "seaclaw/agent/spawn.h"
 #include "seaclaw/tool.h"
 #include <stddef.h>
 
@@ -16,6 +17,7 @@ sc_error_t sc_tools_create_default(sc_allocator_t *alloc,
     const sc_config_t *config,
     sc_memory_t *memory,
     sc_cron_scheduler_t *cron,
+    sc_agent_pool_t *agent_pool,
     sc_tool_t **out_tools, size_t *out_count);
 
 void sc_tools_destroy_default(sc_allocator_t *alloc,
