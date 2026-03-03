@@ -213,6 +213,7 @@ set(SC_CORE_SOURCES
     src/websocket/websocket.c
     src/net_security.c
     src/config.c
+    src/config_migrate.c
     src/config_serialize.c
     src/config_getters.c
     src/config_validate.c
@@ -251,6 +252,7 @@ set(SC_CORE_SOURCES
     src/tunnel/none.c
     src/tunnel/root.c
     src/gateway/gateway.c
+    src/gateway/rate_limit.c
     src/gateway/ws_server.c
     src/gateway/control_protocol.c
     src/gateway/event_bridge.c
@@ -278,6 +280,7 @@ set(SC_CORE_SOURCES
     src/providers/sse.c
     src/providers/scrub.c
     src/providers/reliable.c
+    src/providers/from_config.c
     src/providers/router.c
     src/providers/codex_cli.c
     src/providers/openai_codex.c
@@ -365,6 +368,8 @@ set(SC_CORE_SOURCES
     src/security/policy_engine.c
     src/security/replay.c
     src/plugins/registry.c
+    src/plugin_loader.c
+    src/mcp_registry.c
     src/onboard.c
     src/interactions/choices.c
     src/daemon.c
@@ -531,7 +536,7 @@ if(Threads_FOUND)
     target_link_libraries(seaclaw_core PUBLIC Threads::Threads)
 endif()
 if(UNIX AND NOT APPLE)
-    target_link_libraries(seaclaw_core PUBLIC m)
+    target_link_libraries(seaclaw_core PUBLIC m dl)
 endif()
 target_include_directories(seaclaw_core PRIVATE ${SC_ROOT}/asm/generic)
 ## SC_IS_TEST is intentionally NOT set here — seaclaw_core is the production library.
