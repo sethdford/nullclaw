@@ -1,0 +1,101 @@
+{
+  "$description": "Semantic tokens — purpose-driven aliases of base primitives",
+  "dark": {
+    "$description": "Dark theme (default)",
+    "bg": { "$value": "{color.neutral.50}", "$type": "color" },
+    "bg-inset": { "$value": "{color.neutral.100}", "$type": "color" },
+    "bg-surface": { "$value": "{color.neutral.150}", "$type": "color" },
+    "bg-elevated": { "$value": "{color.neutral.200}", "$type": "color" },
+    "bg-overlay": { "$value": "{color.neutral.250}", "$type": "color" },
+
+    "text": { "$value": "{color.neutral.750}", "$type": "color" },
+    "text-muted": { "$value": "{color.neutral.500}", "$type": "color" },
+    "text-faint": { "$value": "{color.neutral.400}", "$type": "color" },
+
+    "accent": { "$value": "{color.coral.500}", "$type": "color" },
+    "accent-hover": { "$value": "{color.coral.600}", "$type": "color" },
+    "accent-subtle": {
+      "$value": "{color.coral.dark-subtle}",
+      "$type": "color"
+    },
+    "accent-strong": { "$value": "{color.coral.400}", "$type": "color" },
+
+    "border": { "$value": "{color.neutral.300}", "$type": "color" },
+    "border-subtle": { "$value": "{color.neutral.200}", "$type": "color" },
+
+    "success": { "$value": "{color.green.500}", "$type": "color" },
+    "success-dim": { "$value": "{color.green.dim}", "$type": "color" },
+    "warning": { "$value": "{color.yellow.500}", "$type": "color" },
+    "warning-dim": { "$value": "{color.yellow.dim}", "$type": "color" },
+    "error": { "$value": "{color.red.500}", "$type": "color" },
+    "error-dim": { "$value": "{color.red.dim}", "$type": "color" },
+    "info": { "$value": "{color.blue.500}", "$type": "color" },
+    "info-dim": { "$value": "{color.blue.dim}", "$type": "color" },
+
+    "shadow-sm": {
+      "$value": "0 1px 2px rgba(0, 0, 0, 0.4)",
+      "$type": "shadow"
+    },
+    "shadow-md": {
+      "$value": "0 4px 12px rgba(0, 0, 0, 0.5)",
+      "$type": "shadow"
+    },
+    "shadow-lg": {
+      "$value": "0 8px 24px rgba(0, 0, 0, 0.6)",
+      "$type": "shadow"
+    },
+    "shadow-card": {
+      "$value": "0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.08)",
+      "$type": "shadow"
+    }
+  },
+  "light": {
+    "$description": "Light theme",
+    "bg": { "$value": "{color.neutral.900}", "$type": "color" },
+    "bg-inset": { "$value": "{color.neutral.800}", "$type": "color" },
+    "bg-surface": { "$value": "{color.neutral.1000}", "$type": "color" },
+    "bg-elevated": { "$value": "{color.neutral.850}", "$type": "color" },
+    "bg-overlay": { "$value": "{color.neutral.1000}", "$type": "color" },
+
+    "text": { "$value": "#18181b", "$type": "color" },
+    "text-muted": { "$value": "#71717a", "$type": "color" },
+    "text-faint": { "$value": "{color.neutral.600}", "$type": "color" },
+
+    "accent": { "$value": "{color.coral.light-500}", "$type": "color" },
+    "accent-hover": { "$value": "{color.coral.light-600}", "$type": "color" },
+    "accent-subtle": {
+      "$value": "{color.coral.light-subtle}",
+      "$type": "color"
+    },
+    "accent-strong": { "$value": "{color.coral.light-400}", "$type": "color" },
+
+    "border": { "$value": "{color.neutral.700}", "$type": "color" },
+    "border-subtle": { "$value": "{color.neutral.850}", "$type": "color" },
+
+    "success": { "$value": "{color.green.light-500}", "$type": "color" },
+    "success-dim": { "$value": "{color.green.light-dim}", "$type": "color" },
+    "warning": { "$value": "{color.yellow.light-500}", "$type": "color" },
+    "warning-dim": { "$value": "{color.yellow.light-dim}", "$type": "color" },
+    "error": { "$value": "{color.red.light-500}", "$type": "color" },
+    "error-dim": { "$value": "{color.red.light-dim}", "$type": "color" },
+    "info": { "$value": "{color.blue.light-500}", "$type": "color" },
+    "info-dim": { "$value": "{color.blue.light-dim}", "$type": "color" },
+
+    "shadow-sm": {
+      "$value": "0 1px 2px rgba(0, 0, 0, 0.06)",
+      "$type": "shadow"
+    },
+    "shadow-md": {
+      "$value": "0 4px 12px rgba(0, 0, 0, 0.08)",
+      "$type": "shadow"
+    },
+    "shadow-lg": {
+      "$value": "0 8px 24px rgba(0, 0, 0, 0.12)",
+      "$type": "shadow"
+    },
+    "shadow-card": {
+      "$value": "0 1px 2px rgba(0, 0, 0, 0.03), 0 4px 16px rgba(0, 0, 0, 0.06)",
+      "$type": "shadow"
+    }
+  }
+}

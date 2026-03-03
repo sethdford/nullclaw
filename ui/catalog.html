@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SeaClaw Component Catalog</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          "Avenir",
+          "Avenir Next",
+          -apple-system,
+          system-ui,
+          sans-serif;
+        background: #0c0c0c;
+        color: #ebebeb;
+        padding: 2rem;
+      }
+      h1 {
+        font-size: 2rem;
+        font-weight: 900;
+        margin-bottom: 2rem;
+      }
+      h2 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 2rem 0 1rem;
+        color: #f97066;
+      }
+      .section {
+        padding: 1.5rem;
+        background: #161616;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+      }
+      .row {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+      .label {
+        font-size: 0.75rem;
+        color: #737373;
+        margin-bottom: 0.5rem;
+      }
+      @media (prefers-color-scheme: light) {
+        body {
+          background: #fafafa;
+          color: #18181b;
+        }
+        .section {
+          background: #ffffff;
+        }
+        .label {
+          color: #71717a;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>SeaClaw Component Catalog</h1>
+
+    <h2>Buttons</h2>
+    <div class="section">
+      <div class="label">Variants</div>
+      <div class="row">
+        <sc-button variant="primary">Primary</sc-button>
+        <sc-button variant="secondary">Secondary</sc-button>
+        <sc-button variant="destructive">Destructive</sc-button>
+        <sc-button variant="ghost">Ghost</sc-button>
+      </div>
+      <div class="label">Sizes</div>
+      <div class="row">
+        <sc-button size="sm">Small</sc-button>
+        <sc-button size="md">Medium</sc-button>
+        <sc-button size="lg">Large</sc-button>
+      </div>
+      <div class="label">States</div>
+      <div class="row">
+        <sc-button disabled>Disabled</sc-button>
+        <sc-button loading>Loading</sc-button>
+      </div>
+    </div>
+
+    <h2>Badges</h2>
+    <div class="section">
+      <div class="row">
+        <sc-badge variant="success">Success</sc-badge>
+        <sc-badge variant="warning">Warning</sc-badge>
+        <sc-badge variant="error">Error</sc-badge>
+        <sc-badge variant="info">Info</sc-badge>
+        <sc-badge variant="neutral">Neutral</sc-badge>
+      </div>
+      <div class="row">
+        <sc-badge variant="success" dot>With dot</sc-badge>
+      </div>
+    </div>
+
+    <h2>Cards</h2>
+    <div class="section">
+      <div class="row">
+        <sc-card style="width: 200px; padding: 1rem">Default card</sc-card>
+        <sc-card hoverable style="width: 200px; padding: 1rem">Hoverable card</sc-card>
+      </div>
+    </div>
+
+    <h2>Skeleton</h2>
+    <div class="section">
+      <div class="row">
+        <sc-skeleton variant="line" style="width: 200px"></sc-skeleton>
+        <sc-skeleton variant="circle"></sc-skeleton>
+      </div>
+    </div>
+
+    <h2>Empty State</h2>
+    <div class="section">
+      <sc-empty-state
+        heading="No data yet"
+        description="Start by creating your first item."
+      ></sc-empty-state>
+    </div>
+
+    <h2>Tooltip</h2>
+    <div class="section">
+      <div class="row">
+        <sc-tooltip text="Hover to see tooltip">Hover me</sc-tooltip>
+      </div>
+    </div>
+
+    <h2>Toast (click to demo)</h2>
+    <div class="section">
+      <div class="row">
+        <sc-button variant="primary" id="toast-success">Success Toast</sc-button>
+        <sc-button variant="secondary" id="toast-error">Error Toast</sc-button>
+        <sc-button variant="ghost" id="toast-info">Info Toast</sc-button>
+      </div>
+    </div>
+
+    <sc-toast></sc-toast>
+
+    <script type="module">
+      import "/src/styles/theme.css";
+      import "/src/components/sc-button.js";
+      import "/src/components/sc-card.js";
+      import "/src/components/sc-badge.js";
+      import "/src/components/sc-modal.js";
+      import "/src/components/sc-tooltip.js";
+      import "/src/components/sc-empty-state.js";
+      import "/src/components/sc-skeleton.js";
+      import "/src/components/sc-sheet.js";
+      import "/src/components/sc-toast.js";
+
+      const ScToastClass = customElements.get("sc-toast");
+      function showToast(variant) {
+        if (ScToastClass?.show) {
+          ScToastClass.show({
+            message: `This is a ${variant} notification`,
+            variant,
+            duration: 3000,
+          });
+        }
+      }
+
+      document
+        .getElementById("toast-success")
+        ?.addEventListener("click", () => showToast("success"));
+      document.getElementById("toast-error")?.addEventListener("click", () => showToast("error"));
+      document.getElementById("toast-info")?.addEventListener("click", () => showToast("info"));
+    </script>
+  </body>
+</html>

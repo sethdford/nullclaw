@@ -54,6 +54,7 @@ apps/ios/.swiftpm/
 apps/macos/.build/
 apps/macos/.swiftpm/
 apps/shared/.build/
+apps/shared/SeaClawKit/.build/
 
 # Android build caches
 apps/android/.gradle/

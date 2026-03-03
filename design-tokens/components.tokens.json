@@ -1,0 +1,35 @@
+{
+  "$description": "Component-level token overrides",
+  "sidebar": {
+    "width": { "$value": "240px", "$type": "dimension" },
+    "collapsed": { "$value": "52px", "$type": "dimension" }
+  },
+  "button": {
+    "radius": { "$value": "{radius.md}", "$type": "dimension" },
+    "padding-x": { "$value": "{spacing.md}", "$type": "dimension" },
+    "padding-y": { "$value": "{spacing.sm}", "$type": "dimension" },
+    "font-size": { "$value": "{fontSize.sm}", "$type": "dimension" },
+    "font-weight": { "$value": "{fontWeight.medium}", "$type": "number" }
+  },
+  "card": {
+    "radius": { "$value": "{radius.lg}", "$type": "dimension" },
+    "padding": { "$value": "{spacing.lg}", "$type": "dimension" }
+  },
+  "modal": {
+    "radius": { "$value": "{radius.xl}", "$type": "dimension" },
+    "padding": { "$value": "{spacing.xl}", "$type": "dimension" },
+    "max-width": { "$value": "480px", "$type": "dimension" }
+  },
+  "badge": {
+    "radius": { "$value": "{radius.full}", "$type": "dimension" },
+    "padding-x": { "$value": "{spacing.sm}", "$type": "dimension" },
+    "padding-y": { "$value": "{spacing.xs}", "$type": "dimension" },
+    "font-size": { "$value": "{fontSize.xs}", "$type": "dimension" },
+    "font-weight": { "$value": "{fontWeight.medium}", "$type": "number" }
+  },
+  "toast": {
+    "radius": { "$value": "{radius.lg}", "$type": "dimension" },
+    "padding": { "$value": "{spacing.md}", "$type": "dimension" },
+    "max-width": { "$value": "400px", "$type": "dimension" }
+  }
+}

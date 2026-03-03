@@ -1,0 +1,11 @@
+{
+  "name": "seaclaw-design-tokens",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsx build.ts"
+  },
+  "devDependencies": {
+    "tsx": "latest"
+  }
+}

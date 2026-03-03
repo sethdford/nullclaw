@@ -1,0 +1,60 @@
+{
+  "$description": "Motion tokens — duration, easing, and spring configurations",
+  "duration": {
+    "instant": { "$value": "50ms", "$type": "duration" },
+    "fast": { "$value": "100ms", "$type": "duration" },
+    "normal": { "$value": "200ms", "$type": "duration" },
+    "slow": { "$value": "350ms", "$type": "duration" },
+    "slower": { "$value": "500ms", "$type": "duration" }
+  },
+  "easing": {
+    "linear": { "$value": "linear", "$type": "cubicBezier" },
+    "ease-out": {
+      "$value": "cubic-bezier(0.16, 1, 0.3, 1)",
+      "$type": "cubicBezier"
+    },
+    "ease-in-out": {
+      "$value": "cubic-bezier(0.65, 0, 0.35, 1)",
+      "$type": "cubicBezier"
+    },
+    "ease-in": {
+      "$value": "cubic-bezier(0.55, 0, 1, 0.45)",
+      "$type": "cubicBezier"
+    },
+    "spring-out": {
+      "$value": "linear(0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%, 0.721 25.3%, 0.849 31.5%, 0.937 38.1%, 0.968 41.8%, 0.991 45.7%, 1.006 50.1%, 1.015 55%, 1.017 63.9%, 1.001 85.9%, 1)",
+      "$type": "cubicBezier",
+      "$description": "CSS linear() approximation of spring(stiffness:200, damping:20)"
+    }
+  },
+  "spring": {
+    "$description": "Physics-based spring parameters for native platforms and JS animation libs",
+    "micro": {
+      "stiffness": { "$value": 400, "$type": "number" },
+      "damping": { "$value": 30, "$type": "number" },
+      "mass": { "$value": 1, "$type": "number" },
+      "$description": "Button press, toggle (~100ms settle)"
+    },
+    "standard": {
+      "stiffness": { "$value": 200, "$type": "number" },
+      "damping": { "$value": 20, "$type": "number" },
+      "mass": { "$value": 1, "$type": "number" },
+      "$description": "Panel slide, dropdown open (~250ms settle)"
+    },
+    "expressive": {
+      "stiffness": { "$value": 120, "$type": "number" },
+      "damping": { "$value": 14, "$type": "number" },
+      "mass": { "$value": 1, "$type": "number" },
+      "$description": "Page transition, modal enter (~400ms settle)"
+    },
+    "dramatic": {
+      "stiffness": { "$value": 80, "$type": "number" },
+      "damping": { "$value": 10, "$type": "number" },
+      "mass": { "$value": 1, "$type": "number" },
+      "$description": "Hero reveal, onboarding (~600ms settle)"
+    }
+  },
+  "transition": {
+    "default": { "$value": "150ms ease", "$type": "transition" }
+  }
+}
