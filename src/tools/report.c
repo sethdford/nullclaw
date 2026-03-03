@@ -9,20 +9,22 @@
 #include <time.h>
 
 #define TOOL_NAME "report"
-#define TOOL_DESC                                                                                   \
-    "Generate structured reports in Markdown or HTML. Actions: create (build report with title, "   \
-    "sections, and optional data tables), template (list available report templates), export "       \
+#define TOOL_DESC                                                                                 \
+    "Generate structured reports in Markdown or HTML. Actions: create (build report with title, " \
+    "sections, and optional data tables), template (list available report templates), export "    \
     "(convert report to specified format)."
-#define TOOL_PARAMS                                                                                \
-    "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"create\","   \
-    "\"template\",\"export\"]},\"title\":{\"type\":\"string\"},\"sections\":{\"type\":\"array\","  \
-    "\"items\":{\"type\":\"object\",\"properties\":{\"heading\":{\"type\":\"string\"},"            \
-    "\"content\":{\"type\":\"string\"}}}},\"format\":{\"type\":\"string\",\"enum\":["              \
-    "\"markdown\",\"html\"],\"description\":\"Output format (default: markdown)\"},"               \
-    "\"template\":{\"type\":\"string\",\"description\":\"Template name (executive_summary, "       \
+#define TOOL_PARAMS                                                                               \
+    "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"create\","  \
+    "\"template\",\"export\"]},\"title\":{\"type\":\"string\"},\"sections\":{\"type\":\"array\"," \
+    "\"items\":{\"type\":\"object\",\"properties\":{\"heading\":{\"type\":\"string\"},"           \
+    "\"content\":{\"type\":\"string\"}}}},\"format\":{\"type\":\"string\",\"enum\":["             \
+    "\"markdown\",\"html\"],\"description\":\"Output format (default: markdown)\"},"              \
+    "\"template\":{\"type\":\"string\",\"description\":\"Template name (executive_summary, "      \
     "weekly_status, incident_report, financial_summary)\"}},\"required\":[\"action\"]}"
 
-typedef struct { int placeholder; } report_ctx_t;
+typedef struct {
+    int placeholder;
+} report_ctx_t;
 
 static sc_error_t report_execute(void *ctx, sc_allocator_t *alloc, const sc_json_value_t *args,
                                  sc_tool_result_t *out) {
@@ -113,20 +115,36 @@ static sc_error_t report_execute(void *ctx, sc_allocator_t *alloc, const sc_json
     return SC_OK;
 }
 
-static const char *report_name(void *ctx) { (void)ctx; return TOOL_NAME; }
-static const char *report_desc(void *ctx) { (void)ctx; return TOOL_DESC; }
-static const char *report_params(void *ctx) { (void)ctx; return TOOL_PARAMS; }
-static void report_deinit(void *ctx, sc_allocator_t *alloc) { (void)alloc; free(ctx); }
+static const char *report_name(void *ctx) {
+    (void)ctx;
+    return TOOL_NAME;
+}
+static const char *report_desc(void *ctx) {
+    (void)ctx;
+    return TOOL_DESC;
+}
+static const char *report_params(void *ctx) {
+    (void)ctx;
+    return TOOL_PARAMS;
+}
+static void report_deinit(void *ctx, sc_allocator_t *alloc) {
+    (void)alloc;
+    free(ctx);
+}
 
 static const sc_tool_vtable_t report_vtable = {
-    .execute = report_execute, .name = report_name, .description = report_desc,
-    .parameters_json = report_params, .deinit = report_deinit,
+    .execute = report_execute,
+    .name = report_name,
+    .description = report_desc,
+    .parameters_json = report_params,
+    .deinit = report_deinit,
 };
 
 sc_error_t sc_report_create(sc_allocator_t *alloc, sc_tool_t *out) {
     (void)alloc;
     void *ctx = calloc(1, sizeof(report_ctx_t));
-    if (!ctx) return SC_ERR_OUT_OF_MEMORY;
+    if (!ctx)
+        return SC_ERR_OUT_OF_MEMORY;
     out->ctx = ctx;
     out->vtable = &report_vtable;
     return SC_OK;

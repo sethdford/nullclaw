@@ -8,17 +8,19 @@
 #include <string.h>
 
 #define TOOL_NAME "broadcast"
-#define TOOL_DESC                                                                                   \
-    "Send a message to multiple channels simultaneously. Provide a message and a list of channel "  \
+#define TOOL_DESC                                                                                  \
+    "Send a message to multiple channels simultaneously. Provide a message and a list of channel " \
     "targets. Returns delivery status for each channel."
-#define TOOL_PARAMS                                                                                \
-    "{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\",\"description\":"       \
-    "\"Message to broadcast\"},\"channels\":{\"type\":\"array\",\"items\":{\"type\":\"object\","   \
-    "\"properties\":{\"channel\":{\"type\":\"string\"},\"target\":{\"type\":\"string\"}}}},"       \
-    "\"format\":{\"type\":\"string\",\"description\":\"Optional: 'plain' or 'markdown' "          \
+#define TOOL_PARAMS                                                                              \
+    "{\"type\":\"object\",\"properties\":{\"message\":{\"type\":\"string\",\"description\":"     \
+    "\"Message to broadcast\"},\"channels\":{\"type\":\"array\",\"items\":{\"type\":\"object\"," \
+    "\"properties\":{\"channel\":{\"type\":\"string\"},\"target\":{\"type\":\"string\"}}}},"     \
+    "\"format\":{\"type\":\"string\",\"description\":\"Optional: 'plain' or 'markdown' "         \
     "(default: plain)\"}},\"required\":[\"message\",\"channels\"]}"
 
-typedef struct { int placeholder; } broadcast_ctx_t;
+typedef struct {
+    int placeholder;
+} broadcast_ctx_t;
 
 static sc_error_t broadcast_execute(void *ctx, sc_allocator_t *alloc, const sc_json_value_t *args,
                                     sc_tool_result_t *out) {
@@ -48,10 +50,12 @@ static sc_error_t broadcast_execute(void *ctx, sc_allocator_t *alloc, const sc_j
     int n = snprintf(msg, buf_sz, "Broadcast to %zu channels:\n", channels->data.array.len);
     for (size_t i = 0; i < channels->data.array.len; i++) {
         sc_json_value_t *entry = channels->data.array.items[i];
-        const char *ch = entry ? sc_json_get_string(entry, "channel") : NULL;
-        const char *tgt = entry ? sc_json_get_string(entry, "target") : NULL;
+        if (!entry || entry->type != SC_JSON_OBJECT)
+            continue;
+        const char *ch = sc_json_get_string(entry, "channel");
+        const char *tgt = sc_json_get_string(entry, "target");
         n += snprintf(msg + n, buf_sz - (size_t)n, "- %s -> %s: delivered (test)\n",
-                      ch ? ch : "unknown", tgt ? tgt : "default");
+                     ch ? ch : "unknown", tgt ? tgt : "default");
     }
     *out = sc_tool_result_ok_owned(msg, (size_t)n);
 #else
@@ -70,20 +74,36 @@ static sc_error_t broadcast_execute(void *ctx, sc_allocator_t *alloc, const sc_j
     return SC_OK;
 }
 
-static const char *broadcast_name(void *ctx) { (void)ctx; return TOOL_NAME; }
-static const char *broadcast_desc(void *ctx) { (void)ctx; return TOOL_DESC; }
-static const char *broadcast_params(void *ctx) { (void)ctx; return TOOL_PARAMS; }
-static void broadcast_deinit(void *ctx, sc_allocator_t *alloc) { (void)alloc; free(ctx); }
+static const char *broadcast_name(void *ctx) {
+    (void)ctx;
+    return TOOL_NAME;
+}
+static const char *broadcast_desc(void *ctx) {
+    (void)ctx;
+    return TOOL_DESC;
+}
+static const char *broadcast_params(void *ctx) {
+    (void)ctx;
+    return TOOL_PARAMS;
+}
+static void broadcast_deinit(void *ctx, sc_allocator_t *alloc) {
+    (void)alloc;
+    free(ctx);
+}
 
 static const sc_tool_vtable_t broadcast_vtable = {
-    .execute = broadcast_execute, .name = broadcast_name, .description = broadcast_desc,
-    .parameters_json = broadcast_params, .deinit = broadcast_deinit,
+    .execute = broadcast_execute,
+    .name = broadcast_name,
+    .description = broadcast_desc,
+    .parameters_json = broadcast_params,
+    .deinit = broadcast_deinit,
 };
 
 sc_error_t sc_broadcast_create(sc_allocator_t *alloc, sc_tool_t *out) {
     (void)alloc;
     void *ctx = calloc(1, sizeof(broadcast_ctx_t));
-    if (!ctx) return SC_ERR_OUT_OF_MEMORY;
+    if (!ctx)
+        return SC_ERR_OUT_OF_MEMORY;
     out->ctx = ctx;
     out->vtable = &broadcast_vtable;
     return SC_OK;

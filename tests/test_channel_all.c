@@ -1273,16 +1273,17 @@ static void test_dingtalk_poll_null_args(void) {
 static void test_teams_create(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_channel_t ch;
-    sc_error_t err = sc_teams_create(&alloc, "app-id", 6, "secret", 6, "https://example.com", 19, &ch);
+    sc_error_t err = sc_teams_create(&alloc, "https://example.com", 19, &ch);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_STR_EQ(ch.vtable->name(ch.ctx), "teams");
+    SC_ASSERT(sc_teams_is_configured(&ch) == true);
     sc_teams_destroy(&ch);
 }
 
 static void test_teams_health_check(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_channel_t ch;
-    sc_error_t err = sc_teams_create(&alloc, "app-id", 6, "secret", 6, "https://example.com", 19, &ch);
+    sc_error_t err = sc_teams_create(&alloc, "https://example.com", 19, &ch);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT(ch.vtable->health_check(ch.ctx) == true);
     sc_teams_destroy(&ch);
@@ -1291,7 +1292,7 @@ static void test_teams_health_check(void) {
 static void test_teams_webhook_and_poll(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_channel_t ch = {0};
-    sc_error_t err = sc_teams_create(&alloc, "app-id", 6, "secret", 6, "https://example.com", 19, &ch);
+    sc_error_t err = sc_teams_create(&alloc, "https://example.com", 19, &ch);
     SC_ASSERT(err == SC_OK);
     err = sc_teams_on_webhook(ch.ctx, &alloc, "hello from teams", 16);
     SC_ASSERT(err == SC_OK);
@@ -1314,16 +1315,19 @@ static void test_teams_poll_null_args(void) {
 static void test_twilio_create(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_channel_t ch;
-    sc_error_t err = sc_twilio_create(&alloc, "ACXXXX", 6, "token", 5, "+15551234567", 12, &ch);
+    sc_error_t err = sc_twilio_create(&alloc, "ACXXXX", 6, "token", 5, "+15551234567", 12,
+                                      "+15559876543", 12, &ch);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_STR_EQ(ch.vtable->name(ch.ctx), "twilio");
+    SC_ASSERT(sc_twilio_is_configured(&ch) == true);
     sc_twilio_destroy(&ch);
 }
 
 static void test_twilio_health_check(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_channel_t ch;
-    sc_error_t err = sc_twilio_create(&alloc, "ACXXXX", 6, "token", 5, "+15551234567", 12, &ch);
+    sc_error_t err = sc_twilio_create(&alloc, "ACXXXX", 6, "token", 5, "+15551234567", 12,
+                                      "+15559876543", 12, &ch);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT(ch.vtable->health_check(ch.ctx) == true);
     sc_twilio_destroy(&ch);
@@ -1332,7 +1336,8 @@ static void test_twilio_health_check(void) {
 static void test_twilio_webhook_and_poll(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_channel_t ch = {0};
-    sc_error_t err = sc_twilio_create(&alloc, "ACXXXX", 6, "token", 5, "+15551234567", 12, &ch);
+    sc_error_t err = sc_twilio_create(&alloc, "ACXXXX", 6, "token", 5, "+15551234567", 12,
+                                      "+15559876543", 12, &ch);
     SC_ASSERT(err == SC_OK);
     err = sc_twilio_on_webhook(ch.ctx, &alloc, "hello from twilio", 17);
     SC_ASSERT(err == SC_OK);
@@ -1355,16 +1360,19 @@ static void test_twilio_poll_null_args(void) {
 static void test_google_chat_create(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_channel_t ch;
-    sc_error_t err = sc_google_chat_create(&alloc, "bearer-token", 12, "spaces/AAAA", 11, &ch);
+    sc_error_t err =
+        sc_google_chat_create(&alloc, "https://chat.googleapis.com/v1/spaces/abc", 38, &ch);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_STR_EQ(ch.vtable->name(ch.ctx), "google_chat");
+    SC_ASSERT(sc_google_chat_is_configured(&ch) == true);
     sc_google_chat_destroy(&ch);
 }
 
 static void test_google_chat_health_check(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_channel_t ch;
-    sc_error_t err = sc_google_chat_create(&alloc, "bearer-token", 12, "spaces/AAAA", 11, &ch);
+    sc_error_t err =
+        sc_google_chat_create(&alloc, "https://chat.googleapis.com/v1/spaces/abc", 38, &ch);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT(ch.vtable->health_check(ch.ctx) == true);
     sc_google_chat_destroy(&ch);
@@ -1373,7 +1381,8 @@ static void test_google_chat_health_check(void) {
 static void test_google_chat_webhook_and_poll(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_channel_t ch = {0};
-    sc_error_t err = sc_google_chat_create(&alloc, "bearer-token", 12, "spaces/AAAA", 11, &ch);
+    sc_error_t err =
+        sc_google_chat_create(&alloc, "https://chat.googleapis.com/v1/spaces/abc", 38, &ch);
     SC_ASSERT(err == SC_OK);
     err = sc_google_chat_on_webhook(ch.ctx, &alloc, "hello from gchat", 16);
     SC_ASSERT(err == SC_OK);

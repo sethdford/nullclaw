@@ -9,9 +9,9 @@
 #include <time.h>
 
 #define TOOL_NAME "workflow"
-#define TOOL_DESC                                                                                   \
-    "Multi-step workflow engine with approval gates. Actions: create (define workflow with "        \
-    "ordered steps), run (execute a workflow), status (check workflow progress), approve "          \
+#define TOOL_DESC                                                                            \
+    "Multi-step workflow engine with approval gates. Actions: create (define workflow with " \
+    "ordered steps), run (execute a workflow), status (check workflow progress), approve "   \
     "(approve a pending step), list (show all workflows), cancel (abort a running workflow)."
 #define TOOL_PARAMS                                                                                \
     "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"create\","   \
@@ -60,12 +60,18 @@ typedef struct {
 
 static const char *wf_status_str(wf_status_t s) {
     switch (s) {
-    case WF_STATUS_CREATED: return "created";
-    case WF_STATUS_RUNNING: return "running";
-    case WF_STATUS_WAITING_APPROVAL: return "waiting_approval";
-    case WF_STATUS_COMPLETED: return "completed";
-    case WF_STATUS_CANCELLED: return "cancelled";
-    case WF_STATUS_FAILED: return "failed";
+    case WF_STATUS_CREATED:
+        return "created";
+    case WF_STATUS_RUNNING:
+        return "running";
+    case WF_STATUS_WAITING_APPROVAL:
+        return "waiting_approval";
+    case WF_STATUS_COMPLETED:
+        return "completed";
+    case WF_STATUS_CANCELLED:
+        return "cancelled";
+    case WF_STATUS_FAILED:
+        return "failed";
     }
     return "unknown";
 }
@@ -101,7 +107,8 @@ static sc_error_t workflow_execute(void *ctx, sc_allocator_t *alloc, const sc_js
         snprintf(wf->id, sizeof(wf->id), "wf_%u", c->next_id++);
         if (name) {
             size_t nl = strlen(name);
-            if (nl > sizeof(wf->name) - 1) nl = sizeof(wf->name) - 1;
+            if (nl > sizeof(wf->name) - 1)
+                nl = sizeof(wf->name) - 1;
             memcpy(wf->name, name, nl);
             wf->name[nl] = '\0';
         }
@@ -110,19 +117,22 @@ static sc_error_t workflow_execute(void *ctx, sc_allocator_t *alloc, const sc_js
         if (steps && steps->type == SC_JSON_ARRAY) {
             for (size_t i = 0; i < steps->data.array.len && wf->step_count < WF_STEPS_MAX; i++) {
                 sc_json_value_t *s = steps->data.array.items[i];
-                if (!s) continue;
+                if (!s)
+                    continue;
                 wf_step_t *step = &wf->steps[wf->step_count];
                 memset(step, 0, sizeof(*step));
                 const char *sname = sc_json_get_string(s, "name");
                 const char *stool = sc_json_get_string(s, "tool");
                 if (sname) {
                     size_t sl = strlen(sname);
-                    if (sl > sizeof(step->name) - 1) sl = sizeof(step->name) - 1;
+                    if (sl > sizeof(step->name) - 1)
+                        sl = sizeof(step->name) - 1;
                     memcpy(step->name, sname, sl);
                 }
                 if (stool) {
                     size_t tl = strlen(stool);
-                    if (tl > sizeof(step->tool) - 1) tl = sizeof(step->tool) - 1;
+                    if (tl > sizeof(step->tool) - 1)
+                        tl = sizeof(step->tool) - 1;
                     memcpy(step->tool, stool, tl);
                 }
                 sc_json_value_t *ra = sc_json_object_get(s, "requires_approval");
@@ -140,9 +150,15 @@ static sc_error_t workflow_execute(void *ctx, sc_allocator_t *alloc, const sc_js
 
     if (strcmp(action, "run") == 0) {
         const char *wf_id = sc_json_get_string(args, "workflow_id");
-        if (!wf_id) { *out = sc_tool_result_fail("missing workflow_id", 18); return SC_OK; }
+        if (!wf_id) {
+            *out = sc_tool_result_fail("missing workflow_id", 18);
+            return SC_OK;
+        }
         wf_def_t *wf = wf_find(c, wf_id);
-        if (!wf) { *out = sc_tool_result_fail("workflow not found", 18); return SC_OK; }
+        if (!wf) {
+            *out = sc_tool_result_fail("workflow not found", 18);
+            return SC_OK;
+        }
         if (wf->status != WF_STATUS_CREATED) {
             *out = sc_tool_result_fail("workflow already started", 24);
             return SC_OK;
@@ -153,8 +169,8 @@ static sc_error_t workflow_execute(void *ctx, sc_allocator_t *alloc, const sc_js
             wf_step_t *step = &wf->steps[wf->current_step];
             if (step->requires_approval && !step->approved) {
                 wf->status = WF_STATUS_WAITING_APPROVAL;
-                char *msg = sc_sprintf(alloc,
-                    "{\"status\":\"waiting_approval\",\"step\":\"%s\",\"step_index\":%zu}",
+                char *msg = sc_sprintf(
+                    alloc, "{\"status\":\"waiting_approval\",\"step\":\"%s\",\"step_index\":%zu}",
                     step->name, wf->current_step);
                 *out = sc_tool_result_ok_owned(msg, msg ? strlen(msg) : 0);
                 return SC_OK;
@@ -169,9 +185,15 @@ static sc_error_t workflow_execute(void *ctx, sc_allocator_t *alloc, const sc_js
 
     if (strcmp(action, "approve") == 0) {
         const char *wf_id = sc_json_get_string(args, "workflow_id");
-        if (!wf_id) { *out = sc_tool_result_fail("missing workflow_id", 18); return SC_OK; }
+        if (!wf_id) {
+            *out = sc_tool_result_fail("missing workflow_id", 18);
+            return SC_OK;
+        }
         wf_def_t *wf = wf_find(c, wf_id);
-        if (!wf) { *out = sc_tool_result_fail("workflow not found", 18); return SC_OK; }
+        if (!wf) {
+            *out = sc_tool_result_fail("workflow not found", 18);
+            return SC_OK;
+        }
         if (wf->status != WF_STATUS_WAITING_APPROVAL) {
             *out = sc_tool_result_fail("workflow not waiting for approval", 32);
             return SC_OK;
@@ -183,7 +205,8 @@ static sc_error_t workflow_execute(void *ctx, sc_allocator_t *alloc, const sc_js
             wf_step_t *step = &wf->steps[wf->current_step];
             if (step->requires_approval && !step->approved) {
                 wf->status = WF_STATUS_WAITING_APPROVAL;
-                char *msg = sc_sprintf(alloc,
+                char *msg = sc_sprintf(
+                    alloc,
                     "{\"approved\":true,\"next_step\":\"%s\",\"status\":\"waiting_approval\"}",
                     step->name);
                 *out = sc_tool_result_ok_owned(msg, msg ? strlen(msg) : 0);
@@ -199,14 +222,20 @@ static sc_error_t workflow_execute(void *ctx, sc_allocator_t *alloc, const sc_js
 
     if (strcmp(action, "status") == 0) {
         const char *wf_id = sc_json_get_string(args, "workflow_id");
-        if (!wf_id) { *out = sc_tool_result_fail("missing workflow_id", 18); return SC_OK; }
+        if (!wf_id) {
+            *out = sc_tool_result_fail("missing workflow_id", 18);
+            return SC_OK;
+        }
         wf_def_t *wf = wf_find(c, wf_id);
-        if (!wf) { *out = sc_tool_result_fail("workflow not found", 18); return SC_OK; }
+        if (!wf) {
+            *out = sc_tool_result_fail("workflow not found", 18);
+            return SC_OK;
+        }
         char *msg = sc_sprintf(alloc,
-            "{\"workflow_id\":\"%s\",\"name\":\"%s\",\"status\":\"%s\","
-            "\"current_step\":%zu,\"total_steps\":%zu}",
-            wf->id, wf->name, wf_status_str(wf->status),
-            wf->current_step, wf->step_count);
+                               "{\"workflow_id\":\"%s\",\"name\":\"%s\",\"status\":\"%s\","
+                               "\"current_step\":%zu,\"total_steps\":%zu}",
+                               wf->id, wf->name, wf_status_str(wf->status), wf->current_step,
+                               wf->step_count);
         *out = sc_tool_result_ok_owned(msg, msg ? strlen(msg) : 0);
         return SC_OK;
     }
@@ -214,14 +243,17 @@ static sc_error_t workflow_execute(void *ctx, sc_allocator_t *alloc, const sc_js
     if (strcmp(action, "list") == 0) {
         size_t buf_sz = 256 + c->count * 256;
         char *msg = (char *)alloc->alloc(alloc->ctx, buf_sz);
-        if (!msg) { *out = sc_tool_result_fail("out of memory", 13); return SC_ERR_OUT_OF_MEMORY; }
+        if (!msg) {
+            *out = sc_tool_result_fail("out of memory", 13);
+            return SC_ERR_OUT_OF_MEMORY;
+        }
         int n = snprintf(msg, buf_sz, "{\"workflows\":[");
         for (size_t i = 0; i < c->count; i++) {
             wf_def_t *wf = &c->workflows[i];
             n += snprintf(msg + n, buf_sz - (size_t)n,
                           "%s{\"id\":\"%s\",\"name\":\"%s\",\"status\":\"%s\",\"steps\":%zu}",
-                          i > 0 ? "," : "", wf->id, wf->name,
-                          wf_status_str(wf->status), wf->step_count);
+                          i > 0 ? "," : "", wf->id, wf->name, wf_status_str(wf->status),
+                          wf->step_count);
         }
         n += snprintf(msg + n, buf_sz - (size_t)n, "]}");
         *out = sc_tool_result_ok_owned(msg, (size_t)n);
@@ -230,9 +262,15 @@ static sc_error_t workflow_execute(void *ctx, sc_allocator_t *alloc, const sc_js
 
     if (strcmp(action, "cancel") == 0) {
         const char *wf_id = sc_json_get_string(args, "workflow_id");
-        if (!wf_id) { *out = sc_tool_result_fail("missing workflow_id", 18); return SC_OK; }
+        if (!wf_id) {
+            *out = sc_tool_result_fail("missing workflow_id", 18);
+            return SC_OK;
+        }
         wf_def_t *wf = wf_find(c, wf_id);
-        if (!wf) { *out = sc_tool_result_fail("workflow not found", 18); return SC_OK; }
+        if (!wf) {
+            *out = sc_tool_result_fail("workflow not found", 18);
+            return SC_OK;
+        }
         wf->status = WF_STATUS_CANCELLED;
         *out = sc_tool_result_ok("{\"cancelled\":true}", 19);
         return SC_OK;
@@ -242,23 +280,37 @@ static sc_error_t workflow_execute(void *ctx, sc_allocator_t *alloc, const sc_js
     return SC_OK;
 }
 
-static const char *workflow_name(void *ctx) { (void)ctx; return TOOL_NAME; }
-static const char *workflow_desc(void *ctx) { (void)ctx; return TOOL_DESC; }
-static const char *workflow_params(void *ctx) { (void)ctx; return TOOL_PARAMS; }
+static const char *workflow_name(void *ctx) {
+    (void)ctx;
+    return TOOL_NAME;
+}
+static const char *workflow_desc(void *ctx) {
+    (void)ctx;
+    return TOOL_DESC;
+}
+static const char *workflow_params(void *ctx) {
+    (void)ctx;
+    return TOOL_PARAMS;
+}
 static void workflow_deinit(void *ctx, sc_allocator_t *alloc) {
     (void)alloc;
     free(ctx);
 }
 
 static const sc_tool_vtable_t workflow_vtable = {
-    .execute = workflow_execute, .name = workflow_name, .description = workflow_desc,
-    .parameters_json = workflow_params, .deinit = workflow_deinit,
+    .execute = workflow_execute,
+    .name = workflow_name,
+    .description = workflow_desc,
+    .parameters_json = workflow_params,
+    .deinit = workflow_deinit,
 };
 
 sc_error_t sc_workflow_create(sc_allocator_t *alloc, sc_tool_t *out) {
-    if (!alloc || !out) return SC_ERR_INVALID_ARGUMENT;
+    if (!alloc || !out)
+        return SC_ERR_INVALID_ARGUMENT;
     workflow_ctx_t *c = (workflow_ctx_t *)calloc(1, sizeof(*c));
-    if (!c) return SC_ERR_OUT_OF_MEMORY;
+    if (!c)
+        return SC_ERR_OUT_OF_MEMORY;
     c->alloc = alloc;
     out->ctx = c;
     out->vtable = &workflow_vtable;

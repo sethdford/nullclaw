@@ -8,27 +8,29 @@
 #include <string.h>
 
 #define TOOL_NAME "spreadsheet"
-#define TOOL_DESC                                                                                   \
-    "Parse, analyze, and generate CSV/TSV data. Actions: parse (CSV string to structured data), "   \
-    "analyze (summary stats: row/col count, column names, min/max/avg for numeric columns), "       \
+#define TOOL_DESC                                                                                 \
+    "Parse, analyze, and generate CSV/TSV data. Actions: parse (CSV string to structured data), " \
+    "analyze (summary stats: row/col count, column names, min/max/avg for numeric columns), "     \
     "generate (create CSV from rows array), query (filter rows by column value)."
-#define TOOL_PARAMS                                                                                \
-    "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"parse\","    \
-    "\"analyze\",\"generate\",\"query\"]},\"data\":{\"type\":\"string\",\"description\":"          \
-    "\"CSV/TSV string\"},\"delimiter\":{\"type\":\"string\",\"description\":\"Delimiter "          \
-    "(default: comma)\"},\"column\":{\"type\":\"string\",\"description\":\"Column name for "       \
-    "query\"},\"value\":{\"type\":\"string\",\"description\":\"Value to match for query\"},"       \
-    "\"headers\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Column "    \
-    "headers for generate\"},\"rows\":{\"type\":\"array\",\"items\":{\"type\":\"array\","          \
-    "\"items\":{\"type\":\"string\"}},\"description\":\"Row data for generate\"}},"                \
+#define TOOL_PARAMS                                                                             \
+    "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"parse\"," \
+    "\"analyze\",\"generate\",\"query\"]},\"data\":{\"type\":\"string\",\"description\":"       \
+    "\"CSV/TSV string\"},\"delimiter\":{\"type\":\"string\",\"description\":\"Delimiter "       \
+    "(default: comma)\"},\"column\":{\"type\":\"string\",\"description\":\"Column name for "    \
+    "query\"},\"value\":{\"type\":\"string\",\"description\":\"Value to match for query\"},"    \
+    "\"headers\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"Column " \
+    "headers for generate\"},\"rows\":{\"type\":\"array\",\"items\":{\"type\":\"array\","       \
+    "\"items\":{\"type\":\"string\"}},\"description\":\"Row data for generate\"}},"             \
     "\"required\":[\"action\"]}"
 
-#define SS_MAX_ROWS    10000
-#define SS_MAX_COLS    256
-#define SS_MAX_CELL    4096
-#define SS_BUF_INIT    8192
+#define SS_MAX_ROWS 10000
+#define SS_MAX_COLS 256
+#define SS_MAX_CELL 4096
+#define SS_BUF_INIT 8192
 
-typedef struct { int placeholder; } ss_ctx_t;
+typedef struct {
+    int placeholder;
+} ss_ctx_t;
 
 static size_t csv_count_fields(const char *line, char delim) {
     size_t count = 1;
@@ -100,6 +102,10 @@ static sc_error_t ss_execute(void *ctx, sc_allocator_t *alloc, const sc_json_val
             *out = sc_tool_result_fail("missing data", 12);
             return SC_OK;
         }
+        if (strlen(data) > 1024 * 1024) {
+            *out = sc_tool_result_fail("data too large (max 1MB)", 24);
+            return SC_OK;
+        }
 
         size_t num_cols = csv_count_fields(data, delim);
         if (num_cols > SS_MAX_COLS)
@@ -125,8 +131,9 @@ static sc_error_t ss_execute(void *ctx, sc_allocator_t *alloc, const sc_json_val
                 return SC_ERR_OUT_OF_MEMORY;
             }
             char cell[SS_MAX_CELL];
-            int n = snprintf(msg, buf_sz, "Rows: %zu (including header)\nColumns: %zu\nHeaders: ",
-                             row_count, num_cols);
+            int n = snprintf(msg, buf_sz,
+                             "Rows: %zu (including header)\nColumns: %zu\nHeaders: ", row_count,
+                             num_cols);
             p = data;
             for (size_t c = 0; c < num_cols; c++) {
                 p = csv_next_field(p, delim, cell, sizeof(cell));
@@ -203,9 +210,9 @@ static sc_error_t ss_execute(void *ctx, sc_allocator_t *alloc, const sc_json_val
             *out = sc_tool_result_fail("out of memory", 13);
             return SC_ERR_OUT_OF_MEMORY;
         }
-        int n = snprintf(msg, buf_sz, "Parsed %zu rows, %zu columns (delimiter: '%c')\n%.*s",
-                         row_count, num_cols, delim, (int)(strlen(data) > 2048 ? 2048 : strlen(data)),
-                         data);
+        int n =
+            snprintf(msg, buf_sz, "Parsed %zu rows, %zu columns (delimiter: '%c')\n%.*s", row_count,
+                     num_cols, delim, (int)(strlen(data) > 2048 ? 2048 : strlen(data)), data);
         *out = sc_tool_result_ok_owned(msg, (size_t)n);
         return SC_OK;
     }
@@ -231,20 +238,36 @@ static sc_error_t ss_execute(void *ctx, sc_allocator_t *alloc, const sc_json_val
     return SC_OK;
 }
 
-static const char *ss_name(void *ctx) { (void)ctx; return TOOL_NAME; }
-static const char *ss_desc(void *ctx) { (void)ctx; return TOOL_DESC; }
-static const char *ss_params(void *ctx) { (void)ctx; return TOOL_PARAMS; }
-static void ss_deinit(void *ctx, sc_allocator_t *alloc) { (void)alloc; free(ctx); }
+static const char *ss_name(void *ctx) {
+    (void)ctx;
+    return TOOL_NAME;
+}
+static const char *ss_desc(void *ctx) {
+    (void)ctx;
+    return TOOL_DESC;
+}
+static const char *ss_params(void *ctx) {
+    (void)ctx;
+    return TOOL_PARAMS;
+}
+static void ss_deinit(void *ctx, sc_allocator_t *alloc) {
+    (void)alloc;
+    free(ctx);
+}
 
 static const sc_tool_vtable_t ss_vtable = {
-    .execute = ss_execute, .name = ss_name, .description = ss_desc,
-    .parameters_json = ss_params, .deinit = ss_deinit,
+    .execute = ss_execute,
+    .name = ss_name,
+    .description = ss_desc,
+    .parameters_json = ss_params,
+    .deinit = ss_deinit,
 };
 
 sc_error_t sc_spreadsheet_create(sc_allocator_t *alloc, sc_tool_t *out) {
     (void)alloc;
     void *ctx = calloc(1, sizeof(ss_ctx_t));
-    if (!ctx) return SC_ERR_OUT_OF_MEMORY;
+    if (!ctx)
+        return SC_ERR_OUT_OF_MEMORY;
     out->ctx = ctx;
     out->vtable = &ss_vtable;
     return SC_OK;
