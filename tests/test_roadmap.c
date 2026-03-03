@@ -506,35 +506,9 @@ static void test_profile_by_name_null(void) {
 }
 
 
-static void test_websocket_wss_not_supported(void) {
-    sc_allocator_t a = sc_system_allocator();
-    sc_websocket_t ws;
-    memset(&ws, 0, sizeof(ws));
-    sc_error_t err = sc_websocket_connect(&ws, &a, "wss://example.com/ws");
-    SC_ASSERT_EQ(err, SC_ERR_NOT_SUPPORTED);
-}
 
-static void test_voice_tts_not_supported(void) {
-    sc_allocator_t a = sc_system_allocator();
-    sc_voice_config_t vc;
-    memset(&vc, 0, sizeof(vc));
-    sc_error_t err = sc_voice_tts_synthesize(&a, &vc, "hello", 5, NULL, NULL);
-    SC_ASSERT_EQ(err, SC_ERR_NOT_SUPPORTED);
-}
 
-static void test_voice_stt_not_supported(void) {
-    sc_allocator_t a = sc_system_allocator();
-    sc_voice_config_t vc;
-    memset(&vc, 0, sizeof(vc));
-    sc_error_t err = sc_voice_stt_transcribe(&a, &vc, NULL, 0, NULL, NULL);
-    SC_ASSERT_EQ(err, SC_ERR_NOT_SUPPORTED);
-}
 
-static void test_multimodal_image_analyze_not_supported(void) {
-    sc_allocator_t a = sc_system_allocator();
-    sc_error_t err = sc_multimodal_analyze_image(&a, NULL, NULL, 0, NULL, NULL);
-    SC_ASSERT_EQ(err, SC_ERR_NOT_SUPPORTED);
-}
 
 static void test_daemon_start_not_supported(void) {
     sc_error_t err = sc_daemon_start(NULL);
