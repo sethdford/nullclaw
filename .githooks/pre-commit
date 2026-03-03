@@ -2,6 +2,13 @@
 # pre-commit: basic checks on C source files.
 # Activate: git config core.hooksPath .githooks
 
+CLANG_FMT="clang-format"
+if ! command -v "$CLANG_FMT" >/dev/null 2>&1; then
+    for p in /opt/homebrew/opt/llvm/bin/clang-format /usr/local/opt/llvm/bin/clang-format; do
+        if [ -x "$p" ]; then CLANG_FMT="$p"; break; fi
+    done
+fi
+
 if [ -d "src" ] && [ -f "CMakeLists.txt" ]; then
     staged_ch=$(git diff --cached --name-only --diff-filter=ACM -- '*.c' '*.h')
     if [ -n "$staged_ch" ]; then
@@ -10,9 +17,9 @@ if [ -d "src" ] && [ -f "CMakeLists.txt" ]; then
                 echo "Warning: tabs found in $f (project uses spaces)"
             fi
         done
-        echo "$staged_ch" | xargs clang-format --dry-run -Werror
+        echo "$staged_ch" | xargs "$CLANG_FMT" --dry-run -Werror
         if [ $? -ne 0 ]; then
-            echo "clang-format failed. Run: clang-format -i <file>"
+            echo "clang-format failed. Run: $CLANG_FMT -i <file>"
             exit 1
         fi
     fi

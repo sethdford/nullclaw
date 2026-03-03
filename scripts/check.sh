@@ -33,12 +33,19 @@ if [ ! -f "CMakeLists.txt" ]; then
     die "not in SeaClaw root (no CMakeLists.txt)"
 fi
 
+CLANG_FMT="clang-format"
+if ! command -v "$CLANG_FMT" >/dev/null 2>&1; then
+    for p in /opt/homebrew/opt/llvm/bin/clang-format /usr/local/opt/llvm/bin/clang-format; do
+        if [ -x "$p" ]; then CLANG_FMT="$p"; break; fi
+    done
+fi
+
 PASS=0
 FAIL=0
 
 # 1. clang-format
 info "Step 1/4: clang-format check..."
-if find src include \( -name '*.c' -o -name '*.h' \) 2>/dev/null | xargs clang-format --dry-run -Werror 2>/dev/null; then
+if find src include \( -name '*.c' -o -name '*.h' \) 2>/dev/null | xargs "$CLANG_FMT" --dry-run -Werror 2>/dev/null; then
     info "  clang-format: pass"
     PASS=$((PASS + 1))
 else
