@@ -16,10 +16,10 @@ static const sc_channel_meta_t catalog[] = {
     {SC_CHANNEL_DISCORD, "discord", "Discord", "", SC_LISTENER_POLLING},
 #endif
 #ifdef SC_HAS_SLACK
-    {SC_CHANNEL_SLACK, "slack", "Slack", "", SC_LISTENER_GATEWAY},
+    {SC_CHANNEL_SLACK, "slack", "Slack", "", SC_LISTENER_POLLING},
 #endif
 #ifdef SC_HAS_WHATSAPP
-    {SC_CHANNEL_WHATSAPP, "whatsapp", "WhatsApp", "", SC_LISTENER_WEBHOOK_ONLY},
+    {SC_CHANNEL_WHATSAPP, "whatsapp", "WhatsApp", "", SC_LISTENER_POLLING},
 #endif
 #ifdef SC_HAS_MATRIX
     {SC_CHANNEL_MATRIX, "matrix", "Matrix", "", SC_LISTENER_POLLING},

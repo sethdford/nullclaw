@@ -683,6 +683,39 @@ static void parse_discord_channel(sc_allocator_t *a, sc_config_t *cfg, const sc_
     }
 }
 
+static void parse_slack_channel(sc_allocator_t *a, sc_config_t *cfg, const sc_json_value_t *obj) {
+    if (!obj) return;
+    sc_slack_channel_config_t *sl = &cfg->channels.slack;
+    const sc_json_value_t *val = obj;
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items) val = obj->data.array.items[0];
+    if (val->type != SC_JSON_OBJECT) return;
+    const char *s = sc_json_get_string(val, "token");
+    if (s) { if (sl->token) a->free(a->ctx, sl->token, strlen(sl->token) + 1); sl->token = sc_strdup(a, s); }
+    sc_json_value_t *ch_ids = sc_json_object_get(val, "channel_ids");
+    if (ch_ids && ch_ids->type == SC_JSON_ARRAY && ch_ids->data.array.items) {
+        for (size_t i = 0; i < sl->channel_ids_count; i++) if (sl->channel_ids[i]) a->free(a->ctx, sl->channel_ids[i], strlen(sl->channel_ids[i]) + 1);
+        sl->channel_ids_count = 0;
+        for (size_t i = 0; i < ch_ids->data.array.len && sl->channel_ids_count < SC_SLACK_CHANNEL_IDS_MAX; i++) {
+            sc_json_value_t *item = ch_ids->data.array.items[i];
+            if (item && item->type == SC_JSON_STRING && item->data.string.ptr) sl->channel_ids[sl->channel_ids_count++] = sc_strdup(a, item->data.string.ptr);
+        }
+    }
+}
+
+static void parse_whatsapp_channel(sc_allocator_t *a, sc_config_t *cfg, const sc_json_value_t *obj) {
+    if (!obj) return;
+    sc_whatsapp_channel_config_t *wa = &cfg->channels.whatsapp;
+    const sc_json_value_t *val = obj;
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items) val = obj->data.array.items[0];
+    if (val->type != SC_JSON_OBJECT) return;
+    const char *s = sc_json_get_string(val, "phone_number_id");
+    if (s) { if (wa->phone_number_id) a->free(a->ctx, wa->phone_number_id, strlen(wa->phone_number_id) + 1); wa->phone_number_id = sc_strdup(a, s); }
+    s = sc_json_get_string(val, "token");
+    if (s) { if (wa->token) a->free(a->ctx, wa->token, strlen(wa->token) + 1); wa->token = sc_strdup(a, s); }
+    s = sc_json_get_string(val, "verify_token");
+    if (s) { if (wa->verify_token) a->free(a->ctx, wa->verify_token, strlen(wa->verify_token) + 1); wa->verify_token = sc_strdup(a, s); }
+}
+
 static sc_error_t parse_channels(sc_allocator_t *a, sc_config_t *cfg, const sc_json_value_t *obj) {
     if (!obj || obj->type != SC_JSON_OBJECT)
         return SC_OK;
@@ -712,6 +745,14 @@ static sc_error_t parse_channels(sc_allocator_t *a, sc_config_t *cfg, const sc_j
     sc_json_value_t *discord_obj = sc_json_object_get(obj, "discord");
     if (discord_obj)
         parse_discord_channel(a, cfg, discord_obj);
+
+    sc_json_value_t *slack_obj = sc_json_object_get(obj, "slack");
+    if (slack_obj)
+        parse_slack_channel(a, cfg, slack_obj);
+
+    sc_json_value_t *whatsapp_obj = sc_json_object_get(obj, "whatsapp");
+    if (whatsapp_obj)
+        parse_whatsapp_channel(a, cfg, whatsapp_obj);
 
     cfg->channels.channel_config_len = 0;
     if (obj->data.object.pairs && cfg->channels.channel_config_len < SC_CHANNEL_CONFIG_MAX) {

@@ -15,15 +15,10 @@
 #include "seaclaw/channel_loop.h"
 #endif
 #if SC_HAS_SLACK
-extern sc_error_t sc_slack_create(sc_allocator_t *alloc,
-    const char *token, size_t token_len, sc_channel_t *out);
-extern void sc_slack_destroy(sc_channel_t *ch);
+#include "seaclaw/channels/slack.h"
 #endif
 #if SC_HAS_WHATSAPP
-extern sc_error_t sc_whatsapp_create(sc_allocator_t *alloc,
-    const char *phone_number_id, size_t phone_number_id_len,
-    const char *token, size_t token_len, sc_channel_t *out);
-extern void sc_whatsapp_destroy(sc_channel_t *ch);
+#include "seaclaw/channels/whatsapp.h"
 #endif
 #if SC_HAS_MATRIX
 extern sc_error_t sc_matrix_create(sc_allocator_t *alloc,
@@ -236,6 +231,30 @@ static void test_slack_send_long_message(void) {
     SC_ASSERT_EQ(err, SC_OK);
     sc_slack_destroy(&ch);
 }
+
+static void test_slack_create_ex(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch;
+    const char *ids[] = {"C0001", "C0002"};
+    sc_error_t err = sc_slack_create_ex(&alloc, "tok", 3, ids, 2, &ch);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_STR_EQ(ch.vtable->name(ch.ctx), "slack");
+    sc_slack_destroy(&ch);
+}
+
+static void test_slack_poll_test_mode(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch;
+    const char *ids[] = {"C0001"};
+    sc_slack_create_ex(&alloc, "tok", 3, ids, 1, &ch);
+    ch.vtable->start(ch.ctx);
+    sc_channel_loop_msg_t msgs[4];
+    size_t out = 99;
+    sc_error_t err = sc_slack_poll(ch.ctx, &alloc, msgs, 4, &out);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(out, 0);
+    sc_slack_destroy(&ch);
+}
 #endif
 
 /* ─── WhatsApp ────────────────────────────────────────────────────────────── */
@@ -271,6 +290,37 @@ static void test_whatsapp_health_check(void) {
     sc_channel_t ch;
     sc_whatsapp_create(&alloc, "1", 1, "t", 1, &ch);
     SC_ASSERT_TRUE(ch.vtable->health_check(ch.ctx));
+    sc_whatsapp_destroy(&ch);
+}
+
+static void test_whatsapp_webhook_and_poll(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch;
+    sc_whatsapp_create(&alloc, "123", 3, "tok", 3, &ch);
+    sc_error_t err = sc_whatsapp_on_webhook(ch.ctx, &alloc, "hello from webhook", 18);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_channel_loop_msg_t msgs[4];
+    size_t out = 0;
+    err = sc_whatsapp_poll(ch.ctx, &alloc, msgs, 4, &out);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(out, 1);
+    SC_ASSERT_STR_EQ(msgs[0].session_key, "test-sender");
+    SC_ASSERT_STR_EQ(msgs[0].content, "hello from webhook");
+    err = sc_whatsapp_poll(ch.ctx, &alloc, msgs, 4, &out);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(out, 0);
+    sc_whatsapp_destroy(&ch);
+}
+
+static void test_whatsapp_poll_empty(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch;
+    sc_whatsapp_create(&alloc, "1", 1, "t", 1, &ch);
+    sc_channel_loop_msg_t msgs[4];
+    size_t out = 99;
+    sc_error_t err = sc_whatsapp_poll(ch.ctx, &alloc, msgs, 4, &out);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(out, 0);
     sc_whatsapp_destroy(&ch);
 }
 #endif
@@ -1140,12 +1190,16 @@ void run_channel_all_tests(void) {
     SC_RUN_TEST(test_slack_health_check);
     SC_RUN_TEST(test_slack_start_stop_typing);
     SC_RUN_TEST(test_slack_send_long_message);
+    SC_RUN_TEST(test_slack_create_ex);
+    SC_RUN_TEST(test_slack_poll_test_mode);
 #endif
 #if SC_HAS_WHATSAPP
     SC_RUN_TEST(test_whatsapp_create);
     SC_RUN_TEST(test_whatsapp_name);
     SC_RUN_TEST(test_whatsapp_health_check);
     SC_RUN_TEST(test_whatsapp_send);
+    SC_RUN_TEST(test_whatsapp_webhook_and_poll);
+    SC_RUN_TEST(test_whatsapp_poll_empty);
 #endif
 #if SC_HAS_MATRIX
     SC_RUN_TEST(test_matrix_create);

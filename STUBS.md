@@ -9,28 +9,28 @@ Last updated: 2026-03-03
 | Source files (src/ + include/) | **~466**               |
 | Lines of C/H/ASM code          | **~55K**               |
 | Test files                     | 73                     |
-| Tests passing                  | **2,198/2,198 (100%)** |
+| Tests passing                  | **2,194/2,194 (100%)** |
 | Binary size (MinSizeRel+LTO)   | **802 KB**             |
 
 ## Channels — Honest Status
 
-### Full send + receive (5 channels)
+### Full send + receive (7 channels)
 
-| Channel  | send()         | listen()               | Config Required               |
-| -------- | -------------- | ---------------------- | ----------------------------- |
-| CLI      | stdout         | readline               | None                          |
-| Telegram | HTTP API       | Long-poll (getUpdates) | `token`                       |
-| Discord  | HTTP API       | GET /messages poll     | `token`, `channel_ids`        |
-| Email    | curl SMTP      | curl IMAP poll         | SMTP/IMAP config              |
-| iMessage | AppleScript    | chat.db SQLite poll    | `default_target` (macOS only) |
-| Signal   | signal-cli RPC | signal-cli poll        | `http_url`, `account`         |
+| Channel  | send()         | listen()                   | Config Required               |
+| -------- | -------------- | -------------------------- | ----------------------------- |
+| CLI      | stdout         | readline                   | None                          |
+| Telegram | HTTP API       | Long-poll (getUpdates)     | `token`                       |
+| Discord  | HTTP API       | GET /messages poll         | `token`, `channel_ids`        |
+| Slack    | HTTP API       | conversations.history poll | `token`, `channel_ids`        |
+| WhatsApp | Graph API      | Webhook + poll queue       | `phone_number_id`, `token`    |
+| Email    | curl SMTP      | curl IMAP poll             | SMTP/IMAP config              |
+| iMessage | AppleScript    | chat.db SQLite poll        | `default_target` (macOS only) |
+| Signal   | signal-cli RPC | signal-cli poll            | `http_url`, `account`         |
 
-### Send only — no inbound polling (13 channels)
+### Send only — no inbound polling (11 channels)
 
 | Channel    | send()         | listen()            | Config Required                       |
 | ---------- | -------------- | ------------------- | ------------------------------------- |
-| Slack      | HTTP API       | Webhook only        | `token`                               |
-| WhatsApp   | Graph API      | Webhook only        | `phone_number_id`, `token`            |
 | Matrix     | HTTP PUT       | Not implemented     | `homeserver`, `access_token`          |
 | IRC        | TCP socket     | Not implemented     | `server`, `port`                      |
 | LINE       | Push API       | Webhook only        | `channel_token`                       |

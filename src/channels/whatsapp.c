@@ -1,4 +1,5 @@
 #include "seaclaw/channel.h"
+#include "seaclaw/channel_loop.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
 #include "seaclaw/core/http.h"
@@ -9,6 +10,15 @@
 
 #define WHATSAPP_API_BASE "https://graph.facebook.com/v18.0/"
 
+#define WHATSAPP_QUEUE_MAX       32
+#define WHATSAPP_SESSION_KEY_MAX 127
+#define WHATSAPP_CONTENT_MAX     4095
+
+typedef struct sc_whatsapp_queued_msg {
+    char session_key[128];
+    char content[4096];
+} sc_whatsapp_queued_msg_t;
+
 typedef struct sc_whatsapp_ctx {
     sc_allocator_t *alloc;
     char *phone_number_id;
@@ -16,6 +26,10 @@ typedef struct sc_whatsapp_ctx {
     char *token;
     size_t token_len;
     bool running;
+    sc_whatsapp_queued_msg_t queue[WHATSAPP_QUEUE_MAX];
+    size_t queue_head;
+    size_t queue_tail;
+    size_t queue_count;
 } sc_whatsapp_ctx_t;
 
 static sc_error_t whatsapp_start(void *ctx) {
@@ -107,6 +121,81 @@ jfail:
     sc_json_buf_free(&jbuf);
     return err;
 #endif
+}
+
+
+static void whatsapp_queue_push(sc_whatsapp_ctx_t *c, const char *from, size_t from_len, const char *body, size_t body_len) {
+    if (c->queue_count >= WHATSAPP_QUEUE_MAX) return;
+    sc_whatsapp_queued_msg_t *slot = &c->queue[c->queue_tail];
+    size_t sk = from_len < WHATSAPP_SESSION_KEY_MAX ? from_len : WHATSAPP_SESSION_KEY_MAX;
+    memcpy(slot->session_key, from, sk); slot->session_key[sk] = '\0';
+    size_t ct = body_len < WHATSAPP_CONTENT_MAX ? body_len : WHATSAPP_CONTENT_MAX;
+    memcpy(slot->content, body, ct); slot->content[ct] = '\0';
+    c->queue_tail = (c->queue_tail + 1) % WHATSAPP_QUEUE_MAX;
+    c->queue_count++;
+}
+
+sc_error_t sc_whatsapp_on_webhook(void *channel_ctx, sc_allocator_t *alloc, const char *body, size_t body_len) {
+    sc_whatsapp_ctx_t *c = (sc_whatsapp_ctx_t *)channel_ctx;
+    if (!c || !body || body_len == 0) return SC_ERR_INVALID_ARGUMENT;
+#if SC_IS_TEST
+    (void)alloc;
+    whatsapp_queue_push(c, "test-sender", 11, body, body_len);
+    return SC_OK;
+#else
+    sc_json_value_t *parsed = NULL;
+    sc_error_t err = sc_json_parse(alloc, body, body_len, &parsed);
+    if (err != SC_OK || !parsed) return SC_OK;
+    sc_json_value_t *entry = sc_json_object_get(parsed, "entry");
+    if (!entry || entry->type != SC_JSON_ARRAY) { sc_json_free(alloc, parsed); return SC_OK; }
+    for (size_t e = 0; e < entry->data.array.len; e++) {
+        sc_json_value_t *ent = entry->data.array.items[e];
+        if (!ent || ent->type != SC_JSON_OBJECT) continue;
+        sc_json_value_t *changes = sc_json_object_get(ent, "changes");
+        if (!changes || changes->type != SC_JSON_ARRAY) continue;
+        for (size_t ch = 0; ch < changes->data.array.len; ch++) {
+            sc_json_value_t *change = changes->data.array.items[ch];
+            if (!change || change->type != SC_JSON_OBJECT) continue;
+            sc_json_value_t *value = sc_json_object_get(change, "value");
+            if (!value || value->type != SC_JSON_OBJECT) continue;
+            sc_json_value_t *messages = sc_json_object_get(value, "messages");
+            if (!messages || messages->type != SC_JSON_ARRAY) continue;
+            for (size_t m = 0; m < messages->data.array.len; m++) {
+                sc_json_value_t *msg = messages->data.array.items[m];
+                if (!msg || msg->type != SC_JSON_OBJECT) continue;
+                const char *msg_type = sc_json_get_string(msg, "type");
+                if (!msg_type || strcmp(msg_type, "text") != 0) continue;
+                const char *from = sc_json_get_string(msg, "from");
+                if (!from) continue;
+                sc_json_value_t *text_obj = sc_json_object_get(msg, "text");
+                if (!text_obj || text_obj->type != SC_JSON_OBJECT) continue;
+                const char *text_body = sc_json_get_string(text_obj, "body");
+                if (!text_body || strlen(text_body) == 0) continue;
+                whatsapp_queue_push(c, from, strlen(from), text_body, strlen(text_body));
+            }
+        }
+    }
+    sc_json_free(alloc, parsed);
+    return SC_OK;
+#endif
+}
+
+sc_error_t sc_whatsapp_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_loop_msg_t *msgs, size_t max_msgs, size_t *out_count) {
+    (void)alloc;
+    sc_whatsapp_ctx_t *c = (sc_whatsapp_ctx_t *)channel_ctx;
+    if (!c || !msgs || !out_count) return SC_ERR_INVALID_ARGUMENT;
+    *out_count = 0;
+    size_t cnt = 0;
+    while (c->queue_count > 0 && cnt < max_msgs) {
+        sc_whatsapp_queued_msg_t *slot = &c->queue[c->queue_head];
+        memcpy(msgs[cnt].session_key, slot->session_key, sizeof(slot->session_key));
+        memcpy(msgs[cnt].content, slot->content, sizeof(slot->content));
+        c->queue_head = (c->queue_head + 1) % WHATSAPP_QUEUE_MAX;
+        c->queue_count--;
+        cnt++;
+    }
+    *out_count = cnt;
+    return SC_OK;
 }
 
 static const char *whatsapp_name(void *ctx) {

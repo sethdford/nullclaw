@@ -56,6 +56,12 @@
 #if SC_HAS_DISCORD
 #include "seaclaw/channels/discord.h"
 #endif
+#if SC_HAS_SLACK
+#include "seaclaw/channels/slack.h"
+#endif
+#if SC_HAS_WHATSAPP
+#include "seaclaw/channels/whatsapp.h"
+#endif
 
 #define SC_VERSION  "0.1.0"
 #define SC_CODENAME "seaclaw"
@@ -621,7 +627,7 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
             model[0] ? model : "(default)", tools_count);
 
     /* ── Wire channels ────────────────────────────────────────────────── */
-    sc_service_channel_t channels[8];
+    sc_service_channel_t channels[10];
     size_t ch_count = 0;
 
 #if SC_HAS_EMAIL
@@ -708,6 +714,40 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
             ch_count++;
             fprintf(stderr, "[%s] discord channel configured (polling %zu channels)\n", SC_CODENAME,
                     cfg.channels.discord.channel_ids_count);
+        }
+    }
+#endif
+
+
+#if SC_HAS_SLACK
+    sc_channel_t slack_ch = {0};
+    if (cfg.channels.slack.token && cfg.channels.slack.channel_ids_count > 0) {
+        const char **sl_ids = (const char **)cfg.channels.slack.channel_ids;
+        err = sc_slack_create_ex(alloc, cfg.channels.slack.token, strlen(cfg.channels.slack.token), sl_ids, cfg.channels.slack.channel_ids_count, &slack_ch);
+        if (err == SC_OK) {
+            channels[ch_count].channel_ctx = slack_ch.ctx;
+            channels[ch_count].channel = &slack_ch;
+            channels[ch_count].poll_fn = sc_slack_poll;
+            channels[ch_count].interval_ms = 3000;
+            channels[ch_count].last_poll_ms = 0;
+            ch_count++;
+            fprintf(stderr, "[%s] slack channel configured (polling %zu channels)\n", SC_CODENAME, cfg.channels.slack.channel_ids_count);
+        }
+    }
+#endif
+
+#if SC_HAS_WHATSAPP
+    sc_channel_t whatsapp_ch = {0};
+    if (cfg.channels.whatsapp.phone_number_id && cfg.channels.whatsapp.token) {
+        err = sc_whatsapp_create(alloc, cfg.channels.whatsapp.phone_number_id, strlen(cfg.channels.whatsapp.phone_number_id), cfg.channels.whatsapp.token, strlen(cfg.channels.whatsapp.token), &whatsapp_ch);
+        if (err == SC_OK) {
+            channels[ch_count].channel_ctx = whatsapp_ch.ctx;
+            channels[ch_count].channel = &whatsapp_ch;
+            channels[ch_count].poll_fn = sc_whatsapp_poll;
+            channels[ch_count].interval_ms = 1000;
+            channels[ch_count].last_poll_ms = 0;
+            ch_count++;
+            fprintf(stderr, "[%s] whatsapp channel configured (webhook+poll)\n", SC_CODENAME);
         }
     }
 #endif

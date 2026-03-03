@@ -3,6 +3,35 @@
 All notable changes to seaclaw are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning is CalVer (`YYYY.M.D`).
 
+## [2026.3.3] - 2026-03-03
+
+### Added
+
+- **Slack inbound polling**: `sc_slack_poll` via Slack `conversations.history` API; `sc_slack_create_ex`
+  accepts `channel_ids` for multi-channel polling, bot message filtering, and `last_ts` cursor tracking
+- **WhatsApp inbound**: `sc_whatsapp_on_webhook` parses WhatsApp Cloud API webhook payloads
+  (entry → changes → value → messages), queues inbound text messages for `sc_whatsapp_poll` consumption
+- **Multi-agent orchestration wiring**: agent pool, mailbox, policy engine, thread binding,
+  and agent profiles wired into `cli.c`, `main.c` (service, gateway, MCP modes)
+- **Policy engine in tool dispatch**: `sc_agent_check_policy` evaluates tool calls against policy
+  engine before execution; denied calls return "denied by policy"
+- **Slash commands**: `/spawn <task>`, `/agents`, `/cancel <id>` in agent loop using agent pool
+- **`sc_message_tool_set_channel`**: post-creation channel injection for the message tool
+- **`sc_gateway_path_is`**: path-matching utility for gateway routing
+- **Config parsing**: `pool_max_concurrent`, `default_profile`, `policy`, `plugins`, `slack`, `whatsapp`
+  sections in `~/.seaclaw/config.json`
+- **OTel observer**: created when config has `otel_endpoint`
+- **13 roadmap integration tests** in `test_roadmap.c`
+- **4 new channel tests**: `test_slack_create_ex`, `test_slack_poll_test_mode`,
+  `test_whatsapp_webhook_and_poll`, `test_whatsapp_poll_empty`
+
+### Changed
+
+- Slack channel listener type: `SC_LISTENER_GATEWAY` → `SC_LISTENER_POLLING`
+- WhatsApp channel listener type: `SC_LISTENER_WEBHOOK_ONLY` → `SC_LISTENER_POLLING`
+- Service loop `channels` array expanded from 8 → 10 to accommodate Slack and WhatsApp
+- `sc_channels_config_t` extended with `sc_slack_channel_config_t` and `sc_whatsapp_channel_config_t`
+
 ## [2026.3.2] - 2026-03-02
 
 ### Added

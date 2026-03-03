@@ -129,6 +129,19 @@ typedef struct sc_mcp_server_entry {
     size_t args_count;
 } sc_mcp_server_entry_t;
 
+#define SC_SLACK_CHANNEL_IDS_MAX 16
+typedef struct sc_slack_channel_config {
+    char *token;
+    char *channel_ids[SC_SLACK_CHANNEL_IDS_MAX];
+    size_t channel_ids_count;
+} sc_slack_channel_config_t;
+
+typedef struct sc_whatsapp_channel_config {
+    char *phone_number_id;
+    char *token;
+    char *verify_token;
+} sc_whatsapp_channel_config_t;
+
 typedef struct sc_channels_config {
     bool cli;
     char *default_channel;
@@ -140,6 +153,8 @@ typedef struct sc_channels_config {
     sc_imessage_channel_config_t imessage;
     sc_discord_channel_config_t discord;
     sc_telegram_channel_config_t telegram;
+    sc_slack_channel_config_t slack;
+    sc_whatsapp_channel_config_t whatsapp;
 } sc_channels_config_t;
 
 typedef struct sc_memory_config {
