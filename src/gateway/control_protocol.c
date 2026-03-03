@@ -133,23 +133,22 @@ static sc_error_t handle_config_get(sc_allocator_t *alloc, const sc_app_context_
             json_set_str(alloc, sec, "sandbox", app->config->security.sandbox);
             sc_json_value_t *sbc = sc_json_object_new(alloc);
             if (sbc) {
-                sc_json_object_set(alloc, sbc, "enabled",
-                                   sc_json_bool_new(alloc,
-                                                    app->config->security.sandbox_config.enabled));
+                sc_json_object_set(
+                    alloc, sbc, "enabled",
+                    sc_json_bool_new(alloc, app->config->security.sandbox_config.enabled));
                 json_set_str(alloc, sbc, "backend",
-                             app->config->security.sandbox
-                                 ? app->config->security.sandbox
-                                 : "auto");
+                             app->config->security.sandbox ? app->config->security.sandbox
+                                                           : "auto");
                 sc_json_value_t *np = sc_json_object_new(alloc);
                 if (np) {
                     sc_json_object_set(
                         alloc, np, "enabled",
-                        sc_json_bool_new(
-                            alloc, app->config->security.sandbox_config.net_proxy.enabled));
+                        sc_json_bool_new(alloc,
+                                         app->config->security.sandbox_config.net_proxy.enabled));
                     sc_json_object_set(
                         alloc, np, "deny_all",
-                        sc_json_bool_new(
-                            alloc, app->config->security.sandbox_config.net_proxy.deny_all));
+                        sc_json_bool_new(alloc,
+                                         app->config->security.sandbox_config.net_proxy.deny_all));
                     json_set_str(alloc, np, "proxy_addr",
                                  app->config->security.sandbox_config.net_proxy.proxy_addr);
                     sc_json_object_set(alloc, sbc, "net_proxy", np);

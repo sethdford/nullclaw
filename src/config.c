@@ -1631,4 +1631,5 @@ void sc_config_apply_env_overrides(sc_config_t *cfg) {
 }
 
 /* sc_config_save moved to config_serialize.c */
-/* sc_config_get_*, sc_config_validate, sc_config_provider_requires_api_key moved to config_getters.c */
+/* sc_config_get_*, sc_config_validate, sc_config_provider_requires_api_key moved to
+ * config_getters.c */

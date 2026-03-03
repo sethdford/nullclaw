@@ -829,7 +829,8 @@ static sc_error_t cmd_skills(sc_allocator_t *alloc, int argc, char **argv) {
     (void)alloc;
     (void)argc;
     (void)argv;
-    fprintf(stderr, "[%s] skills support not built (compile with SC_ENABLE_SKILLS=ON)\n", SC_CODENAME);
+    fprintf(stderr, "[%s] skills support not built (compile with SC_ENABLE_SKILLS=ON)\n",
+            SC_CODENAME);
     return SC_ERR_NOT_SUPPORTED;
 }
 #endif

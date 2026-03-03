@@ -23,8 +23,7 @@ static const char *fcm_url(const sc_push_config_t *config) {
  * Payload: {"aps":{"alert":{"title":"...","body":"..."},"sound":"default"}}
  * JWT requires P8 key signing (ES256) - not implemented yet. */
 static sc_error_t sc_push_apns_send(sc_push_manager_t *mgr, const char *device_token,
-                                   const char *title, const char *body,
-                                   const char *data_json) {
+                                    const char *title, const char *body, const char *data_json) {
     (void)data_json;
 #if defined(SC_HTTP_CURL)
     if (!mgr->config.endpoint || mgr->config.endpoint[0] == '\0')
