@@ -184,6 +184,7 @@ static sc_error_t parse_providers(sc_allocator_t *a, sc_config_t *cfg, const sc_
         if (base_url)
             providers[n].base_url = sc_strdup(a, base_url);
         providers[n].native_tools = sc_json_get_bool(item, "native_tools", true);
+        providers[n].ws_streaming = sc_json_get_bool(item, "ws_streaming", false);
 
         if (providers[n].name)
             n++;
@@ -686,6 +687,8 @@ static sc_error_t parse_channels(sc_allocator_t *a, sc_config_t *cfg, const sc_j
     if (!obj || obj->type != SC_JSON_OBJECT)
         return SC_OK;
     cfg->channels.cli = sc_json_get_bool(obj, "cli", cfg->channels.cli);
+    cfg->channels.suppress_tool_progress =
+        sc_json_get_bool(obj, "suppress_tool_progress", cfg->channels.suppress_tool_progress);
     const char *def_ch = sc_json_get_string(obj, "default_channel");
     if (def_ch) {
         if (cfg->channels.default_channel)
@@ -2042,6 +2045,16 @@ size_t sc_config_get_channel_configured_count(const sc_config_t *cfg, const char
             return cfg->channels.channel_config_counts[i];
     }
     return 0;
+}
+
+bool sc_config_get_provider_ws_streaming(const sc_config_t *cfg, const char *name) {
+    if (!cfg || !name)
+        return false;
+    for (size_t i = 0; i < cfg->providers_len; i++) {
+        if (cfg->providers[i].name && strcmp(cfg->providers[i].name, name) == 0)
+            return cfg->providers[i].ws_streaming;
+    }
+    return false;
 }
 
 #include <stdatomic.h>

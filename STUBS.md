@@ -6,11 +6,11 @@ Last updated: 2026-03-03
 
 | Metric                         | Value                  |
 | ------------------------------ | ---------------------- |
-| Source files (src/ + include/) | **463**                |
-| Lines of C/H code              | **~91K**               |
-| Test files                     | **72**                 |
-| Tests passing                  | **2,177/2,177 (100%)** |
-| Binary size (MinSizeRel + LTO) | **366 KB**             |
+| Source files (src/ + include/) | **~466**               |
+| Lines of C/H/ASM code          | **~55K**               |
+| Test files                     | 73                     |
+| Tests passing                  | **2,198/2,198 (100%)** |
+| Binary size (MinSizeRel+LTO)   | **802 KB**             |
 
 ## Channels — Honest Status
 
@@ -49,7 +49,7 @@ Last updated: 2026-03-03
 | -------- | ------------------------ |
 | Dispatch | Forwards to sub-channels |
 
-## Tools — All 42 Real
+## Tools — All 46 Real
 
 Every tool has a real implementation. In test mode (`SC_IS_TEST`), they return mock
 data to avoid side effects. Highlights:
@@ -61,49 +61,106 @@ data to avoid side effects. Highlights:
 - **Memory**: store, recall, list, forget (backed by SQLite/LRU/Markdown)
 - **Cron**: add, list, remove, run, runs, update
 - **Hardware**: i2c, spi (Linux only), hardware_info, hardware_memory
+- **PDF**: extract text and metadata from PDF files (pdftotext or fallback)
 - **Other**: database (SQLite), notebook, canvas, schema, pushover, composio, message, image, screenshot, agent*query, agent_spawn, mcp*\*
 
 ## Providers — All Real
 
 9 core providers + 90+ compatible service mappings. All make real HTTP API calls:
 
-| Provider     | Streaming | Env Var                           |
-| ------------ | --------- | --------------------------------- |
-| openai       | Yes (SSE) | `OPENAI_API_KEY`                  |
-| anthropic    | Yes (SSE) | `ANTHROPIC_API_KEY`               |
-| gemini       | Yes (SSE) | `GEMINI_API_KEY`                  |
-| ollama       | No        | None (local)                      |
-| openrouter   | No        | `OPENROUTER_API_KEY`              |
-| compatible   | No        | Per-provider or `SEACLAW_API_KEY` |
-| claude_cli   | No        | `ANTHROPIC_API_KEY`               |
-| codex_cli    | No        | `OPENAI_API_KEY`                  |
-| openai-codex | No        | API key from config               |
+| Provider     | Streaming    | Env Var                           |
+| ------------ | ------------ | --------------------------------- |
+| openai       | SSE + **WS** | `OPENAI_API_KEY`                  |
+| anthropic    | Yes (SSE)    | `ANTHROPIC_API_KEY`               |
+| gemini       | Yes (SSE)    | `GEMINI_API_KEY`                  |
+| ollama       | No           | None (local)                      |
+| openrouter   | No           | `OPENROUTER_API_KEY`              |
+| compatible   | No           | Per-provider or `SEACLAW_API_KEY` |
+| claude_cli   | No           | `ANTHROPIC_API_KEY`               |
+| codex_cli    | No           | `OPENAI_API_KEY`                  |
+| openai-codex | No           | API key from config               |
 
-Compatible covers: Groq, Mistral, DeepSeek, xAI, Cerebras, Perplexity, Cohere,
-Together, Fireworks, HuggingFace, LMStudio, and 80+ more.
+OpenAI provider supports optional WebSocket streaming (`ws_streaming: true` in config)
+with automatic SSE fallback. Compatible covers: Groq, Mistral, DeepSeek, xAI, Cerebras,
+Perplexity, Cohere, Together, Fireworks, HuggingFace, LMStudio, and 80+ more.
 
-## Gateway Control Protocol — 27+ Methods
+## MCP Client — Real (stdio transport)
 
-All real (backed by app context), except:
+The MCP (Model Context Protocol) client is **fully implemented**:
 
-| Method       | Status  | Notes                         |
-| ------------ | ------- | ----------------------------- |
-| update.check | Stub    | Always returns "up_to_date"   |
-| update.run   | Stub    | Always returns "up_to_date"   |
-| nodes.list   | Partial | Single hardcoded "local" node |
+- JSON-RPC 2.0 over stdio pipes (fork/exec child process)
+- `initialize` + `notifications/initialized` handshake
+- `tools/list` — discovers tools from MCP servers
+- `tools/call` — executes MCP tools with arguments
+- Auto-wraps MCP server tools as `sc_tool_t` via `sc_mcp_init_tools()`
+- MCP Host server mode (`sc_mcp_host_t`) for exposing SeaClaw tools
+- Config: `mcp_servers` array in config.json
 
-Everything else (health, capabilities, config.get/set, chat.send/history/abort,
-sessions.list/patch/delete, tools.catalog, channels.status, cron._, skills._,
-models.list, usage.summary, push.\*) returns real data and modifies real state.
+## Voice — Real (STT + TTS)
 
-## What's Stubbed (Returns SC_ERR_NOT_SUPPORTED)
+Voice I/O is **fully implemented**:
 
-- **postgres.c, redis.c, lancedb.c, lucid.c, api.c**: Memory engines — need external libs
-- **store_pgvector.c**: Vector store — needs libpq + pgvector
-- **MCP client transport**: Protocol defined, stdio/HTTP transport not implemented
-- **Voice I/O (server-side)**: No TTS/STT integration; UI uses browser SpeechRecognition
-- **Self-update**: Always returns "up_to_date"
-- **Sub-agent spawning**: Interface defined, partially wired
+- **STT**: Groq Whisper (`whisper-large-v3`) by default, configurable endpoint
+- **TTS**: OpenAI `tts-1` with voice `alloy` by default, configurable endpoint
+- `sc_voice_stt()` — transcribe audio buffer
+- `sc_voice_stt_file()` — transcribe from file path
+- `sc_voice_tts()` — generate speech audio
+- `sc_voice_play()` — play audio (`afplay` on macOS, `paplay`/`aplay` on Linux)
+- Configurable API key, model, voice, language
+
+## Sub-Agent System — Real (pthread pool)
+
+Sub-agent spawning is **fully implemented**:
+
+- `sc_agent_pool_create()` — thread pool with configurable max concurrency
+- `sc_agent_pool_spawn()` — spawn one-shot or persistent agents
+- `sc_agent_pool_query()` — send messages to persistent agents
+- `sc_agent_pool_cancel()` / `sc_agent_pool_status()` / `sc_agent_pool_result()`
+- `sc_agent_pool_list()` — enumerate all agents in pool
+- 64-slot pool with `pthread_mutex_t` synchronization
+- `agent_spawn` and `agent_query` tools wired through tool factory
+
+## Memory & Embeddings — Real
+
+- **SQLite** (primary): FTS5 full-text search + vector cosine similarity
+- **Markdown** (lightweight): file-backed plain text
+- **LRU** (in-memory): bounded-size cache
+- **Embedding providers**: Gemini, **Ollama** (local), Voyage
+- **Vector stores**: in-memory, pgvector (optional), qdrant (optional)
+- **Retrieval engine**: hybrid FTS5 + vector + semantic cache
+
+## Gateway — 27+ Methods + K8s Health
+
+All real (backed by app context):
+
+| Endpoint    | Status | Notes                                    |
+| ----------- | ------ | ---------------------------------------- |
+| /health     | Real   | Liveness — always 200 OK                 |
+| /healthz    | Real   | K8s alias for /health                    |
+| /ready      | Real   | Readiness — checks registered components |
+| /readyz     | Real   | K8s alias for /ready                     |
+| /api/status | Real   | WebSocket connections + status           |
+
+WebSocket control protocol: connect, health, config.get/set/schema, capabilities,
+chat.send/history/abort, sessions.list/patch/delete, tools.catalog, channels.status,
+cron._, skills._, models.list, usage.summary, push.\*, update.check/run, exec.
+
+## Config Hot-Reload — Real (SIGHUP)
+
+- `kill -HUP <pid>` triggers config reload without gateway restart
+- Atomic flag (`stdatomic.h`) for signal-safe communication
+- On success: old config freed, new config applied
+- On failure: current config preserved, error logged
+- Per-channel `suppress_tool_progress` config option
+
+## What Remains Stubbed
+
+| Area                   | Status  | Notes                               |
+| ---------------------- | ------- | ----------------------------------- |
+| postgres/redis/lancedb | Stub    | Memory engines — need external libs |
+| store_pgvector         | Stub    | Vector store — needs libpq          |
+| update.check/run       | Stub    | Always returns "up_to_date"         |
+| nodes.list             | Partial | Single hardcoded "local" node       |
 
 ## Web UI Dashboard
 
@@ -133,7 +190,7 @@ models.list, usage.summary, push.\*) returns real data and modifies real state.
 | libc               | Linked         | Everything                        |
 | SQLite3 (vendored) | Linked         | Memory engine                     |
 | libcurl            | Linked         | HTTP client, provider API calls   |
-| pthread            | Linked         | Agent dispatcher                  |
+| pthread            | Linked         | Agent dispatcher, sub-agent pool  |
 | libpq              | Optional (OFF) | PostgreSQL memory engine          |
 | OpenSSL            | Optional       | WSS, TLS for WebSocket            |
 | math (-lm)         | Linked         | Vector math, retrieval algorithms |

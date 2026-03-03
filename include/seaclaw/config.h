@@ -132,6 +132,7 @@ typedef struct sc_mcp_server_entry {
 typedef struct sc_channels_config {
     bool cli;
     char *default_channel;
+    bool suppress_tool_progress;
     char *channel_config_keys[SC_CHANNEL_CONFIG_MAX];
     size_t channel_config_counts[SC_CHANNEL_CONFIG_MAX];
     size_t channel_config_len;
