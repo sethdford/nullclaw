@@ -147,9 +147,40 @@ export class ScOverviewView extends GatewayAwareLitElement {
     }
     .status-dot.operational {
       background: var(--sc-success);
+      box-shadow: 0 0 6px var(--sc-success);
+      animation: sc-status-pulse 2s ease-in-out infinite;
     }
     .status-dot.offline {
       background: var(--sc-error);
+    }
+    @keyframes sc-status-pulse {
+      0%,
+      100% {
+        box-shadow: 0 0 4px var(--sc-success);
+        opacity: 1;
+      }
+      50% {
+        box-shadow: 0 0 10px var(--sc-success);
+        opacity: 0.8;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .status-dot.operational {
+        animation: none;
+      }
+    }
+    .activity-section {
+      grid-column: 1 / -1;
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sc-space-xl);
+    }
+    @media (max-width: 768px) {
+      .two-col {
+        grid-template-columns: 1fr;
+      }
     }
     .gateway-version {
       font-size: var(--sc-text-xs);
@@ -243,6 +274,28 @@ export class ScOverviewView extends GatewayAwareLitElement {
   @state() private loading = true;
   @state() private error = "";
   @state() private updateInfo: UpdateInfo = {};
+  @state() private activityEvents: ActivityEvent[] = [];
+  private _pollTimer: ReturnType<typeof setInterval> | null = null;
+  private _gwEventHandler = ((e: CustomEvent) => {
+    const detail = e.detail as { event: string; payload: ActivityEvent };
+    if (detail.event === "activity" && detail.payload) {
+      this.activityEvents = [detail.payload, ...this.activityEvents].slice(0, 20);
+    }
+  }) as EventListener;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.gateway?.addEventListener("gateway", this._gwEventHandler);
+    this._pollTimer = setInterval(() => {
+      if (!this.loading && this.gateway?.status === "connected") this.load();
+    }, 30000);
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.gateway?.removeEventListener("gateway", this._gwEventHandler);
+    if (this._pollTimer) clearInterval(this._pollTimer);
+  }
 
   protected override async load(): Promise<void> {
     const gw = this.gateway;

@@ -91,6 +91,8 @@ static sc_chat_request_t make_simple_request(sc_chat_message_t *msgs, size_t cou
         .timeout_secs = 0,
         .reasoning_effort = NULL,
         .reasoning_effort_len = 0,
+        .response_format = NULL,
+        .response_format_len = 0,
     };
 }
 
