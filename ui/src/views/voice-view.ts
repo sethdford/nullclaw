@@ -56,7 +56,7 @@ export class ScVoiceView extends GatewayAwareLitElement {
     .mic-btn.active {
       background: var(--sc-accent);
       border-color: var(--sc-accent);
-      color: white;
+      color: var(--sc-on-accent, #ffffff);
       animation: pulse-mic 1.5s ease-in-out infinite;
     }
     @keyframes pulse-mic {

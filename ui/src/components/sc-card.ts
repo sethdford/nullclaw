@@ -31,7 +31,17 @@ export class ScCard extends LitElement {
     .card.clickable {
       cursor: pointer;
     }
+    .card.clickable:focus-visible {
+      outline: var(--sc-focus-ring-width) solid var(--sc-focus-ring);
+      outline-offset: var(--sc-focus-ring-offset);
+    }
   `;
+
+  private _onKeyDown(e: KeyboardEvent): void {
+    if (!this.clickable || (e.key !== "Enter" && e.key !== " ")) return;
+    e.preventDefault();
+    this.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+  }
 
   render() {
     const classes = ["card", this.hoverable ? "hoverable" : "", this.clickable ? "clickable" : ""]
@@ -39,7 +49,12 @@ export class ScCard extends LitElement {
       .join(" ");
 
     return html`
-      <div class=${classes}>
+      <div
+        class=${classes}
+        role=${this.clickable ? "button" : undefined}
+        tabindex=${this.clickable ? 0 : undefined}
+        @keydown=${this._onKeyDown}
+      >
         <slot></slot>
       </div>
     `;

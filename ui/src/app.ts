@@ -1,5 +1,13 @@
 import { LitElement, html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
+
+declare global {
+  interface Document {
+    startViewTransition?(callback: () => void | Promise<void>): {
+      updateCallbackDone: Promise<void>;
+    };
+  }
+}
 import type { GatewayClient, GatewayStatus } from "./gateway.js";
 import { GatewayClient as GatewayClientClass } from "./gateway.js";
 import { setGateway } from "./gateway-provider.js";
@@ -213,7 +221,14 @@ export class ScApp extends LitElement {
     const hash = window.location.hash.replace("#", "");
     if (hash && VALID_TABS.includes(hash as TabId)) {
       this._ensureLoaded(hash as TabId);
-      this.tab = hash as TabId;
+      if (!document.startViewTransition) {
+        this.tab = hash as TabId;
+        return;
+      }
+      document.startViewTransition(() => {
+        this.tab = hash as TabId;
+        return this.updateComplete as Promise<void>;
+      });
     }
   }
 

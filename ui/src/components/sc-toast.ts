@@ -16,6 +16,17 @@ interface ToastItem extends ToastOptions {
 @customElement("sc-toast")
 export class ScToast extends LitElement {
   static override styles = css`
+    @keyframes sc-slide-in-right {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
     :host {
       position: fixed;
       bottom: var(--sc-space-lg);
@@ -49,8 +60,7 @@ export class ScToast extends LitElement {
       pointer-events: auto;
       font-family: var(--sc-font);
       font-size: var(--sc-text-sm);
-      transform: translateX(0);
-      opacity: 1;
+      animation: sc-slide-in-right var(--sc-duration-normal) var(--sc-spring-out);
       transition:
         transform var(--sc-duration-normal) var(--sc-ease-out),
         opacity var(--sc-duration-normal);

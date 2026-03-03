@@ -16,10 +16,6 @@ export function prefersReducedMotion(): boolean {
 
 /**
  * Creates an expanding circle ripple animation from the pointer position.
- * Uses sc-ripple keyframe. Self-cleaning: removes the ripple element after animation.
- */
-/**
- * Creates an expanding circle ripple animation from the pointer position.
  * Uses sc-ripple keyframe (defined in theme.css). Self-cleaning: removes the ripple element after animation.
  */
 export function rippleEffect(element: HTMLElement, event: PointerEvent): void {
@@ -44,7 +40,7 @@ export function rippleEffect(element: HTMLElement, event: PointerEvent): void {
     opacity: 0.4;
     pointer-events: none;
     transform: scale(0);
-    animation: sc-ripple var(--sc-duration-normal, 200ms) var(--sc-ease-out, ease-out) forwards;
+    animation: sc-ripple var(--sc-duration-slow) var(--sc-ease-out, ease-out) forwards;
   `;
 
   const pos = element.style.position;
@@ -52,7 +48,7 @@ export function rippleEffect(element: HTMLElement, event: PointerEvent): void {
   element.style.overflow = "hidden";
   element.appendChild(ripple);
 
-  const duration = 200; // fallback if --sc-duration-normal unavailable
+  const duration = 350; // fallback if --sc-duration-slow unavailable
   setTimeout(() => {
     ripple.remove();
   }, duration);

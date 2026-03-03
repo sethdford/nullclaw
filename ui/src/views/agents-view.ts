@@ -183,8 +183,10 @@ export class ScAgentsView extends GatewayAwareLitElement {
       `;
     }
 
-    const toolCount = this.capabilities.tools?.length ?? 0;
-    const channelCount = this.capabilities.channels?.length ?? 0;
+    const t = this.capabilities.tools;
+    const toolCount = typeof t === "number" ? t : Array.isArray(t) ? t.length : 0;
+    const ch = this.capabilities.channels;
+    const channelCount = typeof ch === "number" ? ch : Array.isArray(ch) ? ch.length : 0;
 
     return html`
       <div class="header">

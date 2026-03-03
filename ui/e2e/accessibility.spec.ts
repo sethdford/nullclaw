@@ -2,8 +2,9 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 test.describe("Accessibility", () => {
-  test("overview page has no critical a11y violations", async ({ page }) => {
+  test("no critical accessibility violations on main page", async ({ page }) => {
     await page.goto("/");
+    await page.waitForTimeout(1000);
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
       .analyze();

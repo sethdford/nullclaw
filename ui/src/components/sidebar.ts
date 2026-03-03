@@ -124,7 +124,7 @@ export class ScSidebar extends LitElement {
       font-weight: var(--sc-weight-medium);
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      color: var(--sc-text-faint);
+      color: var(--sc-text-muted);
       padding: var(--sc-space-xs) var(--sc-space-md);
       margin-bottom: var(--sc-space-xs);
       white-space: nowrap;

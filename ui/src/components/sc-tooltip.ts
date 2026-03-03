@@ -28,15 +28,15 @@ export class ScTooltip extends LitElement {
       pointer-events: none;
       opacity: 0;
       visibility: hidden;
-      transition:
-        opacity var(--sc-duration-fast),
-        visibility var(--sc-duration-fast);
+      transform-origin: center;
       z-index: 1000;
     }
 
-    :host(:hover) .tip {
+    :host(:hover) .tip,
+    :host(:focus-within) .tip {
       opacity: 1;
       visibility: visible;
+      animation: sc-scale-in var(--sc-duration-fast) var(--sc-spring-out);
     }
 
     .tip.top {

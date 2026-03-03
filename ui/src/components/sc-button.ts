@@ -36,21 +36,28 @@ export class ScButton extends LitElement {
       transition:
         background-color var(--sc-duration-fast) var(--sc-ease-out),
         color var(--sc-duration-fast) var(--sc-ease-out),
-        transform var(--sc-duration-fast) var(--sc-ease-out);
+        box-shadow var(--sc-duration-fast) var(--sc-ease-out);
       border-radius: var(--sc-radius);
     }
 
+    button:focus-visible {
+      outline: var(--sc-focus-ring-width) solid var(--sc-focus-ring);
+      outline-offset: var(--sc-focus-ring-offset);
+    }
+
     button:active {
-      transform: scale(0.98);
+      animation: sc-spring-scale var(--sc-duration-fast) var(--sc-spring-out, ease) forwards;
     }
 
     /* Variants */
     button.variant-primary {
       background: var(--sc-accent);
-      color: white;
+      color: var(--sc-on-accent, #ffffff);
+      box-shadow: var(--sc-elevation-0);
     }
     button.variant-primary:hover:not(:disabled) {
       background: var(--sc-accent-hover);
+      box-shadow: var(--sc-shadow-sm);
     }
 
     button.variant-secondary {

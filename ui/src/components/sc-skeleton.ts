@@ -2,6 +2,7 @@ import { LitElement, html, css } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 type SkeletonVariant = "line" | "card" | "circle";
+type SkeletonAnimation = "shimmer" | "pulse";
 
 @customElement("sc-skeleton")
 export class ScSkeleton extends LitElement {
@@ -18,7 +19,22 @@ export class ScSkeleton extends LitElement {
         var(--sc-bg-elevated) 75%
       );
       background-size: 200% 100%;
-      animation: sc-shimmer 1.5s infinite;
+    }
+
+    .skeleton.animation-shimmer {
+      animation: sc-shimmer var(--sc-duration-slower) infinite;
+    }
+
+    .skeleton.animation-pulse {
+      background: var(--sc-bg-elevated);
+      animation: sc-pulse var(--sc-duration-slower) infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .skeleton.animation-shimmer,
+      .skeleton.animation-pulse {
+        animation: none;
+      }
     }
 
     .skeleton.line {
@@ -35,6 +51,8 @@ export class ScSkeleton extends LitElement {
   `;
 
   @property({ type: String }) variant: SkeletonVariant = "line";
+
+  @property({ type: String }) animation: SkeletonAnimation = "shimmer";
   @property({ type: String }) width = "100%";
   @property({ type: String }) height = "";
 
@@ -57,6 +75,8 @@ export class ScSkeleton extends LitElement {
       this.variant === "circle"
         ? `width: ${this.effectiveHeight}; height: ${this.effectiveHeight};`
         : `width: ${this.width}; height: ${this.effectiveHeight};`;
-    return html` <div class="skeleton ${this.variant}" style="${style}"></div> `;
+    return html`
+      <div class="skeleton ${this.variant} animation-${this.animation}" style="${style}"></div>
+    `;
   }
 }
