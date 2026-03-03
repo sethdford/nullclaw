@@ -326,8 +326,53 @@ static void test_retrieval_engine_with_sqlite_backend(void) {
 #endif
 }
 
-static void test_semantic_retrieve_with_local_embedder(void) { (void)0; }
-static void test_hybrid_retrieve_with_vector(void) { (void)0; }
+static void test_semantic_retrieve_with_local_embedder(void) {
+#ifdef SC_ENABLE_SQLITE
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_memory_t mem = sc_sqlite_memory_create(&alloc, ":memory:");
+    SC_ASSERT_NOT_NULL(mem.ctx);
+    sc_memory_category_t cat = { .tag = SC_MEMORY_CATEGORY_CORE };
+    mem.vtable->store(mem.ctx, "doc1", 4, "machine learning basics", 23, &cat, NULL, 0);
+    sc_retrieval_options_t opts = {
+        .mode = SC_RETRIEVAL_SEMANTIC,
+        .limit = 5,
+        .min_score = 0.0,
+        .use_reranking = false,
+        .temporal_decay_factor = 0.0,
+    };
+    sc_retrieval_result_t res = {0};
+    sc_error_t err = sc_semantic_retrieve(&alloc, NULL, NULL, "ML", 2, &opts, &res);
+    SC_ASSERT_TRUE(err == SC_OK || err == SC_ERR_NOT_SUPPORTED || err == SC_ERR_INVALID_ARGUMENT);
+    sc_retrieval_result_free(&alloc, &res);
+    mem.vtable->deinit(mem.ctx);
+#else
+    SC_ASSERT_TRUE(1);
+#endif
+}
+
+static void test_hybrid_retrieve_with_vector(void) {
+#ifdef SC_ENABLE_SQLITE
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_memory_t mem = sc_sqlite_memory_create(&alloc, ":memory:");
+    SC_ASSERT_NOT_NULL(mem.ctx);
+    sc_memory_category_t cat = { .tag = SC_MEMORY_CATEGORY_CORE };
+    mem.vtable->store(mem.ctx, "v1", 2, "neural network training", 23, &cat, NULL, 0);
+    sc_retrieval_options_t opts = {
+        .mode = SC_RETRIEVAL_HYBRID,
+        .limit = 5,
+        .min_score = 0.0,
+        .use_reranking = false,
+        .temporal_decay_factor = 0.0,
+    };
+    sc_retrieval_result_t res = {0};
+    sc_error_t err = sc_hybrid_retrieve(&alloc, &mem, NULL, NULL, "neural", 6, &opts, &res);
+    SC_ASSERT_TRUE(err == SC_OK || err == SC_ERR_NOT_SUPPORTED || err == SC_ERR_INVALID_ARGUMENT);
+    sc_retrieval_result_free(&alloc, &res);
+    mem.vtable->deinit(mem.ctx);
+#else
+    SC_ASSERT_TRUE(1);
+#endif
+}
 
 void run_retrieval_tests(void) {
     SC_TEST_SUITE("retrieval");

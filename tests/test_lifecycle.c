@@ -154,7 +154,6 @@ static void test_cache_clear(void) {
     sc_memory_cache_destroy(cache);
 }
 
-#if 0
 static void test_hygiene_removes_oversized(void) {
     sc_allocator_t alloc = sc_system_allocator();
 #ifdef SC_ENABLE_SQLITE
@@ -190,9 +189,7 @@ static void test_hygiene_removes_oversized(void) {
 
     mem.vtable->deinit(mem.ctx);
 }
-#endif
 
-#if 0
 static void test_hygiene_removes_expired(void) {
     sc_allocator_t alloc = sc_system_allocator();
 #ifdef SC_ENABLE_SQLITE
@@ -227,9 +224,7 @@ static void test_hygiene_removes_expired(void) {
 
     mem.vtable->deinit(mem.ctx);
 }
-#endif
 
-#if 0
 static void test_hygiene_deduplicates(void) {
     sc_allocator_t alloc = sc_system_allocator();
 #ifdef SC_ENABLE_SQLITE
@@ -263,9 +258,7 @@ static void test_hygiene_deduplicates(void) {
 
     mem.vtable->deinit(mem.ctx);
 }
-#endif
 
-#if 0
 static void test_snapshot_export_import(void) {
     sc_allocator_t alloc = sc_system_allocator();
 #ifdef SC_ENABLE_SQLITE
@@ -330,9 +323,7 @@ static void test_snapshot_export_import(void) {
 #endif
     mem.vtable->deinit(mem.ctx);
 }
-#endif
 
-#if 0
 static void test_summarizer_truncation(void) {
     sc_allocator_t alloc = sc_system_allocator();
 #ifdef SC_ENABLE_SQLITE
@@ -375,7 +366,6 @@ static void test_summarizer_truncation(void) {
 
     mem.vtable->deinit(mem.ctx);
 }
-#endif
 
 void run_lifecycle_tests(void) {
     SC_TEST_SUITE("Lifecycle");
@@ -383,5 +373,9 @@ void run_lifecycle_tests(void) {
     SC_RUN_TEST(test_cache_eviction);
     SC_RUN_TEST(test_cache_invalidate);
     SC_RUN_TEST(test_cache_clear);
-    /* hygiene/snapshot/summarizer tests require full SQLite integration — skipped until stabilized */
+    SC_RUN_TEST(test_hygiene_removes_oversized);
+    SC_RUN_TEST(test_hygiene_removes_expired);
+    SC_RUN_TEST(test_hygiene_deduplicates);
+    SC_RUN_TEST(test_snapshot_export_import);
+    SC_RUN_TEST(test_summarizer_truncation);
 }

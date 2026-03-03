@@ -1,13 +1,13 @@
-import { LitElement, html, css, nothing } from "lit";
+import { html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import type { GatewayClient } from "../gateway.js";
 import { GatewayClient as GatewayClientClass } from "../gateway.js";
-import { getGateway } from "../gateway-provider.js";
+import { GatewayAwareLitElement } from "../gateway-aware.js";
 
 type VoiceStatus = "idle" | "listening" | "processing" | "unsupported";
 
 @customElement("sc-voice-view")
-export class ScVoiceView extends LitElement {
+export class ScVoiceView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
       display: block;
@@ -148,21 +148,27 @@ export class ScVoiceView extends LitElement {
   @state() private speechSupported = true;
   @state() private recognition: SpeechRecognition | null = null;
 
-  private get gateway(): GatewayClient | null {
-    return getGateway();
-  }
-
   private gatewayHandler = (e: Event): void => this.onGatewayEvent(e);
   private _boundGateway: GatewayClient | null = null;
 
-  override connectedCallback(): void {
-    super.connectedCallback();
+  override firstUpdated(): void {
     this.speechSupported =
       "webkitSpeechRecognition" in window || "SpeechRecognition" in window;
     if (!this.speechSupported) this.voiceStatus = "unsupported";
-    this._boundGateway = this.gateway;
-    if (this._boundGateway) {
-      this._boundGateway.addEventListener(
+    const gw = this.gateway;
+    if (gw) {
+      this._boundGateway = gw;
+      gw.addEventListener(
+        GatewayClientClass.EVENT_GATEWAY,
+        this.gatewayHandler,
+      );
+    }
+  }
+
+  protected override async load(): Promise<void> {
+    if (!this._boundGateway && this.gateway) {
+      this._boundGateway = this.gateway;
+      this.gateway.addEventListener(
         GatewayClientClass.EVENT_GATEWAY,
         this.gatewayHandler,
       );
@@ -170,13 +176,13 @@ export class ScVoiceView extends LitElement {
   }
 
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
     this._boundGateway?.removeEventListener(
       GatewayClientClass.EVENT_GATEWAY,
       this.gatewayHandler,
     );
     this._boundGateway = null;
     this.stopRecognition();
+    super.disconnectedCallback();
   }
 
   private onGatewayEvent(e: Event): void {

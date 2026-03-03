@@ -5,7 +5,7 @@ import AppKit
 @MainActor
 class StatusViewModel: ObservableObject {
     @Published var isServiceRunning = false
-    @Published var gatewayURL: String = "ws://localhost:8080/ws"
+    @Published var gatewayURL: String = "ws://localhost:3000/ws"
 
     var isGatewayConnected: Bool { gatewayClient.isConnected }
     var statusColor: Color {
@@ -24,7 +24,7 @@ class StatusViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     init() {
-        gatewayClient = GatewayClient(url: "ws://localhost:8080/ws")
+        gatewayClient = GatewayClient(url: "ws://localhost:3000/ws")
         gatewayClient.eventHandler = { [weak self] event, payload in
             Task { @MainActor in
                 switch event {

@@ -1,7 +1,7 @@
-import { LitElement, html, css } from "lit";
+import { html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { GatewayClient } from "../gateway.js";
-import { getGateway } from "../gateway-provider.js";
+import { GatewayAwareLitElement } from "../gateway-aware.js";
 import { EVENT_NAMES } from "../utils.js";
 
 interface LogEntry {
@@ -11,7 +11,7 @@ interface LogEntry {
 }
 
 @customElement("sc-logs-view")
-export class ScLogsView extends LitElement {
+export class ScLogsView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
       display: block;
@@ -87,12 +87,7 @@ export class ScLogsView extends LitElement {
   @state() private filter = "";
   @state() private logAreaRef: HTMLDivElement | null = null;
 
-  private get gateway(): GatewayClient | null {
-    return getGateway();
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
+  protected override async load(): Promise<void> {
     this.setupListener();
   }
 

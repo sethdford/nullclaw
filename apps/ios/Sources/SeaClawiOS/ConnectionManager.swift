@@ -15,7 +15,7 @@ public final class ConnectionManager: ObservableObject {
 
     public init() {
         self.gatewayURL = UserDefaults.standard.string(forKey: "SeaClaw.gatewayURL")
-            ?? "wss://localhost:8080/ws"
+            ?? "wss://localhost:3000/ws"
     }
 
     public func connect() {

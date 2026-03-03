@@ -142,35 +142,38 @@ sc_error_t sc_nostr_create(sc_allocator_t *alloc,
     c->alloc = alloc;
     if (nak_path && nak_path_len > 0) {
         c->nak_path = (char *)malloc(nak_path_len + 1);
-        if (c->nak_path) {
-            memcpy(c->nak_path, nak_path, nak_path_len);
-            c->nak_path[nak_path_len] = '\0';
-        }
+        if (!c->nak_path) goto oom;
+        memcpy(c->nak_path, nak_path, nak_path_len);
+        c->nak_path[nak_path_len] = '\0';
     }
     if (bot_pubkey && bot_pubkey_len > 0) {
         c->bot_pubkey = (char *)malloc(bot_pubkey_len + 1);
-        if (c->bot_pubkey) {
-            memcpy(c->bot_pubkey, bot_pubkey, bot_pubkey_len);
-            c->bot_pubkey[bot_pubkey_len] = '\0';
-        }
+        if (!c->bot_pubkey) goto oom;
+        memcpy(c->bot_pubkey, bot_pubkey, bot_pubkey_len);
+        c->bot_pubkey[bot_pubkey_len] = '\0';
     }
     if (relay_url && relay_url_len > 0) {
         c->relay_url = (char *)malloc(relay_url_len + 1);
-        if (c->relay_url) {
-            memcpy(c->relay_url, relay_url, relay_url_len);
-            c->relay_url[relay_url_len] = '\0';
-        }
+        if (!c->relay_url) goto oom;
+        memcpy(c->relay_url, relay_url, relay_url_len);
+        c->relay_url[relay_url_len] = '\0';
     }
     if (seckey_hex && seckey_len > 0) {
         c->seckey_hex = (char *)malloc(seckey_len + 1);
-        if (c->seckey_hex) {
-            memcpy(c->seckey_hex, seckey_hex, seckey_len);
-            c->seckey_hex[seckey_len] = '\0';
-        }
+        if (!c->seckey_hex) goto oom;
+        memcpy(c->seckey_hex, seckey_hex, seckey_len);
+        c->seckey_hex[seckey_len] = '\0';
     }
     out->ctx = c;
     out->vtable = &nostr_vtable;
     return SC_OK;
+oom:
+    if (c->nak_path) free(c->nak_path);
+    if (c->bot_pubkey) free(c->bot_pubkey);
+    if (c->relay_url) free(c->relay_url);
+    if (c->seckey_hex) free(c->seckey_hex);
+    free(c);
+    return SC_ERR_OUT_OF_MEMORY;
 }
 
 void sc_nostr_destroy(sc_channel_t *ch) {

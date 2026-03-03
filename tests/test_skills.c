@@ -125,6 +125,84 @@ static void test_skill_registry_publish_null_dir(void) {
     SC_ASSERT(err != SC_OK);
 }
 
+static void test_skill_registry_search_empty_query(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_skill_registry_entry_t *entries = NULL;
+    size_t count = 0;
+    sc_error_t err = sc_skill_registry_search(&alloc, "", &entries, &count);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(entries);
+    SC_ASSERT_TRUE(count >= 1);
+    sc_skill_registry_entries_free(&alloc, entries, count);
+}
+
+static void test_skill_registry_search_null_query(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_skill_registry_entry_t *entries = NULL;
+    size_t count = 0;
+    sc_error_t err = sc_skill_registry_search(&alloc, NULL, &entries, &count);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(entries);
+    SC_ASSERT_TRUE(count >= 1);
+    sc_skill_registry_entries_free(&alloc, entries, count);
+}
+
+static void test_skill_registry_install_null_name(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_error_t err = sc_skill_registry_install(&alloc, NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
+static void test_skill_registry_install_empty_name(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_error_t err = sc_skill_registry_install(&alloc, "");
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
+static void test_skill_registry_uninstall_null_name(void) {
+    sc_error_t err = sc_skill_registry_uninstall(NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
+static void test_skill_registry_update_null_alloc(void) {
+    sc_error_t err = sc_skill_registry_update(NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
+static void test_skill_registry_get_installed_dir_writes_path(void) {
+    char buf[512];
+    size_t n = sc_skill_registry_get_installed_dir(buf, sizeof(buf));
+    if (getenv("HOME")) {
+        SC_ASSERT_TRUE(n > 0);
+        SC_ASSERT_TRUE(strstr(buf, ".seaclaw") != NULL || strstr(buf, "skills") != NULL);
+    }
+}
+
+static void test_skill_registry_get_installed_dir_small_buffer(void) {
+    char buf[4];
+    size_t n = sc_skill_registry_get_installed_dir(buf, 4);
+    SC_ASSERT_TRUE(n == 0 || n < 4);
+}
+
+static void test_skill_registry_search_mock_returns_entries(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_skill_registry_entry_t *entries = NULL;
+    size_t count = 0;
+    sc_error_t err = sc_skill_registry_search(&alloc, "code", &entries, &count);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(entries);
+    SC_ASSERT_EQ(count, 2u);
+    SC_ASSERT_STR_EQ(entries[0].name, "code-review");
+    SC_ASSERT_STR_EQ(entries[1].name, "email-digest");
+    sc_skill_registry_entries_free(&alloc, entries, count);
+}
+
+static void test_skill_registry_entries_free_null_safe(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_skill_registry_entries_free(&alloc, NULL, 0);
+    sc_skill_registry_entries_free(&alloc, NULL, 5);
+}
+
 void run_skills_tests(void) {
     SC_TEST_SUITE("Skills");
     SC_RUN_TEST(test_skills_list_delegates_to_skillforge);
@@ -141,4 +219,14 @@ void run_skills_tests(void) {
     SC_RUN_TEST(test_skill_registry_get_installed_dir);
     SC_RUN_TEST(test_skill_registry_publish_mock);
     SC_RUN_TEST(test_skill_registry_publish_null_dir);
+    SC_RUN_TEST(test_skill_registry_search_empty_query);
+    SC_RUN_TEST(test_skill_registry_search_null_query);
+    SC_RUN_TEST(test_skill_registry_install_null_name);
+    SC_RUN_TEST(test_skill_registry_install_empty_name);
+    SC_RUN_TEST(test_skill_registry_uninstall_null_name);
+    SC_RUN_TEST(test_skill_registry_update_null_alloc);
+    SC_RUN_TEST(test_skill_registry_get_installed_dir_writes_path);
+    SC_RUN_TEST(test_skill_registry_get_installed_dir_small_buffer);
+    SC_RUN_TEST(test_skill_registry_search_mock_returns_entries);
+    SC_RUN_TEST(test_skill_registry_entries_free_null_safe);
 }

@@ -16,7 +16,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Connection")
                 } footer: {
-                    Text("WebSocket URL, e.g. wss://localhost:8080/ws")
+                    Text("WebSocket URL, e.g. wss://localhost:3000/ws")
                 }
 
                 Section {

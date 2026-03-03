@@ -1,7 +1,6 @@
-import { LitElement, html, css } from "lit";
+import { html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { GatewayClient } from "../gateway.js";
-import { getGateway } from "../gateway-provider.js";
+import { GatewayAwareLitElement } from "../gateway-aware.js";
 
 interface ToolDef {
   name?: string;
@@ -10,7 +9,7 @@ interface ToolDef {
 }
 
 @customElement("sc-tools-view")
-export class ScToolsView extends LitElement {
+export class ScToolsView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
       display: block;
@@ -120,19 +119,24 @@ export class ScToolsView extends LitElement {
     .grid .empty-state {
       grid-column: 1 / -1;
     }
+    .error-banner {
+      background: var(--sc-error);
+      color: #fff;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: var(--sc-text-sm);
+    }
   `;
 
   @state() private tools: ToolDef[] = [];
   @state() private loading = true;
   @state() private filter = "";
+  @state() private error = "";
   @state() private expandedCards = new Set<string>();
 
-  private gateway: GatewayClient | null = null;
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.gateway = getGateway();
-    this.loadTools();
+  protected override async load(): Promise<void> {
+    await this.loadTools();
   }
 
   private async loadTools(): Promise<void> {
@@ -147,8 +151,9 @@ export class ScToolsView extends LitElement {
         {},
       );
       this.tools = payload?.tools ?? [];
-    } catch {
+    } catch (e) {
       this.tools = [];
+      this.error = e instanceof Error ? e.message : "Failed to load tools";
     } finally {
       this.loading = false;
     }
@@ -194,6 +199,9 @@ export class ScToolsView extends LitElement {
     }
 
     return html`
+      ${this.error
+        ? html`<div class="error-banner">${this.error}</div>`
+        : nothing}
       <div class="search">
         <input
           type="text"

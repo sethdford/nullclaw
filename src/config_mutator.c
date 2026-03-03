@@ -127,12 +127,12 @@ static sc_error_t write_config_file(sc_allocator_t *alloc, const char *path,
         return SC_ERR_IO;
     }
     if (rename(tmp_path, path) != 0) {
-        (void)remove(tmp_path);
         f = fopen(path, "wb");
         if (f) {
             (void)fwrite(content, 1, content_len, f);
             fclose(f);
         }
+        (void)remove(tmp_path);
     }
     alloc->free(alloc->ctx, tmp_path, tmp_len);
     return SC_OK;

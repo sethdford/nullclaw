@@ -1,7 +1,7 @@
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import type { GatewayClient } from "../gateway.js";
-import { getGateway } from "../gateway-provider.js";
+import { GatewayAwareLitElement } from "../gateway-aware.js";
 
 interface NodeItem {
   id?: string;
@@ -11,7 +11,7 @@ interface NodeItem {
 }
 
 @customElement("sc-nodes-view")
-export class ScNodesView extends LitElement {
+export class ScNodesView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
       display: block;
@@ -72,13 +72,13 @@ export class ScNodesView extends LitElement {
       flex-shrink: 0;
     }
     .status-dot.green {
-      background: #22c55e;
+      background: var(--sc-success);
     }
     .status-dot.yellow {
-      background: #eab308;
+      background: var(--sc-warning);
     }
     .status-dot.red {
-      background: #ef4444;
+      background: var(--sc-error);
     }
     .node-id {
       font-family: var(--sc-font-mono);
@@ -120,7 +120,7 @@ export class ScNodesView extends LitElement {
       color: var(--sc-text-muted);
     }
     .health-status.ok {
-      color: #22c55e;
+      color: var(--sc-success);
     }
     .skeleton {
       background: linear-gradient(
@@ -164,7 +164,7 @@ export class ScNodesView extends LitElement {
       margin-inline: auto;
     }
     .error {
-      color: #ef4444;
+      color: var(--sc-error);
       font-size: 0.875rem;
       margin-bottom: 1rem;
     }
@@ -175,16 +175,7 @@ export class ScNodesView extends LitElement {
   @state() private loading = false;
   @state() private error = "";
 
-  private get gateway(): GatewayClient | null {
-    return getGateway();
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.load();
-  }
-
-  private async load(): Promise<void> {
+  protected override async load(): Promise<void> {
     const gw = this.gateway;
     if (!gw) return;
     this.loading = true;

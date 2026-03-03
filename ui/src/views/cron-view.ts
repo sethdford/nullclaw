@@ -1,7 +1,6 @@
-import { LitElement, html, css } from "lit";
+import { html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { GatewayClient } from "../gateway.js";
-import { getGateway } from "../gateway-provider.js";
+import { GatewayAwareLitElement } from "../gateway-aware.js";
 
 interface CronJob {
   id?: number;
@@ -13,7 +12,7 @@ interface CronJob {
 }
 
 @customElement("sc-cron-view")
-export class ScCronView extends LitElement {
+export class ScCronView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
       display: block;
@@ -51,11 +50,11 @@ export class ScCronView extends LitElement {
       background: var(--sc-border);
     }
     .btn-danger {
-      background: #991b1b;
+      background: var(--sc-error-dim);
       color: white;
     }
     .btn-danger:hover {
-      background: #b91c1c;
+      background: var(--sc-error);
     }
     .job-list {
       display: flex;
@@ -143,7 +142,7 @@ export class ScCronView extends LitElement {
       margin-top: 1rem;
     }
     .error {
-      color: #f87171;
+      color: var(--sc-accent);
       font-size: 0.875rem;
       margin-top: 0.5rem;
     }
@@ -198,13 +197,8 @@ export class ScCronView extends LitElement {
   @state() private formCommand = "";
   @state() private formDescription = "";
 
-  private get gateway(): GatewayClient | null {
-    return getGateway();
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.loadJobs();
+  protected override async load(): Promise<void> {
+    await this.loadJobs();
   }
 
   private async loadJobs(): Promise<void> {

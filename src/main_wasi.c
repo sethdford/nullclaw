@@ -115,7 +115,7 @@ static int run_agent_loop(sc_allocator_t *alloc) {
         }
         if (resp && resp_len > 0) {
             channel.vtable->send(channel.ctx, NULL, 0, resp, resp_len, NULL, 0);
-            alloc->free(alloc->ctx, resp, resp_len);
+            alloc->free(alloc->ctx, resp, resp_len + 1);
         }
     }
 

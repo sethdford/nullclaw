@@ -32,7 +32,7 @@ export class ScFloatingMic extends LitElement {
       cursor: not-allowed;
     }
     .btn.listening {
-      background: #f85149;
+      background: var(--sc-error);
       animation: pulse-red 1s ease-in-out infinite;
     }
     @keyframes pulse-red {

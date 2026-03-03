@@ -11,7 +11,7 @@ struct SeaClawApp: App {
         MenuBarExtra {
             VStack(alignment: .leading, spacing: 0) {
                 Button("Open Dashboard") {
-                    if let url = URL(string: "http://localhost:8080") {
+                    if let url = URL(string: "http://localhost:3000") {
                         NSWorkspace.shared.open(url)
                     }
                 }

@@ -112,12 +112,18 @@ static sc_error_t hardware_memory_execute(void *ctx, sc_allocator_t *alloc,
         sc_run_result_t run = {0};
         sc_error_t err = sc_process_run(alloc, argv, NULL, 65536, &run);
         if (err != SC_OK || !run.success) {
-            const char *emsg = (run.stderr_buf && run.stderr_len > 0) ?
-                run.stderr_buf : "probe-rs read failed";
-            size_t elen = strlen(emsg);
-            if (elen > 256) elen = 256;
-            *out = sc_tool_result_fail(emsg, elen);
-            sc_run_result_free(alloc, &run);
+            if (run.stderr_buf && run.stderr_len > 0) {
+                size_t elen = run.stderr_len > 256 ? 256 : run.stderr_len;
+                char *emsg_copy = sc_strndup(alloc, run.stderr_buf, elen);
+                sc_run_result_free(alloc, &run);
+                if (emsg_copy)
+                    *out = sc_tool_result_fail_owned(emsg_copy, elen);
+                else
+                    *out = sc_tool_result_fail("probe-rs read failed", 20);
+            } else {
+                sc_run_result_free(alloc, &run);
+                *out = sc_tool_result_fail("probe-rs read failed", 20);
+            }
             return SC_OK;
         }
         char *msg = sc_strndup(alloc, run.stdout_buf, run.stdout_len);
@@ -147,12 +153,18 @@ static sc_error_t hardware_memory_execute(void *ctx, sc_allocator_t *alloc,
         sc_run_result_t run = {0};
         sc_error_t err = sc_process_run(alloc, argv, NULL, 65536, &run);
         if (err != SC_OK || !run.success) {
-            const char *emsg = (run.stderr_buf && run.stderr_len > 0) ?
-                run.stderr_buf : "probe-rs write failed";
-            size_t elen = strlen(emsg);
-            if (elen > 256) elen = 256;
-            *out = sc_tool_result_fail(emsg, elen);
-            sc_run_result_free(alloc, &run);
+            if (run.stderr_buf && run.stderr_len > 0) {
+                size_t elen = run.stderr_len > 256 ? 256 : run.stderr_len;
+                char *emsg_copy = sc_strndup(alloc, run.stderr_buf, elen);
+                sc_run_result_free(alloc, &run);
+                if (emsg_copy)
+                    *out = sc_tool_result_fail_owned(emsg_copy, elen);
+                else
+                    *out = sc_tool_result_fail("probe-rs write failed", 21);
+            } else {
+                sc_run_result_free(alloc, &run);
+                *out = sc_tool_result_fail("probe-rs write failed", 21);
+            }
             return SC_OK;
         }
         sc_run_result_free(alloc, &run);

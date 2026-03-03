@@ -1,5 +1,8 @@
 #include "test_framework.h"
 #include "seaclaw/gateway/push.h"
+#include "seaclaw/gateway/event_bridge.h"
+#include "seaclaw/gateway/control_protocol.h"
+#include "seaclaw/bus.h"
 #include "seaclaw/config_types.h"
 #include "seaclaw/portable_atomic.h"
 #include "seaclaw/context_tokens.h"
@@ -435,7 +438,6 @@ static void test_agent_routing_main_session_key_normalizes(void) {
     alloc.free(alloc.ctx, key, strlen(key) + 1);
 }
 
-#if 0
 static void test_agent_routing_resolve_route_parent_peer_match(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_peer_ref_t bind_peer = { .kind = ChatGroup, .id = "thread99", .id_len = 8 };
@@ -461,9 +463,7 @@ static void test_agent_routing_resolve_route_parent_peer_match(void) {
     SC_ASSERT_EQ(route.matched_by, MatchedParentPeer);
     sc_agent_routing_free_route(&alloc, &route);
 }
-#endif
 
-#if 0
 static void test_agent_routing_resolve_route_scope_prefilter_excludes_mismatch(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_peer_ref_t bind_peer = { .kind = ChatDirect, .id = "user1", .id_len = 5 };
@@ -488,7 +488,6 @@ static void test_agent_routing_resolve_route_scope_prefilter_excludes_mismatch(v
     SC_ASSERT_STR_EQ(route.agent_id, "main");
     sc_agent_routing_free_route(&alloc, &route);
 }
-#endif
 
 static void test_agent_routing_resolve_route_guild_roles_match(void) {
     sc_allocator_t alloc = sc_system_allocator();
@@ -814,6 +813,155 @@ static void test_migration_progress_callback(void) {
     SC_ASSERT_EQ(g_migration_progress_tot, 0u);
 }
 
+static void test_migration_dry_run_counts(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_migration_config_t cfg = {
+        .source = SC_MIGRATION_SOURCE_NONE,
+        .target = SC_MIGRATION_TARGET_MARKDOWN,
+        .source_path = "/tmp",
+        .source_path_len = 4,
+        .target_path = "/tmp/md_out",
+        .target_path_len = 10,
+        .dry_run = true,
+    };
+    sc_migration_stats_t stats = {0};
+    sc_error_t err = sc_migration_run(&alloc, &cfg, &stats, NULL, NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(stats.from_sqlite, 0u);
+    SC_ASSERT_EQ(stats.from_markdown, 0u);
+    SC_ASSERT_EQ(stats.imported, 0u);
+    SC_ASSERT_EQ(stats.skipped, 0u);
+    SC_ASSERT_EQ(stats.errors, 0u);
+}
+
+static void test_migration_invalid_source_type(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_migration_config_t cfg = {
+        .source = (sc_migration_source_t)99,
+        .target = SC_MIGRATION_TARGET_MARKDOWN,
+        .source_path = "/tmp",
+        .source_path_len = 4,
+        .target_path = "/tmp/out",
+        .target_path_len = 8,
+        .dry_run = true,
+    };
+    sc_migration_stats_t stats = {0};
+    sc_error_t err = sc_migration_run(&alloc, &cfg, &stats, NULL, NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
+static void test_migration_same_source_target(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_migration_config_t cfg = {
+        .source = SC_MIGRATION_SOURCE_SQLITE,
+        .target = SC_MIGRATION_TARGET_SQLITE,
+        .source_path = "/tmp/db.db",
+        .source_path_len = 10,
+        .target_path = "/tmp/db.db",
+        .target_path_len = 10,
+        .dry_run = true,
+    };
+    sc_migration_stats_t stats = {0};
+    sc_error_t err = sc_migration_run(&alloc, &cfg, &stats, NULL, NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
+static void test_migration_null_progress_fn_ok(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_migration_config_t cfg = {
+        .source = SC_MIGRATION_SOURCE_NONE,
+        .target = SC_MIGRATION_TARGET_MARKDOWN,
+        .source_path = "/tmp",
+        .source_path_len = 4,
+        .target_path = "/tmp/out",
+        .target_path_len = 8,
+        .dry_run = true,
+    };
+    sc_migration_stats_t stats = {0};
+    sc_error_t err = sc_migration_run(&alloc, &cfg, &stats, NULL, NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
+static void test_migration_empty_source_path(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_migration_config_t cfg = {
+        .source = SC_MIGRATION_SOURCE_NONE,
+        .target = SC_MIGRATION_TARGET_MARKDOWN,
+        .source_path = "",
+        .source_path_len = 0,
+        .target_path = "/tmp/out",
+        .target_path_len = 8,
+        .dry_run = true,
+    };
+    sc_migration_stats_t stats = {0};
+    sc_error_t err = sc_migration_run(&alloc, &cfg, &stats, NULL, NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
+static void test_migration_sqlite_to_markdown_mock(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_migration_config_t cfg = {
+        .source = SC_MIGRATION_SOURCE_SQLITE,
+        .target = SC_MIGRATION_TARGET_MARKDOWN,
+        .source_path = "/tmp/test.db",
+        .source_path_len = 12,
+        .target_path = "/tmp/md_out",
+        .target_path_len = 10,
+        .dry_run = true,
+    };
+    sc_migration_stats_t stats = {0};
+    sc_error_t err = sc_migration_run(&alloc, &cfg, &stats, NULL, NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
+static void test_migration_markdown_to_sqlite_mock(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_migration_config_t cfg = {
+        .source = SC_MIGRATION_SOURCE_MARKDOWN,
+        .target = SC_MIGRATION_TARGET_SQLITE,
+        .source_path = "/tmp/md_src",
+        .source_path_len = 11,
+        .target_path = "/tmp/out.db",
+        .target_path_len = 12,
+        .dry_run = true,
+    };
+    sc_migration_stats_t stats = {0};
+    sc_error_t err = sc_migration_run(&alloc, &cfg, &stats, NULL, NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
+static void test_migration_none_to_sqlite_mock(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_migration_config_t cfg = {
+        .source = SC_MIGRATION_SOURCE_NONE,
+        .target = SC_MIGRATION_TARGET_SQLITE,
+        .source_path = "",
+        .source_path_len = 0,
+        .target_path = "/tmp/out.db",
+        .target_path_len = 12,
+        .dry_run = false,
+    };
+    sc_migration_stats_t stats = {0};
+    sc_error_t err = sc_migration_run(&alloc, &cfg, &stats, NULL, NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
+static void test_migration_none_to_markdown_mock(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_migration_config_t cfg = {
+        .source = SC_MIGRATION_SOURCE_NONE,
+        .target = SC_MIGRATION_TARGET_MARKDOWN,
+        .source_path = "",
+        .source_path_len = 0,
+        .target_path = "/tmp/md_out",
+        .target_path_len = 10,
+        .dry_run = false,
+    };
+    sc_migration_stats_t stats = {0};
+    sc_error_t err = sc_migration_run(&alloc, &cfg, &stats, NULL, NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+}
+
 /* ─── Context tokens extended ─────────────────────────────────────────────── */
 static void test_context_tokens_default(void) {
     uint64_t d = sc_context_tokens_default();
@@ -1033,6 +1181,462 @@ static void test_push_send_to_mock(void) {
     sc_push_deinit(&mgr);
 }
 
+/* ─── Push extended (NULL alloc, config, edge cases) ──────────────────────── */
+static void test_push_init_null_alloc(void) {
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_error_t err = sc_push_init(&mgr, NULL, &config);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void test_push_init_null_config(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_manager_t mgr = {0};
+    sc_error_t err = sc_push_init(&mgr, &alloc, NULL);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void test_push_init_null_mgr(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_error_t err = sc_push_init(NULL, &alloc, &config);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void test_push_register_null_token(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_error_t err = sc_push_register_token(&mgr, NULL, SC_PUSH_FCM);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_register_empty_token(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_error_t err = sc_push_register_token(&mgr, "", SC_PUSH_FCM);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_unregister_nonexistent(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_error_t err = sc_push_unregister_token(&mgr, "never-registered");
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(mgr.token_count, 0u);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_unregister_null_token(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "t1", SC_PUSH_FCM);
+    sc_error_t err = sc_push_unregister_token(&mgr, NULL);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_send_empty_title_body(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "t1", SC_PUSH_FCM);
+    sc_error_t err = sc_push_send(&mgr, "", "", NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_send_null_title_body(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "t1", SC_PUSH_FCM);
+    sc_error_t err = sc_push_send(&mgr, NULL, NULL, NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_send_null_mgr(void) {
+    sc_error_t err = sc_push_send(NULL, "Title", "Body", NULL);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void test_push_send_to_null_mgr(void) {
+    sc_error_t err = sc_push_send_to(NULL, "token", "T", "B", NULL);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void test_push_send_to_null_device_token(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_error_t err = sc_push_send_to(&mgr, NULL, "T", "B", NULL);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_deinit_null_safe(void) {
+    sc_push_deinit(NULL);
+}
+
+static void test_push_register_fcm_provider(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_error_t err = sc_push_register_token(&mgr, "fcm-token-x", SC_PUSH_FCM);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(mgr.tokens[0].provider, SC_PUSH_FCM);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_register_apns_provider(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_error_t err = sc_push_register_token(&mgr, "apns-token-y", SC_PUSH_APNS);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(mgr.tokens[0].provider, SC_PUSH_APNS);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_register_many_tokens_capacity_growth(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    for (int i = 0; i < 25; i++) {
+        char buf[32];
+        snprintf(buf, sizeof(buf), "token-%d", i);
+        sc_error_t err = sc_push_register_token(&mgr, buf, SC_PUSH_FCM);
+        SC_ASSERT_EQ(err, SC_OK);
+    }
+    SC_ASSERT_EQ(mgr.token_count, 25u);
+    SC_ASSERT_TRUE(mgr.token_cap >= 25u);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_init_deinit_reinit_cycle(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "a", SC_PUSH_FCM);
+    sc_push_deinit(&mgr);
+    sc_push_init(&mgr, &alloc, &config);
+    SC_ASSERT_EQ(mgr.token_count, 0u);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_send_with_data_json(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "dt", SC_PUSH_FCM);
+    sc_error_t err = sc_push_send(&mgr, "T", "B", "{\"k\":\"v\"}");
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_send_to_with_data_json(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_error_t err = sc_push_send_to(&mgr, "t", "Title", "Body", "{\"x\":1}");
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_multiple_tokens_send_broadcast(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "t1", SC_PUSH_FCM);
+    sc_push_register_token(&mgr, "t2", SC_PUSH_APNS);
+    sc_push_register_token(&mgr, "t3", SC_PUSH_FCM);
+    sc_error_t err = sc_push_send(&mgr, "Broadcast", "To all", NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_push_deinit(&mgr);
+}
+
+/* ─── Event Bridge ───────────────────────────────────────────────────────── */
+static void test_event_bridge_init_null_proto(void) {
+    sc_bus_t bus;
+    sc_bus_init(&bus);
+    sc_event_bridge_t bridge = {0};
+    sc_event_bridge_init(&bridge, NULL, &bus);
+    SC_ASSERT_NULL(bridge.proto);
+    sc_event_bridge_deinit(&bridge);
+}
+
+static void test_event_bridge_init_null_bus(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_control_protocol_t proto = { .alloc = &alloc, .ws = NULL, .event_seq = 0, .app_ctx = NULL };
+    sc_event_bridge_t bridge = {0};
+    sc_event_bridge_init(&bridge, &proto, NULL);
+    SC_ASSERT_NULL(bridge.bus);
+}
+
+static void test_event_bridge_init_null_bridge(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_bus_t bus;
+    sc_bus_init(&bus);
+    sc_control_protocol_t proto = { .alloc = &alloc, .ws = NULL, .event_seq = 0, .app_ctx = NULL };
+    sc_event_bridge_init(NULL, &proto, &bus);
+    SC_ASSERT_NOT_NULL(proto.alloc);
+}
+
+static void test_event_bridge_set_push_null_bridge(void) {
+    sc_event_bridge_set_push(NULL, NULL);
+}
+
+static void test_event_bridge_set_push_then_verify(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_bus_t bus;
+    sc_bus_init(&bus);
+    sc_control_protocol_t proto = { .alloc = &alloc, .ws = NULL, .event_seq = 0, .app_ctx = NULL };
+    sc_event_bridge_t bridge = {0};
+    sc_event_bridge_init(&bridge, &proto, &bus);
+    SC_ASSERT_NULL(bridge.push);
+    sc_push_config_t push_config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t push_mgr = {0};
+    sc_push_init(&push_mgr, &alloc, &push_config);
+    sc_event_bridge_set_push(&bridge, &push_mgr);
+    SC_ASSERT_EQ(bridge.push, &push_mgr);
+    sc_event_bridge_deinit(&bridge);
+    sc_push_deinit(&push_mgr);
+}
+
+static void test_event_bridge_set_push_null_clears(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_bus_t bus;
+    sc_bus_init(&bus);
+    sc_control_protocol_t proto = { .alloc = &alloc, .ws = NULL, .event_seq = 0, .app_ctx = NULL };
+    sc_event_bridge_t bridge = {0};
+    sc_push_config_t push_config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t push_mgr = {0};
+    sc_push_init(&push_mgr, &alloc, &push_config);
+    sc_event_bridge_init(&bridge, &proto, &bus);
+    sc_event_bridge_set_push(&bridge, &push_mgr);
+    sc_event_bridge_set_push(&bridge, NULL);
+    SC_ASSERT_NULL(bridge.push);
+    sc_event_bridge_deinit(&bridge);
+    sc_push_deinit(&push_mgr);
+}
+
+static void test_event_bridge_init_deinit_cycle(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_bus_t bus;
+    sc_bus_init(&bus);
+    sc_control_protocol_t proto = { .alloc = &alloc, .ws = NULL, .event_seq = 0, .app_ctx = NULL };
+    sc_event_bridge_t bridge = {0};
+    sc_event_bridge_init(&bridge, &proto, &bus);
+    SC_ASSERT_EQ(bridge.proto, &proto);
+    SC_ASSERT_EQ(bridge.bus, &bus);
+    sc_event_bridge_deinit(&bridge);
+}
+
+static void test_event_bridge_double_deinit_safety(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_bus_t bus;
+    sc_bus_init(&bus);
+    sc_control_protocol_t proto = { .alloc = &alloc, .ws = NULL, .event_seq = 0, .app_ctx = NULL };
+    sc_event_bridge_t bridge = {0};
+    sc_event_bridge_init(&bridge, &proto, &bus);
+    sc_event_bridge_deinit(&bridge);
+    sc_event_bridge_deinit(&bridge);
+}
+
+static void test_event_bridge_deinit_null_safe(void) {
+    sc_event_bridge_deinit(NULL);
+}
+
+/* ─── Control protocol push handling (via push manager API) ────────────────── */
+static void test_push_control_protocol_register_flow(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_error_t e1 = sc_push_register_token(&mgr, "ctrl-token-fcm", SC_PUSH_FCM);
+    sc_error_t e2 = sc_push_register_token(&mgr, "ctrl-token-apns", SC_PUSH_APNS);
+    SC_ASSERT_EQ(e1, SC_OK);
+    SC_ASSERT_EQ(e2, SC_OK);
+    SC_ASSERT_EQ(mgr.token_count, 2u);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_control_protocol_unregister_flow(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "will-remove", SC_PUSH_FCM);
+    sc_error_t err = sc_push_unregister_token(&mgr, "will-remove");
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(mgr.token_count, 0u);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_control_protocol_register_unregister_cycle(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "cycle-token", SC_PUSH_FCM);
+    sc_push_unregister_token(&mgr, "cycle-token");
+    sc_error_t err = sc_push_register_token(&mgr, "cycle-token", SC_PUSH_APNS);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(mgr.token_count, 1u);
+    SC_ASSERT_EQ(mgr.tokens[0].provider, SC_PUSH_APNS);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_deinit_double_safe(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_deinit(&mgr);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_register_alternating_providers(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "a", SC_PUSH_FCM);
+    sc_push_register_token(&mgr, "b", SC_PUSH_APNS);
+    sc_push_register_token(&mgr, "c", SC_PUSH_FCM);
+    SC_ASSERT_EQ(mgr.tokens[0].provider, SC_PUSH_FCM);
+    SC_ASSERT_EQ(mgr.tokens[1].provider, SC_PUSH_APNS);
+    SC_ASSERT_EQ(mgr.tokens[2].provider, SC_PUSH_FCM);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_unregister_middle_token(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "first", SC_PUSH_FCM);
+    sc_push_register_token(&mgr, "middle", SC_PUSH_FCM);
+    sc_push_register_token(&mgr, "last", SC_PUSH_FCM);
+    sc_push_unregister_token(&mgr, "middle");
+    SC_ASSERT_EQ(mgr.token_count, 2u);
+    SC_ASSERT_STR_EQ(mgr.tokens[0].device_token, "first");
+    SC_ASSERT_STR_EQ(mgr.tokens[1].device_token, "last");
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_unregister_all_then_send(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "t1", SC_PUSH_FCM);
+    sc_push_unregister_token(&mgr, "t1");
+    sc_error_t err = sc_push_send(&mgr, "T", "B", NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_send_broadcast_empty_data(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "t1", SC_PUSH_FCM);
+    sc_error_t err = sc_push_send(&mgr, "Title", "Body", "");
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_token_capacity_exact_20(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    for (int i = 0; i < 20; i++) {
+        char buf[24];
+        snprintf(buf, sizeof(buf), "tok-%02d", i);
+        sc_push_register_token(&mgr, buf, SC_PUSH_FCM);
+    }
+    SC_ASSERT_EQ(mgr.token_count, 20u);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_send_to_unregistered_token(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "registered", SC_PUSH_FCM);
+    sc_error_t err = sc_push_send_to(&mgr, "not-in-list", "T", "B", NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_push_deinit(&mgr);
+}
+
+static void test_push_config_provider_none(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    SC_ASSERT_EQ(mgr.config.provider, SC_PUSH_NONE);
+    sc_push_deinit(&mgr);
+}
+
+static void test_event_bridge_init_valid_sets_fields(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_bus_t bus;
+    sc_bus_init(&bus);
+    sc_control_protocol_t proto = { .alloc = &alloc, .ws = NULL, .event_seq = 0, .app_ctx = NULL };
+    sc_event_bridge_t bridge = {0};
+    sc_event_bridge_init(&bridge, &proto, &bus);
+    SC_ASSERT_EQ(bridge.proto, &proto);
+    SC_ASSERT_EQ(bridge.bus, &bus);
+    SC_ASSERT_NULL(bridge.push);
+    sc_event_bridge_deinit(&bridge);
+}
+
+static void test_push_register_null_mgr(void) {
+    sc_error_t err = sc_push_register_token(NULL, "token", SC_PUSH_FCM);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void test_push_unregister_null_mgr(void) {
+    sc_error_t err = sc_push_unregister_token(NULL, "token");
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void test_push_control_protocol_fcm_then_apns(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_NONE };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "fcm-1", SC_PUSH_FCM);
+    sc_push_register_token(&mgr, "apns-1", SC_PUSH_APNS);
+    sc_error_t err = sc_push_send(&mgr, "Msg", "Content", NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_push_deinit(&mgr);
+}
+
 void run_new_modules_tests(void) {
     SC_TEST_SUITE("New Modules");
     SC_RUN_TEST(test_config_types_constants);
@@ -1077,6 +1681,8 @@ void run_new_modules_tests(void) {
     SC_RUN_TEST(test_agent_routing_resolve_linked_peer_no_links);
     SC_RUN_TEST(test_agent_routing_resolve_linked_peer_matched);
     SC_RUN_TEST(test_agent_routing_main_session_key_normalizes);
+    SC_RUN_TEST(test_agent_routing_resolve_route_parent_peer_match);
+    SC_RUN_TEST(test_agent_routing_resolve_route_scope_prefilter_excludes_mismatch);
     SC_RUN_TEST(test_agent_routing_resolve_route_guild_roles_match);
     SC_RUN_TEST(test_agent_routing_build_session_key_with_scope_per_account_channel_peer);
     SC_RUN_TEST(test_agent_routing_resolve_linked_peer_unmatched);
@@ -1113,6 +1719,15 @@ void run_new_modules_tests(void) {
     SC_RUN_TEST(test_migration_run_progress_callback_invoked);
     SC_RUN_TEST(test_migration_stats_zeroed);
     SC_RUN_TEST(test_migration_progress_callback);
+    SC_RUN_TEST(test_migration_dry_run_counts);
+    SC_RUN_TEST(test_migration_invalid_source_type);
+    SC_RUN_TEST(test_migration_same_source_target);
+    SC_RUN_TEST(test_migration_null_progress_fn_ok);
+    SC_RUN_TEST(test_migration_empty_source_path);
+    SC_RUN_TEST(test_migration_sqlite_to_markdown_mock);
+    SC_RUN_TEST(test_migration_markdown_to_sqlite_mock);
+    SC_RUN_TEST(test_migration_none_to_sqlite_mock);
+    SC_RUN_TEST(test_migration_none_to_markdown_mock);
 
     /* Context tokens extended */
     SC_RUN_TEST(test_context_tokens_default);
@@ -1150,4 +1765,52 @@ void run_new_modules_tests(void) {
     SC_RUN_TEST(test_push_send_no_tokens);
     SC_RUN_TEST(test_push_send_mock);
     SC_RUN_TEST(test_push_send_to_mock);
+    /* Push extended */
+    SC_RUN_TEST(test_push_init_null_alloc);
+    SC_RUN_TEST(test_push_init_null_config);
+    SC_RUN_TEST(test_push_init_null_mgr);
+    SC_RUN_TEST(test_push_register_null_token);
+    SC_RUN_TEST(test_push_register_empty_token);
+    SC_RUN_TEST(test_push_unregister_nonexistent);
+    SC_RUN_TEST(test_push_unregister_null_token);
+    SC_RUN_TEST(test_push_send_empty_title_body);
+    SC_RUN_TEST(test_push_send_null_title_body);
+    SC_RUN_TEST(test_push_send_null_mgr);
+    SC_RUN_TEST(test_push_send_to_null_mgr);
+    SC_RUN_TEST(test_push_send_to_null_device_token);
+    SC_RUN_TEST(test_push_deinit_null_safe);
+    SC_RUN_TEST(test_push_register_fcm_provider);
+    SC_RUN_TEST(test_push_register_apns_provider);
+    SC_RUN_TEST(test_push_register_many_tokens_capacity_growth);
+    SC_RUN_TEST(test_push_init_deinit_reinit_cycle);
+    SC_RUN_TEST(test_push_send_with_data_json);
+    SC_RUN_TEST(test_push_send_to_with_data_json);
+    SC_RUN_TEST(test_push_multiple_tokens_send_broadcast);
+    /* Event Bridge */
+    SC_RUN_TEST(test_event_bridge_init_null_proto);
+    SC_RUN_TEST(test_event_bridge_init_null_bus);
+    SC_RUN_TEST(test_event_bridge_init_null_bridge);
+    SC_RUN_TEST(test_event_bridge_set_push_null_bridge);
+    SC_RUN_TEST(test_event_bridge_set_push_then_verify);
+    SC_RUN_TEST(test_event_bridge_set_push_null_clears);
+    SC_RUN_TEST(test_event_bridge_init_deinit_cycle);
+    SC_RUN_TEST(test_event_bridge_double_deinit_safety);
+    SC_RUN_TEST(test_event_bridge_deinit_null_safe);
+    /* Control protocol push (via push manager) */
+    SC_RUN_TEST(test_push_control_protocol_register_flow);
+    SC_RUN_TEST(test_push_control_protocol_unregister_flow);
+    SC_RUN_TEST(test_push_control_protocol_register_unregister_cycle);
+    /* Push / Event bridge / Control protocol extended */
+    SC_RUN_TEST(test_push_deinit_double_safe);
+    SC_RUN_TEST(test_push_register_alternating_providers);
+    SC_RUN_TEST(test_push_unregister_middle_token);
+    SC_RUN_TEST(test_push_unregister_all_then_send);
+    SC_RUN_TEST(test_push_send_broadcast_empty_data);
+    SC_RUN_TEST(test_push_token_capacity_exact_20);
+    SC_RUN_TEST(test_push_send_to_unregistered_token);
+    SC_RUN_TEST(test_push_config_provider_none);
+    SC_RUN_TEST(test_event_bridge_init_valid_sets_fields);
+    SC_RUN_TEST(test_push_register_null_mgr);
+    SC_RUN_TEST(test_push_unregister_null_mgr);
+    SC_RUN_TEST(test_push_control_protocol_fcm_then_apns);
 }

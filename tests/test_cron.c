@@ -364,7 +364,6 @@ static void test_cron_add_run_null_status_uses_default(void) {
 }
 
 /* ─── Expression patterns ─────────────────────────────────────────────────── */
-#if 0
 static void test_cron_add_job_every_five_minutes(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_cron_scheduler_t *s = sc_cron_create(&alloc, 100, true);
@@ -391,8 +390,8 @@ static void test_cron_update_job_disable(void) {
     sc_cron_scheduler_t *s = sc_cron_create(&alloc, 100, true);
     uint64_t id = 0;
     sc_cron_add_job(s, &alloc, "* * * * *", "enabled_job", NULL, &id);
-    bool disabled = true;
-    sc_error_t err = sc_cron_update_job(s, &alloc, id, NULL, NULL, &disabled);
+    bool off = false;
+    sc_error_t err = sc_cron_update_job(s, &alloc, id, NULL, NULL, &off);
     SC_ASSERT_EQ(err, SC_OK);
     const sc_cron_job_t *job = sc_cron_get_job(s, id);
     SC_ASSERT_FALSE(job->enabled);
@@ -404,9 +403,9 @@ static void test_cron_update_job_reenable(void) {
     sc_cron_scheduler_t *s = sc_cron_create(&alloc, 100, true);
     uint64_t id = 0;
     sc_cron_add_job(s, &alloc, "* * * * *", "job", NULL, &id);
-    bool off = true;
+    bool off = false;
     sc_cron_update_job(s, &alloc, id, NULL, NULL, &off);
-    bool on = false;
+    bool on = true;
     sc_cron_update_job(s, &alloc, id, NULL, NULL, &on);
     const sc_cron_job_t *job = sc_cron_get_job(s, id);
     SC_ASSERT_TRUE(job->enabled);
@@ -591,7 +590,6 @@ static void test_crontab_load_null_args(void) {
     SC_ASSERT_EQ(sc_crontab_load(NULL, "/tmp", &e, &c), SC_ERR_INVALID_ARGUMENT);
     SC_ASSERT_EQ(sc_crontab_load(&alloc, NULL, &e, &c), SC_ERR_INVALID_ARGUMENT);
 }
-#endif
 
 void run_cron_tests(void) {
     SC_TEST_SUITE("cron");
@@ -620,4 +618,19 @@ void run_cron_tests(void) {
     SC_RUN_TEST(test_cron_job_created_at_set);
     SC_RUN_TEST(test_cron_list_runs_returns_newest_first);
     SC_RUN_TEST(test_cron_add_run_null_status_uses_default);
+    SC_RUN_TEST(test_cron_add_job_every_five_minutes);
+    SC_RUN_TEST(test_cron_add_job_weekdays_at_nine);
+    SC_RUN_TEST(test_cron_update_job_disable);
+    SC_RUN_TEST(test_cron_update_job_reenable);
+    SC_RUN_TEST(test_cron_list_runs_newest_first_order);
+    SC_RUN_TEST(test_cron_add_run_nonexistent_job);
+    SC_RUN_TEST(test_crontab_get_path);
+    SC_RUN_TEST(test_crontab_load_empty);
+    SC_RUN_TEST(test_crontab_save_load_roundtrip);
+    SC_RUN_TEST(test_crontab_add);
+    SC_RUN_TEST(test_crontab_remove);
+    SC_RUN_TEST(test_cron_job_paused_field);
+    SC_RUN_TEST(test_cron_job_one_shot_field);
+    SC_RUN_TEST(test_crontab_add_null_path);
+    SC_RUN_TEST(test_crontab_load_null_args);
 }

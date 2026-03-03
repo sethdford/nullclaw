@@ -1,7 +1,6 @@
-import { LitElement, html, css } from "lit";
+import { html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { GatewayClient } from "../gateway.js";
-import { getGateway } from "../gateway-provider.js";
+import { GatewayAwareLitElement } from "../gateway-aware.js";
 
 interface Skill {
   name: string;
@@ -10,7 +9,7 @@ interface Skill {
 }
 
 @customElement("sc-skills-view")
-export class ScSkillsView extends LitElement {
+export class ScSkillsView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
       display: block;
@@ -115,7 +114,7 @@ export class ScSkillsView extends LitElement {
       color: var(--sc-text-muted);
     }
     .error {
-      color: #f87171;
+      color: var(--sc-accent);
       font-size: 0.875rem;
       margin-bottom: 0.5rem;
     }
@@ -170,13 +169,8 @@ export class ScSkillsView extends LitElement {
   @state() private error = "";
   @state() private installUrl = "";
 
-  private get gateway(): GatewayClient | null {
-    return getGateway();
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.loadSkills();
+  protected override async load(): Promise<void> {
+    await this.loadSkills();
   }
 
   private async loadSkills(): Promise<void> {

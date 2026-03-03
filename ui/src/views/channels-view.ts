@@ -1,7 +1,6 @@
-import { LitElement, html, css } from "lit";
+import { html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { GatewayClient } from "../gateway.js";
-import { getGateway } from "../gateway-provider.js";
+import { GatewayAwareLitElement } from "../gateway-aware.js";
 
 interface ChannelStatus {
   name?: string;
@@ -13,7 +12,7 @@ interface ChannelStatus {
 }
 
 @customElement("sc-channels-view")
-export class ScChannelsView extends LitElement {
+export class ScChannelsView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
       display: block;
@@ -46,10 +45,10 @@ export class ScChannelsView extends LitElement {
       border-radius: 50%;
     }
     .status-dot.healthy {
-      background: #22c55e;
+      background: var(--sc-success);
     }
     .status-dot.error {
-      background: #ef4444;
+      background: var(--sc-error);
     }
     .status-dot.unconfigured {
       background: var(--sc-text-muted);
@@ -59,7 +58,7 @@ export class ScChannelsView extends LitElement {
       color: var(--sc-text-muted);
     }
     .card-info .error {
-      color: #ef4444;
+      color: var(--sc-error);
     }
     .skeleton {
       background: linear-gradient(
@@ -105,17 +104,22 @@ export class ScChannelsView extends LitElement {
     .grid .empty-state {
       grid-column: 1 / -1;
     }
+    .error-banner {
+      background: var(--sc-error);
+      color: #fff;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: var(--sc-text-sm);
+    }
   `;
 
   @state() private channels: ChannelStatus[] = [];
   @state() private loading = true;
+  @state() private error = "";
 
-  private gateway: GatewayClient | null = null;
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.gateway = getGateway();
-    this.loadChannels();
+  protected override async load(): Promise<void> {
+    await this.loadChannels();
   }
 
   private async loadChannels(): Promise<void> {
@@ -129,8 +133,9 @@ export class ScChannelsView extends LitElement {
         channels?: ChannelStatus[];
       }>("channels.status", {});
       this.channels = payload?.channels ?? [];
-    } catch {
+    } catch (e) {
       this.channels = [];
+      this.error = e instanceof Error ? e.message : "Failed to load channels";
     } finally {
       this.loading = false;
     }
@@ -155,6 +160,9 @@ export class ScChannelsView extends LitElement {
     }
 
     return html`
+      ${this.error
+        ? html`<div class="error-banner">${this.error}</div>`
+        : nothing}
       <div class="grid">
         ${this.channels.length === 0
           ? html`

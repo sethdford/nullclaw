@@ -219,11 +219,25 @@ static sc_error_t shell_execute(void *ctx, sc_allocator_t *alloc,
             return SC_ERR_OUT_OF_MEMORY;
         }
         *out = sc_tool_result_ok_owned(out_copy, len);
-    } else {
-        char err[64];
-        int n = snprintf(err, sizeof(err), "exit code %d", WEXITSTATUS(status));
+    } else if (WIFSIGNALED(status)) {
         alloc->free(alloc->ctx, buf, cap);
-        *out = sc_tool_result_fail(err, (size_t)n);
+        char err[64];
+        int n = snprintf(err, sizeof(err), "killed by signal %d", WTERMSIG(status));
+        char *err_dup = sc_strndup(alloc, err, (size_t)n);
+        if (err_dup)
+            *out = sc_tool_result_fail_owned(err_dup, (size_t)n);
+        else
+            *out = sc_tool_result_fail("killed by signal", 16);
+    } else {
+        int code = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+        alloc->free(alloc->ctx, buf, cap);
+        char err[64];
+        int n = snprintf(err, sizeof(err), "exit code %d", code);
+        char *err_dup = sc_strndup(alloc, err, (size_t)n);
+        if (err_dup)
+            *out = sc_tool_result_fail_owned(err_dup, (size_t)n);
+        else
+            *out = sc_tool_result_fail("command failed", 14);
     }
     return SC_OK;
 #else

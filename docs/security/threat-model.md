@@ -40,7 +40,7 @@ All extension work is done by implementing vtable structs and registering them i
 ### 1.3 Deployment Models
 
 1. **Standalone CLI** — Direct execution via `main.c`, no network exposure
-2. **Gateway server** — HTTP server on configurable host/port (default `0.0.0.0:8080`), webhooks, WebSocket control
+2. **Gateway server** — HTTP server on configurable host/port (default `0.0.0.0:3000`), webhooks, WebSocket control
 3. **Embedded** — Peripherals for Arduino, STM32, RPi with serial/GPIO access
 
 ### 1.4 Trust Boundaries (Summary)

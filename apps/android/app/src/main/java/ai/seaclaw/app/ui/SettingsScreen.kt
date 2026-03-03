@@ -35,7 +35,7 @@ fun SettingsScreen(gatewayManager: GatewayManager) {
             singleLine = true
         )
         Text(
-            text = "WebSocket URL, e.g. wss://10.0.2.2:8080/ws",
+            text = "WebSocket URL, e.g. wss://10.0.2.2:3000/ws",
             modifier = Modifier.padding(top = 8.dp),
             style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
             color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant

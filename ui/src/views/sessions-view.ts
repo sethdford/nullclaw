@@ -1,7 +1,6 @@
-import { LitElement, html, css, nothing } from "lit";
+import { html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { GatewayClient } from "../gateway.js";
-import { getGateway } from "../gateway-provider.js";
+import { GatewayAwareLitElement } from "../gateway-aware.js";
 import { formatDate } from "../utils.js";
 
 interface SessionItem {
@@ -18,7 +17,7 @@ interface HistoryMessage {
 }
 
 @customElement("sc-sessions-view")
-export class ScSessionsView extends LitElement {
+export class ScSessionsView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
       display: block;
@@ -232,13 +231,8 @@ export class ScSessionsView extends LitElement {
   @state() private renameValue = "";
   @state() private confirmDelete = false;
 
-  private get gateway(): GatewayClient | null {
-    return getGateway();
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.loadSessions();
+  protected override async load(): Promise<void> {
+    await this.loadSessions();
   }
 
   private async loadSessions(): Promise<void> {

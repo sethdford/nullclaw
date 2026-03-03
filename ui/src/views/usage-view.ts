@@ -1,7 +1,6 @@
-import { LitElement, html, css } from "lit";
+import { html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { GatewayClient } from "../gateway.js";
-import { getGateway } from "../gateway-provider.js";
+import { GatewayAwareLitElement } from "../gateway-aware.js";
 
 interface UsageSummary {
   session_cost_usd?: number;
@@ -12,7 +11,7 @@ interface UsageSummary {
 }
 
 @customElement("sc-usage-view")
-export class ScUsageView extends LitElement {
+export class ScUsageView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
       display: block;
@@ -91,7 +90,7 @@ export class ScUsageView extends LitElement {
       font-variant-numeric: tabular-nums;
     }
     .error {
-      color: #f87171;
+      color: var(--sc-accent);
       font-size: 0.875rem;
     }
     .skeleton {
@@ -141,13 +140,8 @@ export class ScUsageView extends LitElement {
   @state() private loading = false;
   @state() private error = "";
 
-  private get gateway(): GatewayClient | null {
-    return getGateway();
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.loadSummary();
+  protected override async load(): Promise<void> {
+    await this.loadSummary();
   }
 
   private async loadSummary(): Promise<void> {

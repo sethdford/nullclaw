@@ -1,8 +1,7 @@
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { GatewayClient } from "../gateway.js";
-import { getGateway } from "../gateway-provider.js";
 import { formatDate } from "../utils.js";
+import { GatewayAwareLitElement } from "../gateway-aware.js";
 
 interface ConfigData {
   default_provider?: string;
@@ -26,7 +25,7 @@ interface Capabilities {
 }
 
 @customElement("sc-agents-view")
-export class ScAgentsView extends LitElement {
+export class ScAgentsView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
       display: block;
@@ -183,16 +182,7 @@ export class ScAgentsView extends LitElement {
   @state() private loading = false;
   @state() private error = "";
 
-  private get gateway(): GatewayClient | null {
-    return getGateway();
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.load();
-  }
-
-  private async load(): Promise<void> {
+  protected override async load(): Promise<void> {
     const gw = this.gateway;
     if (!gw) return;
     this.loading = true;

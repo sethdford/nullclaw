@@ -1,9 +1,6 @@
-name: CI
+name: SeaClaw CI
 
-on:
-  push:
-    branches: [main]
-  pull_request:
+on: [push, pull_request]
 
 jobs:
   build-and-test:
@@ -16,23 +13,64 @@ jobs:
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev libcurl4-openssl-dev libssl-dev
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev libcurl4-openssl-dev
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install sqlite curl openssl
+        run: brew install sqlite3
 
-      - name: Build
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
         run: |
-          mkdir build && cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug
+          mkdir -p build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DSC_ENABLE_ALL_CHANNELS=ON -DSC_ENABLE_CURL=ON -DSC_ENABLE_ASAN=ON
           cmake --build . -j$(nproc 2>/dev/null || sysctl -n hw.logicalcpu)
 
-      - name: Test
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DSC_ENABLE_ALL_CHANNELS=ON -DSC_ENABLE_ASAN=ON
+          cmake --build . -j$(nproc 2>/dev/null || sysctl -n hw.logicalcpu)
+
+      - name: Test (Linux)
+        if: runner.os == 'Linux'
+        run: cd build && ASAN_OPTIONS=detect_leaks=0:detect_stack_use_after_return=0 ./seaclaw_tests
+
+      - name: Test (macOS)
+        if: runner.os == 'macOS'
         run: cd build && ./seaclaw_tests
 
-      - name: MinSizeRel build
-        run: |
-          mkdir build-release && cd build-release
-          cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel
+  release-size:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install sqlite3
+      - run: |
+          mkdir -p build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel -DSC_ENABLE_LTO=ON -DSC_ENABLE_ALL_CHANNELS=ON
           cmake --build . -j$(nproc 2>/dev/null || sysctl -n hw.logicalcpu)
+      - run: ls -lh build/seaclaw
+      - run: |
+          SIZE=$(stat -f%z build/seaclaw)
+          if [ "$SIZE" -gt 512000 ]; then
+            echo "Binary size $SIZE bytes exceeds 500KB (512000 bytes)"
+            exit 1
+          fi
+
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cd apps/ios && swift build
+
+  build-android:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: temurin
+      - run: cd apps/android && chmod +x gradlew && ./gradlew assembleDebug

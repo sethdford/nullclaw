@@ -33,7 +33,7 @@ public final class SeaClawConnection {
     }
 
     public convenience init(urlString: String) {
-        let url = URL(string: urlString) ?? URL(string: "wss://localhost:8080/ws")!
+        let url = URL(string: urlString) ?? URL(string: "wss://localhost:3000/ws")!
         self.init(url: url)
     }
 

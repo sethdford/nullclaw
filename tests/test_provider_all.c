@@ -1904,7 +1904,7 @@ static void test_sse_extract_delta_unicode(void) {
     sc_allocator_t alloc = sc_system_allocator();
     const char *json = "{\"choices\":[{\"delta\":{\"content\":\"\\u00e4\"}}]}";
     char *out = sc_sse_extract_delta_content(&alloc, json, strlen(json));
-    SC_ASSERT_TRUE(out == NULL || strlen(out) >= 0);
+    SC_ASSERT_NOT_NULL(out);
     if (out) alloc.free(alloc.ctx, out, strlen(out) + 1);
 }
 

@@ -18,7 +18,7 @@ class GatewayManager {
     private var client: GatewayClient? = null
     private val _events = MutableSharedFlow<GatewayClient.Event>()
 
-    var gatewayUrl: String = "wss://10.0.2.2:8080/ws"
+    var gatewayUrl: String = "wss://10.0.2.2:3000/ws"
 
     val events: Flow<GatewayClient.Event>
         get() = _events.asSharedFlow()

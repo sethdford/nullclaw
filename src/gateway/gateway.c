@@ -25,7 +25,7 @@
 #include <poll.h>
 #endif
 
-#define SC_GATEWAY_DEFAULT_PORT 8080
+#define SC_GATEWAY_DEFAULT_PORT 3000
 #define SC_GATEWAY_POLL_TIMEOUT_MS 100
 
 void sc_gateway_config_from_cfg(const sc_config_gateway_t *cfg_gw,

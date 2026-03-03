@@ -3,6 +3,7 @@
 #include "seaclaw/mcp_server.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/tool.h"
+#include "seaclaw/memory.h"
 #include <string.h>
 
 static void test_mcp_server_create_destroy(void) {
@@ -138,6 +139,148 @@ static void test_mcp_host_destroy_null(void) {
     sc_mcp_host_destroy(NULL); /* should not crash */
 }
 
+static void test_mcp_host_create_with_memory(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_memory_t mem = sc_none_memory_create(&alloc);
+    SC_ASSERT_NOT_NULL(mem.vtable);
+    sc_tool_t tools[1];
+    tools[0].ctx = NULL;
+    tools[0].vtable = &mock_host_vtable;
+    sc_mcp_host_t *host = NULL;
+    sc_error_t err = sc_mcp_host_create(&alloc, tools, 1, &mem, &host);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(host);
+    sc_mcp_host_destroy(host);
+    if (mem.vtable && mem.vtable->deinit) mem.vtable->deinit(mem.ctx);
+}
+
+static void test_mcp_server_null_config_fails(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_mcp_server_t *srv = sc_mcp_server_create(&alloc, NULL);
+    SC_ASSERT_NULL(srv);
+}
+
+static void test_mcp_server_call_tool_nonexistent(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_mcp_server_config_t cfg = { .command = "echo", .args = NULL, .args_count = 0 };
+    sc_mcp_server_t *srv = sc_mcp_server_create(&alloc, &cfg);
+    SC_ASSERT_NOT_NULL(srv);
+    sc_mcp_server_connect(srv);
+    char *result = NULL;
+    size_t result_len = 0;
+    sc_error_t err = sc_mcp_server_call_tool(srv, &alloc, "nonexistent_tool", "{}",
+        &result, &result_len);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(result);
+    alloc.free(alloc.ctx, result, result_len + 1);
+    sc_mcp_server_destroy(srv);
+}
+
+static void test_mcp_server_double_connect(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_mcp_server_config_t cfg = { .command = "echo", .args = NULL, .args_count = 0 };
+    sc_mcp_server_t *srv = sc_mcp_server_create(&alloc, &cfg);
+    SC_ASSERT_NOT_NULL(srv);
+    sc_error_t err1 = sc_mcp_server_connect(srv);
+    sc_error_t err2 = sc_mcp_server_connect(srv);
+    SC_ASSERT_EQ(err1, SC_OK);
+    SC_ASSERT_EQ(err2, SC_OK);
+    sc_mcp_server_destroy(srv);
+}
+
+static void test_mcp_init_tools_null_alloc(void) {
+    sc_tool_t *tools = NULL;
+    size_t count = 0;
+    sc_error_t err = sc_mcp_init_tools(NULL, NULL, 0, &tools, &count);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void test_mcp_init_tools_zero_configs(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_t *tools = NULL;
+    size_t count = 0;
+    sc_error_t err = sc_mcp_init_tools(&alloc, NULL, 0, &tools, &count);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NULL(tools);
+    SC_ASSERT_EQ(count, 0u);
+}
+
+static void test_mcp_host_create_many_tools(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    static const sc_tool_vtable_t vt = {
+        .execute = mock_tool_execute,
+        .name = mock_tool_name,
+        .description = mock_tool_desc,
+        .parameters_json = mock_tool_params,
+        .deinit = NULL,
+    };
+    sc_tool_t tools[6];
+    for (size_t i = 0; i < 6; i++) {
+        tools[i].ctx = NULL;
+        tools[i].vtable = &vt;
+    }
+    sc_mcp_host_t *host = NULL;
+    sc_error_t err = sc_mcp_host_create(&alloc, tools, 6, NULL, &host);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(host);
+    sc_mcp_host_destroy(host);
+}
+
+static void test_mcp_server_list_tools_not_connected(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_mcp_server_config_t cfg = { .command = "echo", .args = NULL, .args_count = 0 };
+    sc_mcp_server_t *srv = sc_mcp_server_create(&alloc, &cfg);
+    SC_ASSERT_NOT_NULL(srv);
+    char **names = NULL, **descs = NULL;
+    size_t count = 0;
+    sc_error_t err = sc_mcp_server_list_tools(srv, &alloc, &names, &descs, &count);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(count >= 1);
+    for (size_t i = 0; i < count; i++) {
+        alloc.free(alloc.ctx, names[i], strlen(names[i]) + 1);
+        alloc.free(alloc.ctx, descs[i], strlen(descs[i]) + 1);
+    }
+    alloc.free(alloc.ctx, names, count * sizeof(char *));
+    alloc.free(alloc.ctx, descs, count * sizeof(char *));
+    sc_mcp_server_destroy(srv);
+}
+
+static void test_mcp_init_tools_null_out_rejected(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_mcp_server_config_t cfg = { .command = "echo", .args = NULL, .args_count = 0 };
+    sc_tool_t *tools = NULL;
+    size_t count = 0;
+    sc_error_t err = sc_mcp_init_tools(&alloc, &cfg, 1, NULL, &count);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+    err = sc_mcp_init_tools(&alloc, &cfg, 1, &tools, NULL);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void test_mcp_host_create_null_alloc_rejected(void) {
+    sc_tool_t tools[1] = {{ .ctx = NULL, .vtable = &mock_host_vtable }};
+    sc_mcp_host_t *host = NULL;
+    sc_error_t err = sc_mcp_host_create(NULL, tools, 1, NULL, &host);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void test_mcp_server_create_null_command_fails(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_mcp_server_config_t cfg = { .command = NULL, .args = NULL, .args_count = 0 };
+    sc_mcp_server_t *srv = sc_mcp_server_create(&alloc, &cfg);
+    SC_ASSERT_NULL(srv);
+}
+
+static void test_mcp_server_create_null_alloc_fails(void) {
+    sc_mcp_server_config_t cfg = { .command = "echo", .args = NULL, .args_count = 0 };
+    sc_mcp_server_t *srv = sc_mcp_server_create(NULL, &cfg);
+    SC_ASSERT_NULL(srv);
+}
+
+static void test_mcp_free_tools_null_safe(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_mcp_free_tools(&alloc, NULL, 0);
+}
+
 void run_mcp_tests(void) {
     SC_TEST_SUITE("MCP Client");
     SC_RUN_TEST(test_mcp_server_create_destroy);
@@ -153,4 +296,17 @@ void run_mcp_tests(void) {
     SC_RUN_TEST(test_mcp_host_create_zero_tools);
     SC_RUN_TEST(test_mcp_host_run_null);
     SC_RUN_TEST(test_mcp_host_destroy_null);
+    SC_RUN_TEST(test_mcp_host_create_with_memory);
+    SC_RUN_TEST(test_mcp_host_create_many_tools);
+    SC_RUN_TEST(test_mcp_host_create_null_alloc_rejected);
+    SC_RUN_TEST(test_mcp_server_null_config_fails);
+    SC_RUN_TEST(test_mcp_server_create_null_command_fails);
+    SC_RUN_TEST(test_mcp_server_create_null_alloc_fails);
+    SC_RUN_TEST(test_mcp_server_call_tool_nonexistent);
+    SC_RUN_TEST(test_mcp_server_double_connect);
+    SC_RUN_TEST(test_mcp_server_list_tools_not_connected);
+    SC_RUN_TEST(test_mcp_init_tools_null_alloc);
+    SC_RUN_TEST(test_mcp_init_tools_zero_configs);
+    SC_RUN_TEST(test_mcp_init_tools_null_out_rejected);
+    SC_RUN_TEST(test_mcp_free_tools_null_safe);
 }

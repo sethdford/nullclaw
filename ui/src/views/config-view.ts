@@ -1,7 +1,6 @@
-import { LitElement, html, css, nothing } from "lit";
+import { html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { GatewayClient } from "../gateway.js";
-import { getGateway } from "../gateway-provider.js";
+import { GatewayAwareLitElement } from "../gateway-aware.js";
 
 type SaveStatus = "saved" | "error" | "unsaved" | "idle";
 
@@ -35,7 +34,7 @@ function toRawConfig(edited: ConfigData): Record<string, unknown> {
 }
 
 @customElement("sc-config-view")
-export class ScConfigView extends LitElement {
+export class ScConfigView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
       display: block;
@@ -55,13 +54,23 @@ export class ScConfigView extends LitElement {
       color: var(--sc-text-muted);
     }
     .status.saved {
-      color: #22c55e;
+      color: var(--sc-success);
     }
     .status.error {
-      color: #ef4444;
+      color: var(--sc-error);
     }
     .status.unsaved {
       color: var(--sc-accent);
+    }
+    .status.unsaved::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--sc-accent);
+      margin-right: 0.375rem;
+      vertical-align: middle;
     }
     .header-actions {
       display: flex;
@@ -166,6 +175,7 @@ export class ScConfigView extends LitElement {
     .field input:focus {
       outline: none;
       border-color: var(--sc-accent);
+      box-shadow: 0 0 0 3px var(--sc-accent-subtle, rgba(249, 112, 102, 0.12));
     }
     .field input[type="number"] {
       width: 8rem;
@@ -195,14 +205,27 @@ export class ScConfigView extends LitElement {
   @state() private sectionCollapsed = false;
   @state() private saveStatus: SaveStatus = "idle";
   @state() private errorMessage = "";
-
-  private gateway: GatewayClient | null = null;
+  private _beforeUnloadHandler?: (e: BeforeUnloadEvent) => void;
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.gateway = getGateway();
-    this.loadConfig();
-    this.loadSchema();
+    this._beforeUnloadHandler = (e: BeforeUnloadEvent) => {
+      if (this.hasChanges()) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", this._beforeUnloadHandler);
+  }
+
+  override disconnectedCallback(): void {
+    if (this._beforeUnloadHandler) {
+      window.removeEventListener("beforeunload", this._beforeUnloadHandler);
+    }
+    super.disconnectedCallback();
+  }
+
+  protected override async load(): Promise<void> {
+    await Promise.all([this.loadConfig(), this.loadSchema()]);
   }
 
   private async loadConfig(): Promise<void> {

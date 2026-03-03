@@ -1,7 +1,6 @@
 import { LitElement, html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { GatewayClient } from "../gateway.js";
-import { getGateway } from "../gateway-provider.js";
+import { GatewayAwareLitElement } from "../gateway-aware.js";
 
 interface ProviderItem {
   name?: string;
@@ -22,7 +21,7 @@ interface ConfigGetRes {
 }
 
 @customElement("sc-models-view")
-export class ScModelsView extends LitElement {
+export class ScModelsView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
       display: block;
@@ -105,10 +104,10 @@ export class ScModelsView extends LitElement {
       gap: 0.35rem;
     }
     .key-status.has {
-      color: #22c55e;
+      color: var(--sc-success);
     }
     .key-status.missing {
-      color: #ef4444;
+      color: var(--sc-error);
     }
     .skeleton {
       background: linear-gradient(
@@ -154,23 +153,23 @@ export class ScModelsView extends LitElement {
     .grid .empty-state {
       grid-column: 1 / -1;
     }
+    .error-banner {
+      background: var(--sc-error);
+      color: #fff;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: var(--sc-text-sm);
+    }
   `;
 
   @state() private defaultModel = "";
   @state() private defaultProvider = "";
   @state() private providers: ProviderItem[] = [];
   @state() private loading = true;
+  @state() private error = "";
 
-  private get gateway(): GatewayClient | null {
-    return getGateway();
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.load();
-  }
-
-  private async load(): Promise<void> {
+  protected override async load(): Promise<void> {
     const gw = this.gateway;
     if (!gw) {
       this.loading = false;
@@ -188,10 +187,11 @@ export class ScModelsView extends LitElement {
         modelsPayload?.default_model ?? configPayload?.default_model ?? "";
       this.defaultProvider = configPayload?.default_provider ?? "";
       this.providers = modelsPayload?.providers ?? [];
-    } catch {
+    } catch (e) {
       this.providers = [];
       this.defaultModel = "";
       this.defaultProvider = "";
+      this.error = e instanceof Error ? e.message : "Failed to load models";
     } finally {
       this.loading = false;
     }
@@ -217,6 +217,9 @@ export class ScModelsView extends LitElement {
 
     return html`
       <h2>Models & Providers</h2>
+      ${this.error
+        ? html`<div class="error-banner">${this.error}</div>`
+        : nothing}
       <div class="info-bar">
         <span class="info-item"
           ><strong>Default provider:</strong> ${this.defaultProvider ||

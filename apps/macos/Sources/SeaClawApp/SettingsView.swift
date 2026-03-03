@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @State private var gatewayURL: String = "ws://localhost:8080"
+    @State private var gatewayURL: String = "ws://localhost:3000"
     @State private var autoStartOnLogin: Bool = false
     @State private var binaryPath: String = ""
 

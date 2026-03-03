@@ -1,9 +1,9 @@
-import { LitElement, html, css, nothing } from "lit";
+import { html, css, nothing } from "lit";
 import { customElement, property, state, query } from "lit/decorators.js";
 import type { TemplateResult } from "lit";
-import type { GatewayClient, GatewayStatus } from "../gateway.js";
+import type { GatewayStatus } from "../gateway.js";
 import { GatewayClient as GatewayClientClass } from "../gateway.js";
-import { getGateway } from "../gateway-provider.js";
+import { GatewayAwareLitElement } from "../gateway-aware.js";
 import { EVENT_NAMES } from "../utils.js";
 
 interface ChatMessage {
@@ -74,7 +74,7 @@ function formatTime(ts: number): string {
 }
 
 @customElement("sc-chat-view")
-export class ScChatView extends LitElement {
+export class ScChatView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
       display: flex;
@@ -141,6 +141,8 @@ export class ScChatView extends LitElement {
       display: flex;
       flex-direction: column;
       gap: 0.25rem;
+      animation: sc-slide-up var(--sc-duration-normal, 200ms)
+        var(--sc-ease-out, ease) both;
     }
     .message.user {
       align-self: flex-end;
@@ -280,6 +282,7 @@ export class ScChatView extends LitElement {
     .input-bar textarea:focus {
       outline: none;
       border-color: var(--sc-accent);
+      box-shadow: 0 0 0 3px var(--sc-accent-subtle, rgba(249, 112, 102, 0.12));
     }
     .input-bar textarea::placeholder {
       color: var(--sc-text-muted);
@@ -328,21 +331,33 @@ export class ScChatView extends LitElement {
       background: var(--sc-error-dim);
       border-color: var(--sc-error);
     }
-    .thinking::after {
-      content: "";
-      animation: dots 1.5s infinite;
+    .typing-dots {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+      margin-left: 4px;
     }
-    @keyframes dots {
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--sc-text-muted);
+      animation: sc-bounce-dot 1.4s infinite ease-in-out both;
+    }
+    .typing-dots span:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+    .typing-dots span:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+    @keyframes sc-bounce-dot {
       0%,
-      20% {
-        content: ".";
+      80%,
+      100% {
+        transform: scale(0);
       }
       40% {
-        content: "..";
-      }
-      60%,
-      100% {
-        content: "...";
+        transform: scale(1);
       }
     }
     .error-banner {
@@ -391,26 +406,24 @@ export class ScChatView extends LitElement {
   @query("#message-list") private messageList!: HTMLElement;
   @query("#chat-input") private inputEl!: HTMLTextAreaElement;
 
-  private gateway: GatewayClient | null = null;
   private messageHandler = (e: Event) => this.onGatewayMessage(e);
   private statusHandler = (e: Event) => {
     this.connectionStatus = (e as CustomEvent<GatewayStatus>).detail;
   };
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.gateway = getGateway();
-    if (!this.gateway) return;
-    this.connectionStatus = this.gateway.status;
-    this.gateway.addEventListener(
-      GatewayClientClass.EVENT_GATEWAY,
-      this.messageHandler,
-    );
-    this.gateway.addEventListener(
+  override firstUpdated(): void {
+    const gw = this.gateway;
+    if (!gw) return;
+    this.connectionStatus = gw.status;
+    gw.addEventListener(GatewayClientClass.EVENT_GATEWAY, this.messageHandler);
+    gw.addEventListener(
       GatewayClientClass.EVENT_STATUS,
       this.statusHandler as EventListener,
     );
-    this.loadHistory();
+  }
+
+  protected override async load(): Promise<void> {
+    await this.loadHistory();
   }
 
   private async loadHistory(): Promise<void> {
@@ -446,15 +459,16 @@ export class ScChatView extends LitElement {
   }
 
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.gateway?.removeEventListener(
+    const gw = this.gateway;
+    gw?.removeEventListener(
       GatewayClientClass.EVENT_GATEWAY,
       this.messageHandler,
     );
-    this.gateway?.removeEventListener(
+    gw?.removeEventListener(
       GatewayClientClass.EVENT_STATUS,
       this.statusHandler as EventListener,
     );
+    super.disconnectedCallback();
   }
 
   private onGatewayMessage(e: Event): void {
@@ -719,8 +733,9 @@ export class ScChatView extends LitElement {
           )}
           ${this.isWaiting
             ? html`<div class="thinking">
-                Thinking
-                <button class="abort-btn" @click=${() => this.handleAbort()}>
+                Thinking<span class="typing-dots"
+                  ><span></span><span></span><span></span></span
+                ><button class="abort-btn" @click=${() => this.handleAbort()}>
                   Abort
                 </button>
               </div>`

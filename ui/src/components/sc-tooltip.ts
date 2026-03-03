@@ -1,0 +1,82 @@
+import { LitElement, html, css } from "lit";
+import { customElement, property } from "lit/decorators.js";
+
+type TooltipPosition = "top" | "bottom" | "left" | "right";
+
+@customElement("sc-tooltip")
+export class ScTooltip extends LitElement {
+  static override styles = css`
+    :host {
+      display: inline-block;
+      position: relative;
+    }
+
+    .wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    .tip {
+      position: absolute;
+      white-space: nowrap;
+      background: var(--sc-bg-overlay);
+      color: var(--sc-text);
+      font-size: var(--sc-text-xs);
+      padding: 0.25rem 0.5rem;
+      border-radius: var(--sc-radius-sm);
+      box-shadow: var(--sc-shadow-md);
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition:
+        opacity var(--sc-duration-fast),
+        visibility var(--sc-duration-fast);
+      z-index: 1000;
+    }
+
+    :host(:hover) .tip {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .tip.top {
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-bottom: 4px;
+    }
+
+    .tip.bottom {
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: 4px;
+    }
+
+    .tip.left {
+      right: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      margin-right: 4px;
+    }
+
+    .tip.right {
+      left: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      margin-left: 4px;
+    }
+  `;
+
+  @property({ type: String }) text = "";
+  @property({ type: String }) position: TooltipPosition = "top";
+
+  override render() {
+    return html`
+      <div class="wrapper">
+        <slot></slot>
+        <div class="tip ${this.position}" role="tooltip">${this.text}</div>
+      </div>
+    `;
+  }
+}

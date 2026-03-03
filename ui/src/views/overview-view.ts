@@ -1,8 +1,12 @@
-import { LitElement, html, css, nothing } from "lit";
+import { html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { GatewayClient } from "../gateway.js";
-import { getGateway } from "../gateway-provider.js";
 import { formatDate } from "../utils.js";
+import { GatewayAwareLitElement } from "../gateway-aware.js";
+import "../components/sc-card.js";
+import "../components/sc-badge.js";
+import "../components/sc-skeleton.js";
+import "../components/sc-empty-state.js";
+import "../components/sc-button.js";
 
 interface HealthRes {
   status?: string;
@@ -32,7 +36,7 @@ interface SessionItem {
 }
 
 @customElement("sc-overview-view")
-export class ScOverviewView extends LitElement {
+export class ScOverviewView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
       display: block;
@@ -41,52 +45,75 @@ export class ScOverviewView extends LitElement {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 1.5rem;
+      margin-bottom: var(--sc-space-lg);
       flex-wrap: wrap;
-      gap: 1rem;
+      gap: var(--sc-space-md);
     }
-    h2 {
+    .header h2 {
       margin: 0;
-      font-size: 1.25rem;
-      font-weight: 600;
+      font-size: var(--sc-text-xl);
+      font-weight: var(--sc-weight-semibold);
       color: var(--sc-text);
     }
-    .refresh-btn {
-      padding: 0.5rem 1rem;
-      background: var(--sc-bg-elevated);
-      color: var(--sc-text);
-      border: 1px solid var(--sc-border);
-      border-radius: var(--sc-radius);
-      cursor: pointer;
-      font-size: 0.875rem;
-    }
-    .refresh-btn:hover {
-      background: var(--sc-border);
-    }
-    .status-cards {
+    .bento {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 0.75rem;
-      margin-bottom: 1.5rem;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--sc-space-md);
     }
-    .status-card {
-      padding: 0.75rem 1rem;
-      background: var(--sc-bg-surface);
-      border: 1px solid var(--sc-border);
-      border-radius: var(--sc-radius);
+    .bento-card {
+      animation: sc-slide-up var(--sc-duration-normal) var(--sc-ease-out) both;
     }
-    .status-card-label {
-      font-size: 0.75rem;
+    .bento-card:nth-child(1) {
+      animation-delay: 0ms;
+    }
+    .bento-card:nth-child(2) {
+      animation-delay: 50ms;
+    }
+    .bento-card:nth-child(3) {
+      animation-delay: 100ms;
+    }
+    .bento-card:nth-child(4) {
+      animation-delay: 150ms;
+    }
+    .bento-card:nth-child(5) {
+      animation-delay: 200ms;
+    }
+    .bento-card:nth-child(6) {
+      animation-delay: 250ms;
+    }
+    .bento-card:nth-child(7) {
+      animation-delay: 300ms;
+    }
+    .bento-card:nth-child(8) {
+      animation-delay: 350ms;
+    }
+    .bento-card:nth-child(9) {
+      animation-delay: 400ms;
+    }
+    .gateway-card {
+      grid-column: span 2;
+    }
+    .channels-overview {
+      grid-column: 1 / -1;
+    }
+    .recent-sessions {
+      grid-column: 1 / -1;
+    }
+    .stat-label {
+      font-size: var(--sc-text-xs);
       color: var(--sc-text-muted);
-      margin-bottom: 0.25rem;
+      margin-bottom: var(--sc-space-xs);
     }
-    .status-card-value {
-      font-size: 1rem;
-      font-weight: 600;
+    .stat-value {
+      font-size: var(--sc-text-xl);
+      font-weight: var(--sc-weight-bold);
       color: var(--sc-text);
+    }
+    .gateway-content {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: var(--sc-space-sm);
+      margin-bottom: var(--sc-space-xs);
     }
     .status-dot {
       width: 8px;
@@ -100,120 +127,82 @@ export class ScOverviewView extends LitElement {
     .status-dot.offline {
       background: var(--sc-error);
     }
-    .section-title {
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--sc-text);
-      margin-bottom: 0.75rem;
-    }
-    .channels-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 0.75rem;
-      margin-bottom: 1.5rem;
-    }
-    .channel-card {
-      padding: 0.75rem 1rem;
-      background: var(--sc-bg-surface);
-      border: 1px solid var(--sc-border);
-      border-radius: var(--sc-radius);
-    }
-    .channel-card-header {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.25rem;
-    }
-    .channel-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .channel-dot.configured {
-      background: var(--sc-success);
-    }
-    .channel-dot.unconfigured {
-      background: var(--sc-text-muted);
-    }
-    .channel-name {
-      font-weight: 500;
-      font-size: 0.875rem;
-      color: var(--sc-text);
-    }
-    .channel-status {
-      font-size: 0.75rem;
+    .gateway-version {
+      font-size: var(--sc-text-xs);
       color: var(--sc-text-muted);
     }
-    .sessions-list {
-      background: var(--sc-bg-surface);
-      border: 1px solid var(--sc-border);
-      border-radius: var(--sc-radius);
-      overflow: hidden;
+    .channels-inner {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: var(--sc-space-sm);
     }
-    .session-row {
+    .channel-item {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0.5rem 1rem;
-      border-bottom: 1px solid var(--sc-border);
-      font-size: 0.875rem;
+      gap: var(--sc-space-sm);
     }
-    .session-row:last-child {
-      border-bottom: none;
-    }
-    .session-info {
-      color: var(--sc-text);
-    }
-    .session-meta {
-      font-size: 0.75rem;
-      color: var(--sc-text-muted);
-    }
-    .skeleton {
-      background: linear-gradient(
-        90deg,
-        var(--sc-bg-elevated) 25%,
-        var(--sc-bg-surface) 50%,
-        var(--sc-bg-elevated) 75%
-      );
-      background-size: 200% 100%;
-      animation: sc-shimmer 1.5s ease-in-out infinite;
-      border-radius: var(--sc-radius);
-    }
-    .skeleton-line {
-      height: 1rem;
-      margin-bottom: 0.75rem;
-      border-radius: 4px;
-    }
-    .skeleton-card {
-      height: 5rem;
-      margin-bottom: 0.75rem;
-    }
-    .empty-state {
-      text-align: center;
-      padding: 3rem 1rem;
-      color: var(--sc-text-muted);
-    }
-    .empty-icon {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-    }
-    .empty-title {
-      font-size: var(--sc-text-lg);
-      font-weight: 600;
-      color: var(--sc-text);
-      margin: 0 0 0.5rem;
-    }
-    .empty-desc {
+    .channel-name {
       font-size: var(--sc-text-sm);
-      margin: 0;
-      max-width: 24rem;
-      margin-inline: auto;
+      font-weight: var(--sc-weight-medium);
+      color: var(--sc-text);
+    }
+    .sessions-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .sessions-table th,
+    .sessions-table td {
+      padding: var(--sc-space-sm) var(--sc-space-md);
+      text-align: left;
+      border-bottom: 1px solid var(--sc-border);
+      font-size: var(--sc-text-sm);
+    }
+    .sessions-table th {
+      font-size: var(--sc-text-xs);
+      font-weight: var(--sc-weight-medium);
+      color: var(--sc-text-muted);
+    }
+    .sessions-table tr:last-child td {
+      border-bottom: none;
     }
     .error {
       color: var(--sc-error);
-      font-size: 0.875rem;
-      margin-bottom: 1rem;
+      font-size: var(--sc-text-sm);
+      margin-bottom: var(--sc-space-md);
+    }
+    .skeleton-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--sc-space-md);
+    }
+    .skeleton-gateway {
+      grid-column: span 2;
+    }
+    .skeleton-full {
+      grid-column: 1 / -1;
+    }
+    @media (max-width: 768px) {
+      .bento {
+        grid-template-columns: 1fr 1fr;
+      }
+      .gateway-card {
+        grid-column: span 2;
+      }
+      .skeleton-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    @media (max-width: 480px) {
+      .bento {
+        grid-template-columns: 1fr;
+      }
+      .gateway-card {
+        grid-column: span 1;
+      }
+      .skeleton-grid {
+        grid-template-columns: 1fr;
+      }
     }
   `;
 
@@ -224,16 +213,7 @@ export class ScOverviewView extends LitElement {
   @state() private loading = true;
   @state() private error = "";
 
-  private get gateway(): GatewayClient | null {
-    return getGateway();
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.load();
-  }
-
-  private async load(): Promise<void> {
+  protected override async load(): Promise<void> {
     const gw = this.gateway;
     if (!gw) {
       this.loading = false;
@@ -285,111 +265,149 @@ export class ScOverviewView extends LitElement {
   }
 
   override render() {
+    const cap = this.capabilities;
+    const gwOk = this.gatewayOperational;
+
     if (this.loading) {
       return html`
         <div class="header">
           <h2>Overview</h2>
         </div>
-        <div class="status-cards">
-          <div class="status-card skeleton skeleton-card"></div>
-          <div class="status-card skeleton skeleton-card"></div>
-          <div class="status-card skeleton skeleton-card"></div>
-        </div>
-        <div class="section-title skeleton skeleton-line"></div>
-        <div class="sessions-list">
-          <div class="session-row">
-            <div class="skeleton skeleton-line"></div>
+        <div class="skeleton-grid bento">
+          <div class="skeleton-gateway">
+            <sc-skeleton variant="card" height="120px"></sc-skeleton>
           </div>
-          <div class="session-row">
-            <div class="skeleton skeleton-line"></div>
+          <sc-skeleton variant="card" height="100px"></sc-skeleton>
+          <sc-skeleton variant="card" height="100px"></sc-skeleton>
+          <sc-skeleton variant="card" height="100px"></sc-skeleton>
+          <sc-skeleton variant="card" height="100px"></sc-skeleton>
+          <sc-skeleton variant="card" height="100px"></sc-skeleton>
+          <div class="skeleton-full">
+            <sc-skeleton variant="card" height="140px"></sc-skeleton>
+          </div>
+          <div class="skeleton-full">
+            <sc-skeleton variant="card" height="180px"></sc-skeleton>
           </div>
         </div>
       `;
     }
 
-    const cap = this.capabilities;
-    const gwOk = this.gatewayOperational;
-
     return html`
       <div class="header">
         <h2>Overview</h2>
-        <button class="refresh-btn" @click=${() => this.load()}>Refresh</button>
+        <sc-button variant="secondary" @click=${() => this.load()}
+          >Refresh</sc-button
+        >
       </div>
       ${this.error ? html`<p class="error">${this.error}</p>` : nothing}
-      <div class="status-cards">
-        <div class="status-card">
-          <div class="status-card-label">Gateway</div>
-          <div class="status-card-value">
-            <span class="status-dot ${gwOk ? "operational" : "offline"}"></span>
-            ${gwOk ? "Operational" : "Offline"}
+      <div class="bento">
+        <!-- 1. Gateway Status (2 cols) -->
+        <sc-card hoverable class="bento-card gateway-card">
+          <div class="stat-label">Gateway Status</div>
+          <div class="gateway-content">
+            <span
+              class="status-dot ${gwOk ? "operational" : "offline"}"
+              aria-hidden="true"
+            ></span>
+            <span class="stat-value">${gwOk ? "Operational" : "Offline"}</span>
           </div>
-        </div>
-        <div class="status-card">
-          <div class="status-card-label">Version</div>
-          <div class="status-card-value">${cap.version ?? "—"}</div>
-        </div>
-        <div class="status-card">
-          <div class="status-card-label">Providers</div>
-          <div class="status-card-value">${cap.providers ?? 0}</div>
-        </div>
-        <div class="status-card">
-          <div class="status-card-label">Channels</div>
-          <div class="status-card-value">${cap.channels ?? 0}</div>
-        </div>
-        <div class="status-card">
-          <div class="status-card-label">Tools</div>
-          <div class="status-card-value">${cap.tools ?? 0}</div>
-        </div>
-        <div class="status-card">
-          <div class="status-card-label">Active Sessions</div>
-          <div class="status-card-value">${this.sessions.length}</div>
-        </div>
-      </div>
-      <div class="section-title">Channels</div>
-      <div class="channels-grid">
-        ${this.channels.map(
-          (ch) => html`
-            <div class="channel-card">
-              <div class="channel-card-header">
-                <span
-                  class="channel-dot ${ch.configured
-                    ? "configured"
-                    : "unconfigured"}"
-                ></span>
-                <span class="channel-name"
-                  >${ch.label ?? ch.key ?? "unnamed"}</span
-                >
-              </div>
-              <div class="channel-status">${ch.status ?? "—"}</div>
-            </div>
-          `,
-        )}
-      </div>
-      <div class="section-title">Recent Sessions</div>
-      <div class="sessions-list">
-        ${this.recentSessions.length === 0
-          ? html`
-              <div class="empty-state">
-                <div class="empty-icon">🗨️</div>
-                <p class="empty-title">No sessions yet</p>
-                <p class="empty-desc">
-                  Start a conversation to see your sessions here.
-                </p>
-              </div>
-            `
-          : this.recentSessions.map(
-              (s) => html`
-                <div class="session-row">
-                  <span class="session-info"
-                    >${s.label ?? s.key ?? "unnamed"}</span
-                  >
-                  <span class="session-meta"
-                    >${s.turn_count ?? 0} turns ·
-                    ${formatDate(s.last_active)}</span
-                  >
+          <div class="gateway-version">${cap.version ?? "—"}</div>
+        </sc-card>
+
+        <!-- 2. Providers -->
+        <sc-card hoverable class="bento-card">
+          <div class="stat-label">Providers</div>
+          <div class="stat-value">${cap.providers ?? 0}</div>
+        </sc-card>
+
+        <!-- 3. Channels -->
+        <sc-card hoverable class="bento-card">
+          <div class="stat-label">Channels</div>
+          <div class="stat-value">${cap.channels ?? 0}</div>
+        </sc-card>
+
+        <!-- 4. Tools -->
+        <sc-card hoverable class="bento-card">
+          <div class="stat-label">Tools</div>
+          <div class="stat-value">${cap.tools ?? 0}</div>
+        </sc-card>
+
+        <!-- 5. Active Sessions -->
+        <sc-card hoverable class="bento-card">
+          <div class="stat-label">Active Sessions</div>
+          <div class="stat-value">${this.sessions.length}</div>
+        </sc-card>
+
+        <!-- 6. Channels Overview (full width) -->
+        <sc-card hoverable class="bento-card channels-overview">
+          <div class="stat-label" style="margin-bottom: var(--sc-space-sm);">
+            Channels Overview
+          </div>
+          ${this.channels.length === 0
+            ? html`
+                <sc-empty-state
+                  icon="📡"
+                  heading="No channels"
+                  description="Configure channels in the Channels view."
+                ></sc-empty-state>
+              `
+            : html`
+                <div class="channels-inner">
+                  ${this.channels.map(
+                    (ch) => html`
+                      <div class="channel-item">
+                        <span class="channel-name"
+                          >${ch.label ?? ch.key ?? "unnamed"}</span
+                        >
+                        <sc-badge
+                          variant=${ch.configured ? "success" : "neutral"}
+                          dot
+                          >${ch.status ??
+                          (ch.configured ? "Configured" : "—")}</sc-badge
+                        >
+                      </div>
+                    `,
+                  )}
                 </div>
-              `,
-            )}
+              `}
+        </sc-card>
+
+        <!-- 7. Recent Sessions (full width) -->
+        <sc-card hoverable class="bento-card recent-sessions">
+          <div class="stat-label" style="margin-bottom: var(--sc-space-sm);">
+            Recent Sessions
+          </div>
+          ${this.recentSessions.length === 0
+            ? html`
+                <sc-empty-state
+                  icon="🗨️"
+                  heading="No sessions yet"
+                  description="Start a conversation to see your sessions here."
+                ></sc-empty-state>
+              `
+            : html`
+                <table class="sessions-table">
+                  <thead>
+                    <tr>
+                      <th>Session</th>
+                      <th>Turns</th>
+                      <th>Last active</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${this.recentSessions.map(
+                      (s) => html`
+                        <tr>
+                          <td>${s.label ?? s.key ?? "unnamed"}</td>
+                          <td>${s.turn_count ?? 0}</td>
+                          <td>${formatDate(s.last_active)}</td>
+                        </tr>
+                      `,
+                    )}
+                  </tbody>
+                </table>
+              `}
+        </sc-card>
       </div>
     `;
   }

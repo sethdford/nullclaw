@@ -121,13 +121,16 @@ endif()
 if(SC_ENABLE_DINGTALK)
     list(APPEND CHANNEL_SOURCES src/channels/dingtalk.c)
 endif()
-list(APPEND CHANNEL_SOURCES
-    src/channels/signal.c
-    src/channels/nostr.c
-    src/channels/qq.c
-    src/channels/maixcam.c
-    src/channels/dispatch.c
-)
+# signal, nostr, qq, maixcam, dispatch: only when all-channels build (saves ~60KB in default)
+if(SC_ENABLE_ALL_CHANNELS)
+    list(APPEND CHANNEL_SOURCES
+        src/channels/signal.c
+        src/channels/nostr.c
+        src/channels/qq.c
+        src/channels/maixcam.c
+        src/channels/dispatch.c
+    )
+endif()
 
 # --- Memory engine sources (conditionally added) ---
 set(MEMORY_ENGINE_SOURCES)
@@ -358,7 +361,6 @@ set(SC_CORE_SOURCES
     src/migration.c
     src/version.c
     src/cli_commands.c
-    src/heartbeat.c
     src/cost.c
     src/memory/vector/math.c
     src/memory/vector/cosine.c
@@ -693,7 +695,15 @@ if(CMAKE_BUILD_TYPE STREQUAL "MinSizeRel" AND UNIX)
 endif()
 
 # --- Test-mode core library (same sources, compiled with SC_IS_TEST=1) ---
-add_library(seaclaw_core_test STATIC ${SC_CORE_SOURCES} ${SC_CRYPTO_SOURCES} ${SC_ASM_SOURCES})
+# When SC_ENABLE_ALL_CHANNELS=OFF, prod binary omits signal/nostr/qq/maixcam/dispatch,
+# but tests need them — add to test lib only.
+set(SC_TEST_EXTRA_CHANNELS)
+if(NOT SC_ENABLE_ALL_CHANNELS)
+    list(APPEND SC_TEST_EXTRA_CHANNELS
+        src/channels/signal.c src/channels/nostr.c src/channels/qq.c
+        src/channels/maixcam.c src/channels/dispatch.c)
+endif()
+add_library(seaclaw_core_test STATIC ${SC_CORE_SOURCES} ${SC_TEST_EXTRA_CHANNELS} ${SC_CRYPTO_SOURCES} ${SC_ASM_SOURCES})
 target_include_directories(seaclaw_core_test PUBLIC ${SC_ROOT}/include)
 target_include_directories(seaclaw_core_test PRIVATE ${SC_ROOT}/asm/generic)
 target_compile_definitions(seaclaw_core_test PRIVATE SC_IS_TEST=1)

@@ -13,6 +13,40 @@ ERRORS=""
 pass() { PASS=$((PASS + 1)); TOTAL=$((TOTAL + 1)); printf "  \033[32mPASS\033[0m  %s\n" "$1"; }
 fail() { FAIL=$((FAIL + 1)); TOTAL=$((TOTAL + 1)); ERRORS="${ERRORS}\n  - $1: $2"; printf "  \033[31mFAIL\033[0m  %s — %s\n" "$1" "$2"; }
 
+# Portable timeout: use gtimeout (Homebrew coreutils), timeout (Linux), or perl fallback
+if command -v gtimeout >/dev/null 2>&1; then
+  TIMEOUT_CMD="gtimeout"
+elif command -v timeout >/dev/null 2>&1; then
+  TIMEOUT_CMD="timeout"
+else
+  _perl_timeout() {
+    local secs="$1"; shift
+    perl -e '
+      use POSIX ":sys_wait_h";
+      my $pid = fork();
+      if ($pid == 0) { exec @ARGV; exit 127; }
+      my $elapsed = 0;
+      while ($elapsed < '"$secs"') {
+        my $r = waitpid($pid, WNOHANG);
+        if ($r > 0) { exit ($? >> 8); }
+        select(undef, undef, undef, 0.2);
+        $elapsed += 0.2;
+      }
+      kill "TERM", $pid;
+      select(undef, undef, undef, 0.5);
+      kill "KILL", $pid;
+      waitpid($pid, 0);
+      exit 124;
+    ' -- "$@"
+  }
+  TIMEOUT_CMD="_perl_timeout"
+fi
+
+run_with_timeout() {
+  local secs="$1"; shift
+  $TIMEOUT_CMD "$secs" "$@"
+}
+
 if [ -z "${OPENAI_API_KEY:-}" ]; then
   echo "ERROR: OPENAI_API_KEY not set" >&2; exit 1
 fi
@@ -59,7 +93,7 @@ echo "── MCP Server (JSON-RPC) ──"
 MCP_INIT='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"e2e-test","version":"1.0"}}}'
 MCP_LIST='{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
 
-MCP_OUT=$(printf '%s\n%s\n' "$MCP_INIT" "$MCP_LIST" | timeout 5 "$BINARY" mcp 2>/dev/null || true)
+MCP_OUT=$(printf '%s\n%s\n' "$MCP_INIT" "$MCP_LIST" | run_with_timeout 5 "$BINARY" mcp 2>/dev/null || true)
 
 if echo "$MCP_OUT" | grep -q '"tools"'; then
   pass "mcp_tools_list"
@@ -72,7 +106,7 @@ fi
 
 if echo "$MCP_OUT" | grep -q '"shell"'; then pass "mcp_has_shell_tool"; else fail "mcp_has_shell_tool" "shell not found"; fi
 if echo "$MCP_OUT" | grep -q '"file_read"'; then pass "mcp_has_file_read"; else fail "mcp_has_file_read" "file_read not found"; fi
-if echo "$MCP_OUT" | grep -q '"git"'; then pass "mcp_has_git_tool"; else fail "mcp_has_git_tool" "git not found"; fi
+if echo "$MCP_OUT" | grep -q '"git_operations"'; then pass "mcp_has_git_tool"; else fail "mcp_has_git_tool" "git_operations not found"; fi
 if echo "$MCP_OUT" | grep -q '"memory_store"'; then pass "mcp_has_memory_store"; else fail "mcp_has_memory_store" "memory_store not found"; fi
 if echo "$MCP_OUT" | grep -q '"cron_add"'; then pass "mcp_has_cron_add"; else fail "mcp_has_cron_add" "cron_add not found"; fi
 
@@ -83,7 +117,7 @@ echo ""
 echo "── MCP Tool Execution ──"
 
 MCP_EXEC_SHELL='{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"shell","arguments":{"command":"echo e2e_sentinel_42"}}}'
-MCP_OUT2=$(printf '%s\n%s\n' "$MCP_INIT" "$MCP_EXEC_SHELL" | timeout 10 "$BINARY" mcp 2>/dev/null || true)
+MCP_OUT2=$(printf '%s\n%s\n' "$MCP_INIT" "$MCP_EXEC_SHELL" | run_with_timeout 10 "$BINARY" mcp 2>/dev/null || true)
 
 if echo "$MCP_OUT2" | grep -q "e2e_sentinel_42"; then
   pass "mcp_shell_exec"
@@ -92,7 +126,7 @@ else
 fi
 
 MCP_EXEC_READ='{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"file_read","arguments":{"path":"README.md"}}}'
-MCP_OUT3=$(printf '%s\n%s\n' "$MCP_INIT" "$MCP_EXEC_READ" | timeout 10 "$BINARY" mcp 2>/dev/null || true)
+MCP_OUT3=$(printf '%s\n%s\n' "$MCP_INIT" "$MCP_EXEC_READ" | run_with_timeout 10 "$BINARY" mcp 2>/dev/null || true)
 
 if echo "$MCP_OUT3" | grep -qi "seaclaw\|autonomous"; then
   pass "mcp_file_read"
@@ -100,8 +134,8 @@ else
   fail "mcp_file_read" "README content not found"
 fi
 
-MCP_EXEC_GIT='{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"git","arguments":{"subcommand":"status"}}}'
-MCP_OUT4=$(printf '%s\n%s\n' "$MCP_INIT" "$MCP_EXEC_GIT" | timeout 10 "$BINARY" mcp 2>/dev/null || true)
+MCP_EXEC_GIT='{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"git_operations","arguments":{"operation":"status"}}}'
+MCP_OUT4=$(printf '%s\n%s\n' "$MCP_INIT" "$MCP_EXEC_GIT" | run_with_timeout 10 "$BINARY" mcp 2>/dev/null || true)
 
 if echo "$MCP_OUT4" | grep -qi "branch\|clean\|nothing to commit"; then
   pass "mcp_git_status"
@@ -118,7 +152,7 @@ echo "── Live LLM (OpenAI gpt-4o) ──"
 LOGFILE=$(mktemp /tmp/seaclaw_e2e_XXXXXX.log)
 
 echo "What is the capital of France? Answer in one word only." | \
-  SEACLAW_LOG="$LOGFILE" timeout 30 "$BINARY" agent 2>/dev/null &
+  SEACLAW_LOG="$LOGFILE" run_with_timeout 30 "$BINARY" agent 2>/dev/null &
 AGENT_PID=$!
 sleep 15
 kill $AGENT_PID 2>/dev/null || true
@@ -165,10 +199,14 @@ echo "── Live LLM Tool Calling ──"
 
 LOGFILE2=$(mktemp /tmp/seaclaw_e2e_XXXXXX.log)
 
-echo "Use the shell tool to run: echo TOOL_TEST_OK" | \
-  SEACLAW_LOG="$LOGFILE2" timeout 30 "$BINARY" agent 2>/dev/null &
+echo "You MUST use the shell tool right now. Run this exact command: echo TOOL_TEST_OK. Do not respond with text, just call the shell tool." | \
+  SEACLAW_LOG="$LOGFILE2" run_with_timeout 60 "$BINARY" agent 2>/dev/null &
 AGENT_PID=$!
-sleep 20
+# Tool-calling requires 2+ LLM round-trips: wait up to 45s
+for i in $(seq 1 9); do
+  sleep 5
+  if [ -f "$LOGFILE2" ] && grep -q '"event":"turn_complete"' "$LOGFILE2" 2>/dev/null; then break; fi
+done
 kill $AGENT_PID 2>/dev/null || true
 wait $AGENT_PID 2>/dev/null || true
 
@@ -178,10 +216,10 @@ if [ -f "$LOGFILE2" ]; then
   else
     fail "llm_tool_call_response" "no successful response"
   fi
-  if grep -q '"event":"tool_' "$LOGFILE2" || grep -q 'tool_call\|tool_use\|function_call' "$LOGFILE2"; then
+  if grep -q '"event":"tool_call_start"' "$LOGFILE2" || grep -q '"event":"tool_call"' "$LOGFILE2"; then
     pass "llm_tool_invocation"
   else
-    fail "llm_tool_invocation" "no tool call events in log"
+    fail "llm_tool_invocation" "no tool_call events in log"
   fi
   if grep -q '"event":"turn_complete"' "$LOGFILE2"; then
     pass "llm_tool_turn_complete"
@@ -204,7 +242,7 @@ echo "── Live LLM Streaming ──"
 LOGFILE3=$(mktemp /tmp/seaclaw_e2e_XXXXXX.log)
 
 echo "Count from 1 to 5, one number per line." | \
-  SEACLAW_LOG="$LOGFILE3" timeout 30 "$BINARY" agent 2>/dev/null &
+  SEACLAW_LOG="$LOGFILE3" run_with_timeout 30 "$BINARY" agent 2>/dev/null &
 AGENT_PID=$!
 sleep 15
 kill $AGENT_PID 2>/dev/null || true
@@ -236,7 +274,7 @@ fi
 
 LOGFILE4=$(mktemp /tmp/seaclaw_e2e_XXXXXX.log)
 echo "Hello" | \
-  OPENAI_API_KEY="sk-invalid" SEACLAW_LOG="$LOGFILE4" timeout 15 "$BINARY" agent 2>/dev/null &
+  OPENAI_API_KEY="sk-invalid" SEACLAW_LOG="$LOGFILE4" run_with_timeout 15 "$BINARY" agent 2>/dev/null &
 AGENT_PID=$!
 sleep 10
 kill $AGENT_PID 2>/dev/null || true
@@ -268,7 +306,7 @@ ALL_OK=true
 for i in 1 2 3; do
   TMPLOG=$(mktemp /tmp/seaclaw_e2e_concurrent_${i}_XXXXXX.log)
   (echo "Say the number $i and nothing else." | \
-    SEACLAW_LOG="$TMPLOG" timeout 30 "$BINARY" agent 2>/dev/null; \
+    SEACLAW_LOG="$TMPLOG" run_with_timeout 30 "$BINARY" agent 2>/dev/null; \
     echo "$?" > "${TMPLOG}.exit") &
   PIDS="$PIDS $!"
 done
