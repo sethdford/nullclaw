@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// Chat message bubble with user vs assistant styling.
+/// Uses SCTokens for accent, spacing, and radius.
 public struct ChatBubble: View {
     public enum Role {
         case user
@@ -16,17 +17,17 @@ public struct ChatBubble: View {
     }
 
     public var body: some View {
-        HStack(alignment: .bottom, spacing: 8) {
-            if role == .user { Spacer(minLength: 48) }
+        HStack(alignment: .bottom, spacing: SCTokens.spaceSm) {
+            if role == .user { Spacer(minLength: SCTokens.space2xl) }
             Text(text)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(role == .user ? Color.accentColor : Color(white: 0.92))
+                .background(role == .user ? SCTokens.Dark.accent : Color(white: 0.92))
                 .foregroundColor(role == .user ? .white : .primary)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            if role == .assistant { Spacer(minLength: 48) }
+                .clipShape(RoundedRectangle(cornerRadius: SCTokens.radiusXl, style: .continuous))
+            if role == .assistant { Spacer(minLength: SCTokens.space2xl) }
         }
-        .padding(.horizontal, 4)
+        .padding(.horizontal, SCTokens.spaceXs)
     }
 }
 

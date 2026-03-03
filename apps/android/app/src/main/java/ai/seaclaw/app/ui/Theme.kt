@@ -11,18 +11,16 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-val Coral = Color(0xFFF97066)
-
 private val DarkColorScheme = darkColorScheme(
-    primary = Coral,
+    primary = SCTokens.Dark.accent,
     onPrimary = Color.White,
-    secondary = Coral,
+    secondary = SCTokens.Dark.accent,
     onSecondary = Color.White,
-    tertiary = Coral,
-    surface = Color(0xFF121212),
-    onSurface = Color(0xFFE0E0E0),
-    background = Color(0xFF121212),
-    onBackground = Color(0xFFE0E0E0)
+    tertiary = SCTokens.Dark.accent,
+    surface = SCTokens.Dark.bgSurface,
+    onSurface = SCTokens.Dark.text,
+    background = SCTokens.Dark.bg,
+    onBackground = SCTokens.Dark.text
 )
 
 @Composable

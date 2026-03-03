@@ -21,8 +21,8 @@ public struct ToolCallCard: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: SCTokens.spaceSm) {
+            HStack(spacing: SCTokens.spaceSm) {
                 Image(systemName: statusIcon)
                     .foregroundStyle(statusColor)
                 Text(name)
@@ -48,9 +48,9 @@ public struct ToolCallCard: View {
                     .lineLimit(3)
             }
         }
-        .padding(12)
+        .padding(SCTokens.spaceMd)
         .background(Color(white: 0.95))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: SCTokens.radiusLg, style: .continuous))
     }
 
     private var statusIcon: String {
@@ -64,8 +64,8 @@ public struct ToolCallCard: View {
     private var statusColor: Color {
         switch status {
         case .running: return .orange
-        case .completed: return .green
-        case .failed: return .red
+        case .completed: return SCTokens.Dark.success
+        case .failed: return SCTokens.Dark.error
         }
     }
 }

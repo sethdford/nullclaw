@@ -533,10 +533,9 @@ static size_t openai_stream_write_cb(const char *data, size_t len, void *userdat
 /* WebSocket streaming: convert base URL to wss:// and stream via WS frames.
  * Returns SC_ERR_NOT_SUPPORTED if WS connect fails, signaling SSE fallback. */
 #if !SC_IS_TEST && defined(SC_GATEWAY_POSIX)
-static sc_error_t openai_stream_ws(sc_openai_ctx_t *oc, sc_allocator_t *alloc,
-                                   const char *body, size_t body_len,
-                                   sc_stream_callback_t callback, void *callback_ctx,
-                                   sc_stream_chat_result_t *out) {
+static sc_error_t openai_stream_ws(sc_openai_ctx_t *oc, sc_allocator_t *alloc, const char *body,
+                                   size_t body_len, sc_stream_callback_t callback,
+                                   void *callback_ctx, sc_stream_chat_result_t *out) {
     const char *base = oc->base_url ? oc->base_url : "https://api.openai.com/v1/chat/completions";
     char ws_url[512];
     const char *p = base;
@@ -558,13 +557,14 @@ static sc_error_t openai_stream_ws(sc_openai_ctx_t *oc, sc_allocator_t *alloc,
     else
         auth_hdr[0] = '\0';
 
-    sc_ws_conn_t *ws = sc_ws_connect(alloc, ws_url, NULL);
-    if (!ws)
+    sc_ws_client_t *ws = NULL;
+    sc_error_t conn_err = sc_ws_connect(alloc, ws_url, &ws);
+    if (conn_err != SC_OK || !ws)
         return SC_ERR_NOT_SUPPORTED;
 
-    sc_error_t err = sc_ws_send(ws, body, body_len, false);
+    sc_error_t err = sc_ws_send(ws, body, body_len);
     if (err != SC_OK) {
-        sc_ws_close(ws);
+        sc_ws_close(ws, alloc);
         return SC_ERR_NOT_SUPPORTED;
     }
 
@@ -574,8 +574,7 @@ static sc_error_t openai_stream_ws(sc_openai_ctx_t *oc, sc_allocator_t *alloc,
     for (;;) {
         char *frame = NULL;
         size_t frame_len = 0;
-        bool is_binary = false;
-        err = sc_ws_recv(ws, alloc, &frame, &frame_len, &is_binary);
+        err = sc_ws_recv(ws, alloc, &frame, &frame_len);
         if (err != SC_OK || !frame)
             break;
 
@@ -587,8 +586,7 @@ static sc_error_t openai_stream_ws(sc_openai_ctx_t *oc, sc_allocator_t *alloc,
         sc_json_value_t *root = NULL;
         if (sc_json_parse(alloc, frame, frame_len, &root) == SC_OK && root) {
             sc_json_value_t *choices = sc_json_object_get(root, "choices");
-            if (choices && choices->type == SC_JSON_ARRAY &&
-                choices->data.array.count > 0) {
+            if (choices && choices->type == SC_JSON_ARRAY && choices->data.array.len > 0) {
                 sc_json_value_t *c0 = choices->data.array.items[0];
                 sc_json_value_t *delta = sc_json_object_get(c0, "delta");
                 if (delta) {
@@ -596,8 +594,10 @@ static sc_error_t openai_stream_ws(sc_openai_ctx_t *oc, sc_allocator_t *alloc,
                     if (text) {
                         size_t tlen = strlen(text);
                         sc_stream_chunk_t chunk = {
-                            .delta = text, .delta_len = tlen,
-                            .is_final = false, .token_count = 1,
+                            .delta = text,
+                            .delta_len = tlen,
+                            .is_final = false,
+                            .token_count = 1,
                         };
                         callback(callback_ctx, &chunk);
                         if (content_len + tlen >= content_cap) {
@@ -627,10 +627,13 @@ static sc_error_t openai_stream_ws(sc_openai_ctx_t *oc, sc_allocator_t *alloc,
         alloc->free(alloc->ctx, frame, frame_len);
     }
 
-    sc_ws_close(ws);
+    sc_ws_close(ws, alloc);
 
     sc_stream_chunk_t final_chunk = {
-        .delta = NULL, .delta_len = 0, .is_final = true, .token_count = 0,
+        .delta = NULL,
+        .delta_len = 0,
+        .is_final = true,
+        .token_count = 0,
     };
     callback(callback_ctx, &final_chunk);
 
@@ -728,6 +731,17 @@ static sc_error_t openai_stream_chat(void *ctx, sc_allocator_t *alloc,
     sc_json_free(alloc, root);
     if (err != SC_OK)
         return err;
+
+#if defined(SC_GATEWAY_POSIX)
+    if (oc->ws_streaming) {
+        sc_error_t ws_err =
+            openai_stream_ws(oc, alloc, body, body_len, callback, callback_ctx, out);
+        if (ws_err == SC_OK) {
+            alloc->free(alloc->ctx, body, body_len);
+            return SC_OK;
+        }
+    }
+#endif
 
     const char *url = oc->base_url ? oc->base_url : SC_OPENAI_URL;
     char url_buf[512];

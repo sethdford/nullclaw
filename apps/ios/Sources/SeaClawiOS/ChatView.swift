@@ -14,7 +14,7 @@ struct ChatView: View {
             VStack(spacing: 0) {
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 12) {
+                        LazyVStack(alignment: .leading, spacing: SCTokens.spaceMd) {
                             ForEach(messages) { msg in
                                 ChatBubble(text: msg.text, role: msg.role)
                                     .id(msg.id)
@@ -33,7 +33,7 @@ struct ChatView: View {
                     }
                     .onChange(of: messages.count) { _, _ in
                         if let last = messages.last {
-                            withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+                            withAnimation(SCTokens.springExpressive) { proxy.scrollTo(last.id, anchor: .bottom) }
                         }
                     }
                 }
@@ -42,14 +42,14 @@ struct ChatView: View {
                     HStack {
                         Text(err)
                             .font(.caption)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(SCTokens.Dark.error)
                         Spacer()
                         Button("Dismiss") { errorBanner = nil }
                             .font(.caption)
                     }
-                    .padding(8)
-                    .background(Color.red.opacity(0.1))
-                    .cornerRadius(8)
+                    .padding(SCTokens.spaceSm)
+                    .background(SCTokens.Dark.errorDim)
+                    .cornerRadius(SCTokens.radiusMd)
                 }
                 ChatInputBar(text: $inputText) {
                     sendMessage()
@@ -59,9 +59,9 @@ struct ChatView: View {
             .navigationTitle("Chat")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    HStack(spacing: 8) {
+                        HStack(spacing: SCTokens.spaceSm) {
                         Circle()
-                            .fill(connectionManager.isConnected ? Color.green : Color.red)
+                            .fill(connectionManager.isConnected ? SCTokens.Dark.success : SCTokens.Dark.error)
                             .frame(width: 8, height: 8)
                         if connectionManager.isConnected {
                             Text("Connected")

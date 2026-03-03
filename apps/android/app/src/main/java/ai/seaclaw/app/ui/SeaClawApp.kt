@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -57,9 +58,9 @@ fun SeaClawApp(gatewayManager: GatewayManager) {
                             }
                         },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = SeaClawTheme.Coral,
-                            selectedTextColor = SeaClawTheme.Coral,
-                            indicatorColor = SeaClawTheme.Coral.copy(alpha = 0.2f)
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                         )
                     )
                 }

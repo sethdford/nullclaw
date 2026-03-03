@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import ai.seaclaw.app.ui.SCTokens
 import ai.seaclaw.app.GatewayClient
 import ai.seaclaw.app.GatewayManager
 import kotlinx.coroutines.launch
@@ -117,20 +118,20 @@ fun ChatScreen(gatewayManager: GatewayManager) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(SCTokens.spaceMd)
     ) {
         errorBanner?.let { msg ->
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(SCTokens.radiusMd),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp)
+                    .padding(bottom = SCTokens.spaceSm)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(12.dp),
+                        .padding(SCTokens.spaceMd),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -144,7 +145,7 @@ fun ChatScreen(gatewayManager: GatewayManager) {
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(SCTokens.spaceSm)
         ) {
             items(messages) { msg ->
                 ChatBubble(text = msg.text, role = msg.role)
@@ -162,7 +163,7 @@ fun ChatScreen(gatewayManager: GatewayManager) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
+                .padding(vertical = SCTokens.spaceSm),
             verticalAlignment = Alignment.CenterVertically
         ) {
             BasicTextField(
@@ -170,7 +171,7 @@ fun ChatScreen(gatewayManager: GatewayManager) {
                 onValueChange = { inputText = it },
                 modifier = Modifier
                     .weight(1f)
-                    .padding(12.dp)
+                    .padding(SCTokens.spaceMd)
                     .height(48.dp),
                 decorationBox = { inner ->
                     Box(
@@ -202,7 +203,7 @@ fun ChatScreen(gatewayManager: GatewayManager) {
                     }
                 }
             ) {
-                Icon(Icons.Default.Send, contentDescription = "Send", tint = SeaClawTheme.Coral)
+                Icon(Icons.Default.Send, contentDescription = "Send", tint = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -216,13 +217,13 @@ private fun ChatBubble(text: String, role: Role) {
     ) {
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = if (role == Role.USER) SeaClawTheme.Coral else MaterialTheme.colorScheme.surfaceVariant
+                containerColor = if (role == Role.USER) SCTokens.Dark.accent else MaterialTheme.colorScheme.surfaceVariant
             ),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(SCTokens.radiusXl)
         ) {
             Text(
                 text = text,
-                modifier = Modifier.padding(14.dp),
+                modifier = Modifier.padding(14.dp)
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (role == Role.USER) Color.White else MaterialTheme.colorScheme.onSurface
             )
@@ -239,9 +240,9 @@ private fun ToolCallCard(
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(SCTokens.radiusLg)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(SCTokens.spaceMd)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(name, style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.weight(1f))
@@ -250,11 +251,11 @@ private fun ToolCallCard(
                 }
             }
             if (!arguments.isNullOrEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(SCTokens.spaceXs))
                 Text(arguments, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             }
             if (!result.isNullOrEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(SCTokens.spaceXs))
                 Text(result, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             }
         }

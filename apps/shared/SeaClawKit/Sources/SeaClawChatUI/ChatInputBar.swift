@@ -13,7 +13,7 @@ public struct ChatInputBar: View {
     }
 
     public var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: SCTokens.spaceMd) {
             TextField(placeholder, text: $text, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(1...6)
@@ -25,12 +25,12 @@ public struct ChatInputBar: View {
             Button(action: onSend) {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(text.isEmpty ? Color.secondary : Color.accentColor)
+                    .foregroundStyle(text.isEmpty ? Color.secondary : SCTokens.Dark.accent)
             }
             .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, SCTokens.spaceMd)
+        .padding(.vertical, SCTokens.spaceSm)
     }
 }
 
