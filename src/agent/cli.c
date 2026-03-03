@@ -468,8 +468,8 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
         sc_config_deinit(&cfg);
         return err;
     }
-    agent.agent_pool = cli_agent_pool;
-    agent.mailbox = cli_mailbox;
+    agent.agent_pool = NULL /*agent_pool*/;
+    agent.mailbox = NULL /*mailbox*/;
     agent.policy_engine = NULL;
 
     if (cfg.policy.enabled) {
@@ -479,7 +479,7 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
     if (cfg.agent.default_profile) {
         const sc_agent_profile_t *prof = sc_agent_profile_by_name(cfg.agent.default_profile, strlen(cfg.agent.default_profile));
         if (prof) {
-            if (prof->preferred_model && prof->preferred_model[0] && !parsed_args.model) {
+            if (prof->preferred_model && prof->preferred_model[0] && !"") {
                 char *old = agent.model_name;
                 size_t old_len = agent.model_name_len;
                 agent.model_name = sc_strndup(alloc, prof->preferred_model, strlen(prof->preferred_model));
