@@ -25,6 +25,7 @@ void run_peripheral_tests(void);
 void run_e2e_tests(void);
 void run_subsystems_tests(void);
 void run_config_parse_tests(void);
+void run_config_migrate_tests(void);
 void run_adversarial_tests(void);
 void run_gateway_http_tests(void);
 void run_memory_full_tests(void);
@@ -101,6 +102,7 @@ int main(void) {
     run_e2e_tests();
     run_subsystems_tests();
     run_config_parse_tests();
+    run_config_migrate_tests();
     run_adversarial_tests();
     run_gateway_http_tests();
     run_memory_full_tests();
@@ -152,6 +154,7 @@ int main(void) {
     run_util_modules_tests();
     run_roadmap_tests();
     run_new_features_tests();
+    run_ollama_integration_tests();
 
     SC_TEST_REPORT();
     SC_TEST_EXIT();

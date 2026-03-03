@@ -396,6 +396,11 @@ static sc_error_t gemini_chat(void *ctx, sc_allocator_t *alloc, const sc_chat_re
         uint32_t max_tok = request->max_tokens ? request->max_tokens : SC_GEMINI_DEFAULT_MAX_TOKENS;
         sc_json_object_set(alloc, gen_cfg, "maxOutputTokens",
                            sc_json_number_new(alloc, (double)max_tok));
+        if (request->response_format && request->response_format_len >= 4 &&
+            memcmp(request->response_format, "json", 4) == 0) {
+            sc_json_object_set(alloc, gen_cfg, "responseMimeType",
+                sc_json_string_new(alloc, "application/json", 16));
+        }
     }
 
     /* Safety settings: BLOCK_NONE for minimal filtering (matching Zig default) */

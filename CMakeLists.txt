@@ -1088,6 +1088,7 @@ set(SC_TEST_SOURCES
     tests/test_e2e.c
     tests/test_subsystems.c
     tests/test_config_parse.c
+    tests/test_config_migrate.c
     tests/test_adversarial.c
     tests/test_gateway_http.c
     tests/test_memory_full.c
