@@ -37,14 +37,14 @@ const tools = [
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SeaClaw — Bring AI to every device on Earth</title>
-    <meta name="description" content="A complete autonomous AI agent runtime in 282 kilobytes of pure C. One static binary. Zero dependencies. 50+ providers. Runs on anything with a CPU." />
+    <meta name="description" content="A complete autonomous AI agent runtime in 349 kilobytes of pure C. One static binary. Zero dependencies. 50+ providers. Runs on anything with a CPU." />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <link rel="icon" type="image/png" sizes="32x32" href={`${base}favicon-32.png`} />
     <link rel="apple-touch-icon" href={`${base}apple-touch-icon.png`} />
     <link rel="manifest" href={`${base}site.webmanifest`} />
     <meta name="theme-color" content="#f97066" />
     <meta property="og:title" content="SeaClaw — Bring AI to every device on Earth" />
-    <meta property="og:description" content="282 KB binary. 50+ AI providers. 20 channels. 47 tools. Zero dependencies. Pure C." />
+    <meta property="og:description" content="349 KB binary. 50+ AI providers. 20 channels. 47 tools. Zero dependencies. Pure C." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://sethdford.github.io/seaclaw/" />
     <meta property="og:image" content="https://sethdford.github.io/seaclaw/og-image.png" />
@@ -52,14 +52,14 @@ const tools = [
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="SeaClaw — Bring AI to every device on Earth" />
-    <meta name="twitter:description" content="282 KB binary. 50+ AI providers. 20 channels. 47 tools. Zero dependencies. Pure C." />
+    <meta name="twitter:description" content="349 KB binary. 50+ AI providers. 20 channels. 47 tools. Zero dependencies. Pure C." />
     <meta name="twitter:image" content="https://sethdford.github.io/seaclaw/og-image.png" />
 
     <script type="application/ld+json" set:html={JSON.stringify({
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       "name": "SeaClaw",
-      "description": "A complete autonomous AI agent runtime in 282 kilobytes of pure C.",
+      "description": "A complete autonomous AI agent runtime in 349 kilobytes of pure C.",
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "Cross-platform",
       "url": "https://sethdford.github.io/seaclaw/",
@@ -90,7 +90,7 @@ const tools = [
           Bring AI to every device on&nbsp;Earth.
         </h1>
         <p class="hero-desc text-[clamp(1.05rem,2.2vw,1.3rem)] leading-relaxed mb-10 opacity-0 max-w-2xl mx-auto" style="color: var(--color-text-secondary)">
-          A complete autonomous AI agent runtime in <strong style="color: var(--color-text)">282&nbsp;kilobytes</strong> of pure&nbsp;C.<br />
+          A complete autonomous AI agent runtime in <strong style="color: var(--color-text)">349&nbsp;kilobytes</strong> of pure&nbsp;C.<br />
           One static binary. Zero dependencies. Boots in under 2&nbsp;milliseconds.
         </p>
         <div class="hero-buttons flex flex-col sm:flex-row gap-4 justify-center opacity-0">
@@ -106,9 +106,9 @@ const tools = [
       <div class="max-w-5xl mx-auto">
         <div class="numbers-grid glass px-4 md:px-8 py-8 md:py-10 grid grid-cols-3 md:grid-cols-6 gap-0">
           {[
-            { count: 282, suffix: " KB", label: "Binary" },
+            { count: 349, suffix: " KB", label: "Binary" },
             { count: 2, prefix: "<", suffix: " ms", label: "Startup" },
-            { count: 1946, label: "Tests" },
+            { count: 1987, label: "Tests" },
             { count: 50, suffix: "+", label: "Providers" },
             { count: 20, label: "Channels" },
             { count: 47, label: "Tools" },
@@ -286,7 +286,7 @@ const tools = [
           Bring AI to every device on&nbsp;Earth.
         </h2>
         <p class="cta-sub text-[clamp(1.1rem,2.5vw,1.4rem)] mb-14 opacity-0 max-w-xl mx-auto leading-relaxed" style="color: var(--color-text-secondary)">
-          Open source. MIT licensed. 282 KB. Runs anywhere.
+          Open source. MIT licensed. 349 KB. Runs anywhere.
         </p>
         <div class="cta-buttons flex flex-col sm:flex-row gap-4 justify-center opacity-0">
           <a href={`${base}getting-started/installation/`} class="btn-primary">Get Started</a>
@@ -335,7 +335,7 @@ const tools = [
             '<div><span style="color:rgba(255,255,255,0.3)">$ </span><span style="color:rgba(255,255,255,0.8)">cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel -DSC_ENABLE_LTO=ON && cmake --build .</span></div>',
             '<div><span style="color:rgba(255,255,255,0.45)">[100%] Built target seaclaw</span></div>',
             '<div><span style="color:rgba(255,255,255,0.3)">$ </span><span style="color:rgba(255,255,255,0.8)">ls -lh seaclaw</span></div>',
-            '<div><span style="color:rgba(255,255,255,0.45)">-rwxr-xr-x  1 user  staff  </span><span style="color:var(--color-accent)">282K</span><span style="color:rgba(255,255,255,0.45)">  seaclaw</span></div>',
+            '<div><span style="color:rgba(255,255,255,0.45)">-rwxr-xr-x  1 user  staff  </span><span style="color:var(--color-accent)">349K</span><span style="color:rgba(255,255,255,0.45)">  seaclaw</span></div>',
           ].join("");
         }
 
@@ -462,10 +462,10 @@ const tools = [
               { prompt: true, text: "cmake --build ." },
               { prompt: false, text: "[100%] Built target seaclaw" },
               { prompt: true, text: "ls -lh seaclaw" },
-              { prompt: false, text: "-rwxr-xr-x  1 user  staff  282K  seaclaw", highlights: [{ text: "282K", cls: accentColor }] },
-              { prompt: true, text: "./seaclaw agent -m \"Hello from a 282 KB binary.\"" },
+              { prompt: false, text: "-rwxr-xr-x  1 user  staff  349K  seaclaw", highlights: [{ text: "349K", cls: accentColor }] },
+              { prompt: true, text: "./seaclaw agent -m \"Hello from a 349 KB binary.\"" },
               { prompt: false, text: "Hello! I'm SeaClaw — a fully autonomous AI assistant", highlights: [{ text: "SeaClaw", cls: accentColor }] },
-              { prompt: false, text: "running in 282 kilobytes. How can I help?" },
+              { prompt: false, text: "running in 349 kilobytes. How can I help?" },
             ];
 
             let lineIdx = 0;

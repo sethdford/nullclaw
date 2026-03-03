@@ -7,7 +7,7 @@ Scope: entire repository.
 
 seaclaw is a C11 autonomous AI assistant runtime optimized for:
 
-- minimal binary size (282 KB core MinSizeRel)
+- minimal binary size (349 KB core MinSizeRel)
 - minimal memory footprint (target: < 5 MB peak RSS)
 - zero dependencies beyond libc, optional SQLite and libcurl
 - Zig reference implementation archived in `archive/zig-reference/`
@@ -25,7 +25,7 @@ Key extension points:
 - `src/runtime/` (`sc_runtime_t`) — execution environments
 - `src/peripherals/` (`sc_peripheral_t`) — hardware boards (Arduino, STM32, RPi)
 
-Current scale: **432 source + header files, ~64K lines of C, ~26K lines of tests, 1,946 tests**.
+Current scale: **433 source + header files, ~67K lines of C, ~26K lines of tests, 1,987 tests**.
 
 Build and test:
 
@@ -49,7 +49,7 @@ These codebase realities should drive every design decision:
 2. **Binary size and memory are hard product constraints**
    - `cmake -DCMAKE_BUILD_TYPE=MinSizeRel -DSC_ENABLE_LTO=ON` is the release target. Every dependency and abstraction has a size cost.
    - Avoid adding unnecessary runtime allocations or large data tables without justification.
-   - Current release binary: 282 KB (core) / 380 KB (full).
+   - Current release binary: 349 KB (core) / 430 KB (full).
 
 3. **Security-critical surfaces are first-class**
    - `src/gateway/gateway.c`, `src/security/`, `src/tools/`, `src/runtime/` carry high blast radius.
@@ -62,7 +62,7 @@ These codebase realities should drive every design decision:
    - All code compiles with `-Wall -Wextra -Wpedantic -Werror`.
    - Use `SC_IS_TEST` guards to bypass side effects (spawning, opening URLs, real hardware I/O).
 
-5. **All 1,946+ tests must pass at zero ASan errors**
+5. **All 1,987+ tests must pass at zero ASan errors**
    - The test suite uses AddressSanitizer for leak and overflow detection.
    - Every allocation must be freed (`free()` or cleanup function).
    - Use `SC_IS_TEST` mock paths in tests — no network, no process spawning.
@@ -143,7 +143,7 @@ src/
 
 include/seaclaw/       public C headers
 
-tests/                 71 test files, 1,946 tests
+tests/                 71 test files, 1,987 tests
 
 asm/                   platform-specific assembly (aarch64, x86_64, generic C)
 
