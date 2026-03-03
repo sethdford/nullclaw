@@ -110,6 +110,12 @@ export class ScSlider extends LitElement {
       transform: scale(0.95);
     }
 
+    .track-wrap:has(input:focus-visible) {
+      outline: var(--sc-focus-ring-width) solid var(--sc-focus-ring);
+      outline-offset: var(--sc-focus-ring-offset);
+      border-radius: var(--sc-radius-full);
+    }
+
     input:focus-visible ~ .track .thumb {
       border-color: var(--sc-accent);
       box-shadow: 0 0 0 var(--sc-focus-ring-width) var(--sc-focus-ring);

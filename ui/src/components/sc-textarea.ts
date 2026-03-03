@@ -72,11 +72,13 @@ export class ScTextarea extends LitElement {
       border-color: var(--sc-text-faint);
     }
 
-    textarea:focus-within {
+    textarea:focus-visible {
       border-color: var(--sc-accent);
       box-shadow:
         0 0 0 var(--sc-focus-ring-width) var(--sc-focus-ring),
         0 0 0 3px var(--sc-accent-subtle);
+      outline: var(--sc-focus-ring-width) solid var(--sc-focus-ring);
+      outline-offset: var(--sc-focus-ring-offset);
     }
 
     textarea.error {
