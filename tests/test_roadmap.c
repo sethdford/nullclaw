@@ -1,9 +1,6 @@
 #include "test_framework.h"
 #include "seaclaw/update.h"
 #include "seaclaw/daemon.h"
-#include "seaclaw/multimodal.h"
-#include "seaclaw/voice.h"
-#include "seaclaw/websocket.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/string.h"
 #include "seaclaw/agent/spawn.h"
@@ -21,6 +18,9 @@
 #include "seaclaw/security/replay.h"
 #include "seaclaw/plugin.h"
 #include "seaclaw/agent/profile.h"
+#include "seaclaw/tools/factory.h"
+#include "seaclaw/config.h"
+#include "seaclaw/agent.h"
 #include <string.h>
 #include <time.h>
 
@@ -545,6 +545,171 @@ static void test_update_check_not_supported(void) {
     sc_allocator_t a = sc_system_allocator();
     sc_error_t err = sc_update_check(&a, NULL, NULL);
     SC_ASSERT_EQ(err, SC_ERR_NOT_SUPPORTED);
+}
+
+
+static void test_integ_config_defaults(void) {
+    sc_allocator_t a = sc_system_allocator();
+    sc_config_t cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    sc_error_t err = sc_config_load(&a, &cfg);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(cfg.agent.pool_max_concurrent, 8);
+    SC_ASSERT_NULL(cfg.agent.default_profile);
+    SC_ASSERT_EQ(cfg.policy.enabled, false);
+    SC_ASSERT_EQ(cfg.plugins.enabled, false);
+    sc_config_deinit(&cfg);
+}
+
+static void test_integ_config_parse_pool(void) {
+    sc_allocator_t a = sc_system_allocator();
+    sc_config_t cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    sc_error_t err = sc_config_load(&a, &cfg);
+    SC_ASSERT_EQ(err, SC_OK);
+    const char *json = "{\"agent\":{\"pool_max_concurrent\":16}}";
+    err = sc_config_parse_json(&cfg, json, strlen(json));
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(cfg.agent.pool_max_concurrent, 16);
+    sc_config_deinit(&cfg);
+}
+
+static void test_integ_config_parse_policy(void) {
+    sc_allocator_t a = sc_system_allocator();
+    sc_config_t cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    sc_error_t err = sc_config_load(&a, &cfg);
+    SC_ASSERT_EQ(err, SC_OK);
+    const char *json = "{\"policy\":{\"enabled\":true}}";
+    err = sc_config_parse_json(&cfg, json, strlen(json));
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(cfg.policy.enabled, true);
+    sc_config_deinit(&cfg);
+}
+
+static void test_integ_agent_fields(void) {
+    sc_agent_t agent;
+    memset(&agent, 0, sizeof(agent));
+    SC_ASSERT_NULL(agent.agent_pool);
+    SC_ASSERT_NULL(agent.mailbox);
+    SC_ASSERT_NULL(agent.policy_engine);
+    sc_allocator_t a = sc_system_allocator();
+    sc_agent_pool_t *pool = sc_agent_pool_create(&a, 4);
+    sc_mailbox_t *mb = sc_mailbox_create(&a, 8);
+    sc_policy_engine_t *pe = sc_policy_engine_create(&a);
+    agent.agent_pool = pool;
+    agent.mailbox = mb;
+    agent.policy_engine = pe;
+    SC_ASSERT_NOT_NULL(agent.agent_pool);
+    SC_ASSERT_NOT_NULL(agent.mailbox);
+    SC_ASSERT_NOT_NULL(agent.policy_engine);
+    sc_policy_engine_destroy(pe);
+    sc_mailbox_destroy(mb);
+    sc_agent_pool_destroy(pool);
+}
+
+static void test_integ_factory_pool(void) {
+    sc_allocator_t a = sc_system_allocator();
+    sc_agent_pool_t *pool = sc_agent_pool_create(&a, 2);
+    sc_tool_t *tools = NULL;
+    size_t count = 0;
+    sc_error_t err = sc_tools_create_default(&a, ".", 1, NULL, NULL, NULL, NULL, pool, &tools, &count);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT(count > 0);
+    sc_tools_destroy_default(&a, tools, count);
+    sc_agent_pool_destroy(pool);
+}
+
+static void test_integ_factory_null_pool(void) {
+    sc_allocator_t a = sc_system_allocator();
+    sc_tool_t *tools = NULL;
+    size_t count = 0;
+    sc_error_t err = sc_tools_create_default(&a, ".", 1, NULL, NULL, NULL, NULL, NULL, &tools, &count);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_tools_destroy_default(&a, tools, count);
+}
+
+static void test_integ_policy_deny(void) {
+    sc_allocator_t a = sc_system_allocator();
+    sc_policy_engine_t *pe = sc_policy_engine_create(&a);
+    sc_policy_match_t m = { .tool = "shell" };
+    sc_policy_engine_add_rule(pe, "d", m, SC_POLICY_DENY, "no");
+    sc_policy_eval_ctx_t ctx = { .tool_name = "shell", .args_json = "{}" };
+    sc_policy_result_t res = sc_policy_engine_evaluate(pe, &ctx);
+    SC_ASSERT_EQ(res.action, SC_POLICY_DENY);
+    sc_policy_engine_destroy(pe);
+}
+
+static void test_integ_policy_allow(void) {
+    sc_allocator_t a = sc_system_allocator();
+    sc_policy_engine_t *pe = sc_policy_engine_create(&a);
+    sc_policy_match_t m = { .tool = "shell" };
+    sc_policy_engine_add_rule(pe, "d", m, SC_POLICY_DENY, "no");
+    sc_policy_eval_ctx_t ctx = { .tool_name = "file_read", .args_json = "{}" };
+    sc_policy_result_t res = sc_policy_engine_evaluate(pe, &ctx);
+    SC_ASSERT_EQ(res.action, SC_POLICY_ALLOW);
+    sc_policy_engine_destroy(pe);
+}
+
+static void test_integ_profile_coding(void) {
+    const sc_agent_profile_t *p = sc_agent_profile_get(SC_PROFILE_CODING);
+    SC_ASSERT_NOT_NULL(p);
+    SC_ASSERT(p->max_iterations > 0);
+    SC_ASSERT(p->max_history > 0);
+    SC_ASSERT_NOT_NULL(p->preferred_model);
+}
+
+static void test_integ_pool_roundtrip(void) {
+    sc_allocator_t a = sc_system_allocator();
+    sc_agent_pool_t *pool = sc_agent_pool_create(&a, 4);
+    sc_spawn_config_t cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.mode = SC_SPAWN_ONE_SHOT;
+    cfg.max_iterations = 5;
+    uint64_t id = 0;
+    SC_ASSERT_EQ(sc_agent_pool_spawn(pool, &cfg, "t", 1, "l", &id), SC_OK);
+    SC_ASSERT(id > 0);
+    sc_agent_pool_info_t *info = NULL;
+    size_t ic = 0;
+    SC_ASSERT_EQ(sc_agent_pool_list(pool, &a, &info, &ic), SC_OK);
+    SC_ASSERT(ic >= 1);
+    if (info) a.free(a.ctx, info, ic * sizeof(sc_agent_pool_info_t));
+    SC_ASSERT_EQ(sc_agent_pool_cancel(pool, id), SC_OK);
+    sc_agent_pool_destroy(pool);
+}
+
+static void test_integ_mailbox_roundtrip(void) {
+    sc_allocator_t a = sc_system_allocator();
+    sc_mailbox_t *mb = sc_mailbox_create(&a, 8);
+    SC_ASSERT_EQ(sc_mailbox_register(mb, 10), SC_OK);
+    SC_ASSERT_EQ(sc_mailbox_register(mb, 20), SC_OK);
+    SC_ASSERT_EQ(sc_mailbox_send(mb, 10, 20, SC_MSG_TASK, "hi", 2, 42), SC_OK);
+    sc_message_t msg;
+    SC_ASSERT_EQ(sc_mailbox_recv(mb, 20, &msg), SC_OK);
+    SC_ASSERT_EQ(msg.type, SC_MSG_TASK);
+    SC_ASSERT_STR_EQ(msg.payload, "hi");
+    a.free(a.ctx, msg.payload, msg.payload_len + 1);
+    sc_mailbox_destroy(mb);
+}
+
+static void test_integ_thread_binding(void) {
+    sc_allocator_t a = sc_system_allocator();
+    sc_thread_binding_t *tb = sc_thread_binding_create(&a, 16);
+    SC_ASSERT_NOT_NULL(tb);
+    SC_ASSERT_EQ(sc_thread_binding_bind(tb, "discord", "thread-123", 42, 3600), SC_OK);
+    uint64_t aid = 0;
+    SC_ASSERT_EQ(sc_thread_binding_lookup(tb, "discord", "thread-123", &aid), SC_OK);
+    SC_ASSERT_EQ(aid, 42);
+    SC_ASSERT_EQ(sc_thread_binding_count(tb), 1);
+    sc_thread_binding_destroy(tb);
+}
+
+static void test_integ_plugin_registry(void) {
+    sc_allocator_t a = sc_system_allocator();
+    sc_plugin_registry_t *reg = sc_plugin_registry_create(&a, 8);
+    SC_ASSERT_NOT_NULL(reg);
+    SC_ASSERT_EQ(sc_plugin_count(reg), 0);
+    sc_plugin_registry_destroy(reg);
 }
 
 void run_roadmap_tests(void) {
