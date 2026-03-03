@@ -49,10 +49,14 @@
     --color-text: #1d1d1f;
     --color-text-secondary: #6e6e73;
     --color-text-tertiary: #86868b;
-    --color-accent: #f97066;
-    --color-accent-hover: #ef5350;
-    --color-accent-glow: rgba(249, 112, 102, 0.25);
-    --color-accent-light: rgba(249, 112, 102, 0.08);
+    --color-accent: #14b8a6;
+    --color-accent-hover: #0d9488;
+    --color-accent-glow: rgba(20, 184, 166, 0.25);
+    --color-accent-light: rgba(20, 184, 166, 0.08);
+    --color-accent-secondary: #f59e0b;
+    --color-accent-secondary-glow: rgba(245, 158, 11, 0.25);
+    --color-accent-tertiary: #6366f1;
+    --color-accent-tertiary-glow: rgba(99, 102, 241, 0.25);
     --color-code-bg: #f5f5f4;
     --color-terminal-bg: #1d1d1f;
     --color-terminal-chrome: #2c2c2e;
@@ -121,10 +125,14 @@
       --color-text: #f5f5f7;
       --color-text-secondary: #a1a1a6;
       --color-text-tertiary: #86868b;
-      --color-accent: #f97066;
-      --color-accent-hover: #ff8a80;
-      --color-accent-glow: rgba(249, 112, 102, 0.2);
-      --color-accent-light: rgba(249, 112, 102, 0.12);
+      --color-accent: #2dd4bf;
+      --color-accent-hover: #5eead4;
+      --color-accent-glow: rgba(45, 212, 191, 0.2);
+      --color-accent-light: rgba(45, 212, 191, 0.12);
+      --color-accent-secondary: #fbbf24;
+      --color-accent-secondary-glow: rgba(251, 191, 36, 0.2);
+      --color-accent-tertiary: #818cf8;
+      --color-accent-tertiary-glow: rgba(129, 140, 248, 0.2);
       --color-code-bg: #1c1c1e;
       --color-terminal-bg: #0f0f0f;
       --color-terminal-chrome: #1c1c1e;
@@ -162,7 +170,7 @@
   }
 
   ::selection {
-    background: rgba(249, 112, 102, 0.2);
+    background: rgba(20, 184, 166, 0.2);
     color: var(--color-text);
   }
 
@@ -246,23 +254,23 @@
     background:
       conic-gradient(
         from 0deg at 50% 50%,
-        rgba(249, 112, 102, 0.18) 0deg,
+        rgba(20, 184, 166, 0.18) 0deg,
         transparent 60deg,
-        rgba(59, 130, 246, 0.12) 120deg,
+        rgba(99, 102, 241, 0.14) 120deg,
         transparent 180deg,
-        rgba(249, 112, 102, 0.15) 240deg,
+        rgba(245, 158, 11, 0.12) 240deg,
         transparent 300deg,
-        rgba(168, 85, 247, 0.1) 340deg,
-        rgba(249, 112, 102, 0.18) 360deg
+        rgba(99, 102, 241, 0.1) 340deg,
+        rgba(20, 184, 166, 0.18) 360deg
       ),
       radial-gradient(
         ellipse at 20% 50%,
-        rgba(249, 112, 102, 0.12) 0%,
+        rgba(20, 184, 166, 0.12) 0%,
         transparent 50%
       ),
       radial-gradient(
         ellipse at 80% 20%,
-        rgba(59, 130, 246, 0.08) 0%,
+        rgba(99, 102, 241, 0.1) 0%,
         transparent 50%
       );
     animation: mesh-drift 25s ease-in-out infinite alternate;
@@ -299,9 +307,9 @@
     background: linear-gradient(
       135deg,
       var(--color-accent) 0%,
-      #ff8a80 25%,
+      var(--color-accent-secondary, #f59e0b) 25%,
       var(--color-accent) 50%,
-      #a855f7 75%,
+      var(--color-accent-tertiary, #6366f1) 75%,
       var(--color-accent) 100%
     );
     background-size: 200% auto;
@@ -346,9 +354,9 @@
     border-radius: inherit;
     background: linear-gradient(
       135deg,
-      rgba(249, 112, 102, 0.3),
+      rgba(20, 184, 166, 0.3),
       transparent 50%,
-      rgba(59, 130, 246, 0.2)
+      rgba(99, 102, 241, 0.2)
     );
     opacity: 0;
     transition: opacity var(--duration-slow) var(--ease-out);
@@ -407,7 +415,7 @@
   }
 
   /* ── Ambient gradients ── */
-  .ambient-coral {
+  .ambient-teal {
     position: absolute;
     width: 600px;
     height: 600px;
@@ -421,14 +429,14 @@
     z-index: -1;
   }
 
-  .ambient-blue {
+  .ambient-indigo {
     position: absolute;
     width: 500px;
     height: 500px;
     border-radius: 50%;
     background: radial-gradient(
       circle,
-      rgba(59, 130, 246, 0.04) 0%,
+      rgba(99, 102, 241, 0.05) 0%,
       transparent 70%
     );
     pointer-events: none;
@@ -622,8 +630,8 @@
 /* ── Print ── */
 @media print {
   nav,
-  .ambient-coral,
-  .ambient-blue,
+  .ambient-teal,
+  .ambient-indigo,
   footer {
     display: none !important;
   }

@@ -17,16 +17,45 @@ SeaClaw's design system prioritizes:
 
 ## Color System
 
-### Coral Accent
+### Primary Accent — Ocean Teal
 
-The primary accent is coral (`--sc-accent`), a warm, distinctive color that reads well on dark and light backgrounds.
+The primary accent is teal (`--sc-accent`), an ocean-inspired color that anchors the SeaClaw brand identity.
 
-| Token                | Dark                   | Light                |
-| -------------------- | ---------------------- | -------------------- |
-| `--sc-accent`        | #f97066                | #e11d48              |
-| `--sc-accent-hover`  | #fb8a82                | #be123c              |
-| `--sc-accent-strong` | #ff5c50                | #f43f5e              |
-| `--sc-accent-subtle` | rgba(249,112,102,0.12) | rgba(225,29,72,0.08) |
+| Token                | Dark                  | Light                 |
+| -------------------- | --------------------- | --------------------- |
+| `--sc-accent`        | #14b8a6               | #14b8a6               |
+| `--sc-accent-hover`  | #2dd4bf               | #0f766e               |
+| `--sc-accent-strong` | #5eead4               | #14b8a6               |
+| `--sc-accent-subtle` | rgba(20,184,166,0.14) | rgba(13,148,136,0.10) |
+
+### Secondary Accent — Amber
+
+Amber (`--sc-accent-secondary`) provides warm counterpoint for featured content, highlights, and CTAs.
+
+| Token                          | Dark                  | Light                |
+| ------------------------------ | --------------------- | -------------------- |
+| `--sc-accent-secondary`        | #f59e0b               | #d97706              |
+| `--sc-accent-secondary-hover`  | #fbbf24               | #b45309              |
+| `--sc-accent-secondary-subtle` | rgba(245,158,11,0.14) | rgba(217,119,6,0.10) |
+
+### Tertiary Accent — Indigo
+
+Indigo (`--sc-accent-tertiary`) adds depth for info states, data visualization, and provider-related UI.
+
+| Token                         | Dark                  | Light                |
+| ----------------------------- | --------------------- | -------------------- |
+| `--sc-accent-tertiary`        | #6366f1               | #4f46e5              |
+| `--sc-accent-tertiary-hover`  | #818cf8               | #4338ca              |
+| `--sc-accent-tertiary-subtle` | rgba(99,102,241,0.14) | rgba(79,70,229,0.10) |
+
+### Coral (Error/Destructive Only)
+
+Coral is reserved exclusively for error and destructive states. Do not use coral as a general accent.
+
+| Token            | Dark                   | Light                |
+| ---------------- | ---------------------- | -------------------- |
+| `--sc-error`     | #f97066                | #e11d48              |
+| `--sc-error-dim` | rgba(249,112,102,0.12) | rgba(225,29,72,0.08) |
 
 ### Neutral Scale
 
@@ -169,7 +198,7 @@ Four spring presets for different contexts:
 
 ### Don't
 
-- Use raw hex colors (e.g., `#f97066`) — use `var(--sc-accent)`
+- Use raw hex colors (e.g., `#14b8a6`) — use `var(--sc-accent)`
 - Use raw pixel values for spacing — use `var(--sc-space-sm)` etc.
 - Use raw `font-family` — use `var(--sc-font)`
 - Use emoji as UI icons — use Phosphor Regular from `ui/src/icons.ts`

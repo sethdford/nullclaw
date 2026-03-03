@@ -333,6 +333,15 @@ Required:
 - Token categories: color (base + semantic), spacing, radius, shadow, typography, motion.
 - Generated outputs: CSS custom properties, Kotlin constants, Swift constants, C `#define` macros.
 
+Color accent hierarchy:
+
+- **Primary**: `--sc-accent` (teal) — brand identity, primary buttons, links, focus rings.
+- **Secondary**: `--sc-accent-secondary` (amber) — warm highlights, featured content, CTAs needing contrast.
+- **Tertiary**: `--sc-accent-tertiary` (indigo) — info states, data visualization, depth.
+- **Error only**: coral — reserved exclusively for `--sc-error` / `--sc-error-dim`. Never use coral as a general accent.
+
+Each accent provides `-hover`, `-subtle`, `-strong`, `-text`, and `on-accent-*` variants for both dark and light themes.
+
 ### 12.4 Motion & Animation
 
 Required:

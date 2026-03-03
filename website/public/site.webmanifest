@@ -4,7 +4,7 @@
   "description": "Autonomous AI agent runtime in 366 KB of pure C",
   "start_url": "/seaclaw/",
   "display": "standalone",
-  "theme_color": "#f97066",
+  "theme_color": "#14b8a6",
   "background_color": "#fafaf9",
   "icons": [
     { "src": "/seaclaw/favicon-48.png", "sizes": "48x48", "type": "image/png" },

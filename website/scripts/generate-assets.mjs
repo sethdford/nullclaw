@@ -12,19 +12,19 @@ const whiteClaw = clawSvg.replace(
   /<\/svg>/,
   "<style>path{fill:#fff}</style></svg>",
 );
-const coralClaw = clawSvg.replace(
+const tealClaw = clawSvg.replace(
   /<\/svg>/,
-  "<style>path{fill:#F97066}</style></svg>",
+  "<style>path{fill:#14B8A6}</style></svg>",
 );
 
 async function generateFavicons() {
   for (const size of [16, 32, 48]) {
-    await sharp(Buffer.from(coralClaw))
+    await sharp(Buffer.from(tealClaw))
       .resize(size, size)
       .png()
       .toFile(join(pub, `favicon-${size}.png`));
   }
-  await sharp(Buffer.from(coralClaw))
+  await sharp(Buffer.from(tealClaw))
     .resize(180, 180)
     .png()
     .toFile(join(pub, "apple-touch-icon.png"));
@@ -37,7 +37,7 @@ async function generateOgImage() {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
     <defs>
       <radialGradient id="g1" cx="30%" cy="40%" r="60%">
-        <stop offset="0%" stop-color="rgba(249,112,102,0.15)"/>
+        <stop offset="0%" stop-color="rgba(20,184,166,0.15)"/>
         <stop offset="100%" stop-color="transparent"/>
       </radialGradient>
       <radialGradient id="g2" cx="75%" cy="65%" r="50%">
@@ -58,7 +58,7 @@ async function generateOgImage() {
 
     <text x="200" y="360" fill="#a1a1a6" font-family="system-ui,-apple-system,sans-serif" font-size="22">366 KB binary · 50+ providers · 20 channels · 47 tools</text>
 
-    <text x="200" y="420" fill="#F97066" font-family="system-ui,-apple-system,sans-serif" font-size="20" font-weight="600">SeaClaw</text>
+    <text x="200" y="420" fill="#14B8A6" font-family="system-ui,-apple-system,sans-serif" font-size="20" font-weight="600">SeaClaw</text>
     <text x="310" y="420" fill="#6e6e73" font-family="system-ui,-apple-system,sans-serif" font-size="18">Pure C11 · Zero dependencies · MIT licensed</text>
 
     <line x1="200" y1="490" x2="1000" y2="490" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
