@@ -737,6 +737,54 @@ static void test_rpc_usage_summary_no_crash(void) {
     teardown_proto(&ws, &proto);
 }
 
+/* SC_IS_TEST: update.check/run use mock data, no network. */
+static void test_rpc_update_check_returns_valid_structure(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_ws_server_t ws;
+    sc_control_protocol_t proto;
+    sc_app_context_t app;
+    sc_bus_t bus;
+    sc_config_t cfg;
+    setup_proto_with_app(&alloc, &ws, &proto, &app, &bus, &cfg);
+    sc_ws_conn_t conn;
+    memset(&conn, 0, sizeof(conn));
+    const char *msg = "{\"type\":\"req\",\"id\":\"uc\",\"method\":\"update.check\"}";
+    sc_control_on_message(&conn, msg, strlen(msg), &proto);
+    teardown_proto(&ws, &proto);
+}
+
+/* SC_IS_TEST: update.apply returns SC_OK, no real apply. */
+static void test_rpc_update_run_returns_valid_structure(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_ws_server_t ws;
+    sc_control_protocol_t proto;
+    sc_app_context_t app;
+    sc_bus_t bus;
+    sc_config_t cfg;
+    setup_proto_with_app(&alloc, &ws, &proto, &app, &bus, &cfg);
+    sc_ws_conn_t conn;
+    memset(&conn, 0, sizeof(conn));
+    const char *msg = "{\"type\":\"req\",\"id\":\"ur\",\"method\":\"update.run\"}";
+    sc_control_on_message(&conn, msg, strlen(msg), &proto);
+    teardown_proto(&ws, &proto);
+}
+
+/* nodes.list returns at least one node (local default). */
+static void test_rpc_nodes_list_returns_at_least_one_node(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_ws_server_t ws;
+    sc_control_protocol_t proto;
+    sc_app_context_t app;
+    sc_bus_t bus;
+    sc_config_t cfg;
+    setup_proto_with_app(&alloc, &ws, &proto, &app, &bus, &cfg);
+    sc_ws_conn_t conn;
+    memset(&conn, 0, sizeof(conn));
+    const char *msg = "{\"type\":\"req\",\"id\":\"nl\",\"method\":\"nodes.list\"}";
+    sc_control_on_message(&conn, msg, strlen(msg), &proto);
+    teardown_proto(&ws, &proto);
+}
+
 static void test_event_bridge_payload_propagation(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_ws_server_t ws;
@@ -847,6 +895,9 @@ void run_gateway_extended_tests(void) {
     SC_RUN_TEST(test_rpc_skills_install_no_crash);
     SC_RUN_TEST(test_rpc_exec_approval_no_crash);
     SC_RUN_TEST(test_rpc_usage_summary_no_crash);
+    SC_RUN_TEST(test_rpc_update_check_returns_valid_structure);
+    SC_RUN_TEST(test_rpc_update_run_returns_valid_structure);
+    SC_RUN_TEST(test_rpc_nodes_list_returns_at_least_one_node);
     SC_RUN_TEST(test_event_bridge_payload_propagation);
 
     SC_TEST_SUITE("WS Server Extended");

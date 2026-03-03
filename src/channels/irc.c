@@ -1,4 +1,5 @@
 #include "seaclaw/channel.h"
+#include "seaclaw/channel_loop.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
 #include <netdb.h>
@@ -9,6 +10,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#define IRC_SESSION_KEY_MAX 127
+#define IRC_CONTENT_MAX     4095
+#define IRC_RECV_BUF_SIZE   4096
+
 typedef struct sc_irc_ctx {
     char *server;
     size_t server_len;
@@ -16,6 +21,10 @@ typedef struct sc_irc_ctx {
     int sock_fd;
     bool connected;
     bool running;
+    char *nick;
+    char *channel;
+    char recv_buf[IRC_RECV_BUF_SIZE];
+    size_t recv_len;
 } sc_irc_ctx_t;
 
 static sc_error_t irc_start(void *ctx) {
@@ -131,6 +140,81 @@ static const sc_channel_vtable_t irc_vtable = {
     .start_typing = NULL,
     .stop_typing = NULL,
 };
+
+sc_error_t sc_irc_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_loop_msg_t *msgs,
+                       size_t max_msgs, size_t *out_count) {
+    sc_irc_ctx_t *ctx = (sc_irc_ctx_t *)channel_ctx;
+    if (!ctx || !msgs || !out_count)
+        return SC_ERR_INVALID_ARGUMENT;
+    *out_count = 0;
+#if SC_IS_TEST
+    (void)alloc;
+    (void)max_msgs;
+    return SC_OK;
+#else
+    if (!ctx->connected || ctx->sock_fd < 0 || !ctx->running)
+        return SC_OK;
+    struct timeval tv = {0, 100000};
+    fd_set rfds;
+    FD_ZERO(&rfds);
+    FD_SET(ctx->sock_fd, &rfds);
+    int ready = select(ctx->sock_fd + 1, &rfds, NULL, NULL, &tv);
+    if (ready <= 0)
+        return SC_OK;
+    size_t space = IRC_RECV_BUF_SIZE - ctx->recv_len - 1;
+    if (space == 0)
+        ctx->recv_len = 0, space = IRC_RECV_BUF_SIZE - 1;
+    ssize_t n = recv(ctx->sock_fd, ctx->recv_buf + ctx->recv_len, space, 0);
+    if (n <= 0)
+        return SC_OK;
+    ctx->recv_len += (size_t)n;
+    ctx->recv_buf[ctx->recv_len] = '\0';
+    size_t cnt = 0;
+    char *line_start = ctx->recv_buf;
+    char *line_end;
+    while ((line_end = strstr(line_start, "\r\n")) != NULL && cnt < max_msgs) {
+        *line_end = '\0';
+        if (strncmp(line_start, "PING ", 5) == 0) {
+            char pong[512];
+            int pn = snprintf(pong, sizeof(pong), "PONG %s\r\n", line_start + 5);
+            if (pn > 0)
+                send(ctx->sock_fd, pong, (size_t)pn, 0);
+        } else {
+            char *privmsg = strstr(line_start, "PRIVMSG ");
+            if (privmsg) {
+                char *nick_end = strchr(line_start, '!');
+                const char *sender = line_start + 1;
+                size_t sender_len = nick_end ? (size_t)(nick_end - sender) : 0;
+                char *colon = strchr(privmsg, ':');
+                if (colon && sender_len > 0) {
+                    const char *text = colon + 1;
+                    size_t text_len = strlen(text);
+                    if (text_len > 0) {
+                        size_t sk =
+                            sender_len < IRC_SESSION_KEY_MAX ? sender_len : IRC_SESSION_KEY_MAX;
+                        memcpy(msgs[cnt].session_key, sender, sk);
+                        msgs[cnt].session_key[sk] = '\0';
+                        size_t ct = text_len < IRC_CONTENT_MAX ? text_len : IRC_CONTENT_MAX;
+                        memcpy(msgs[cnt].content, text, ct);
+                        msgs[cnt].content[ct] = '\0';
+                        cnt++;
+                    }
+                }
+            }
+        }
+        line_start = line_end + 2;
+    }
+    if (line_start > ctx->recv_buf) {
+        size_t remaining = ctx->recv_len - (size_t)(line_start - ctx->recv_buf);
+        if (remaining > 0)
+            memmove(ctx->recv_buf, line_start, remaining);
+        ctx->recv_len = remaining;
+    }
+    *out_count = cnt;
+    (void)alloc;
+    return SC_OK;
+#endif
+}
 
 sc_error_t sc_irc_create(sc_allocator_t *alloc, const char *server, size_t server_len,
                          uint16_t port, sc_channel_t *out) {

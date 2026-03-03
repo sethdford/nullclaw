@@ -380,6 +380,26 @@ static void test_config_parse_mcp_servers_empty(void) {
     sc_arena_destroy(arena);
 }
 
+static void test_config_parse_nodes_array(void) {
+    sc_allocator_t backing = sc_system_allocator();
+    sc_config_t cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    sc_arena_t *arena = sc_arena_create(backing);
+    SC_ASSERT_NOT_NULL(arena);
+    cfg.arena = arena;
+    cfg.allocator = sc_arena_allocator(arena);
+    const char *json =
+        "{\"nodes\":[{\"name\":\"local\",\"status\":\"online\"},{\"name\":\"remote-1\",\"status\":\"offline\"}]}";
+    sc_error_t err = sc_config_parse_json(&cfg, json, strlen(json));
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(cfg.nodes_len, 2u);
+    SC_ASSERT_STR_EQ(cfg.nodes[0].name, "local");
+    SC_ASSERT_STR_EQ(cfg.nodes[0].status, "online");
+    SC_ASSERT_STR_EQ(cfg.nodes[1].name, "remote-1");
+    SC_ASSERT_STR_EQ(cfg.nodes[1].status, "offline");
+    sc_arena_destroy(arena);
+}
+
 static void test_config_parse_service_loop(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_error_t err = sc_service_run(&alloc, 0, NULL, 0, NULL);
@@ -533,6 +553,7 @@ void run_config_parse_tests(void) {
     SC_RUN_TEST(test_config_parse_imessage_channel);
     SC_RUN_TEST(test_config_parse_mcp_servers);
     SC_RUN_TEST(test_config_parse_mcp_servers_empty);
+    SC_RUN_TEST(test_config_parse_nodes_array);
 
     SC_TEST_SUITE("Service loop");
     SC_RUN_TEST(test_config_parse_service_loop);

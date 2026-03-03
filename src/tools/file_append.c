@@ -11,8 +11,8 @@
 #include <string.h>
 
 #include "seaclaw/tools/schema_common.h"
-#define SC_FILE_APPEND_NAME "file_append"
-#define SC_FILE_APPEND_DESC "Append content to file"
+#define SC_FILE_APPEND_NAME   "file_append"
+#define SC_FILE_APPEND_DESC   "Append content to file"
 #define SC_FILE_APPEND_PARAMS SC_SCHEMA_PATH_CONTENT
 
 typedef struct sc_file_append_ctx {

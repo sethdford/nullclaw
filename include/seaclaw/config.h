@@ -122,6 +122,13 @@ typedef struct sc_telegram_channel_config {
 #define SC_MCP_SERVERS_MAX     16
 #define SC_MCP_SERVER_ARGS_MAX 16
 
+#define SC_NODES_MAX 16
+
+typedef struct sc_node_entry {
+    char *name;
+    char *status;
+} sc_node_entry_t;
+
 typedef struct sc_mcp_server_entry {
     char *name;
     char *command;
@@ -284,6 +291,8 @@ typedef struct sc_config {
     sc_hardware_config_t hardware;
     sc_cron_config_t cron;
     sc_scheduler_config_t scheduler;
+    sc_node_entry_t nodes[SC_NODES_MAX];
+    size_t nodes_len;
     sc_mcp_server_entry_t mcp_servers[SC_MCP_SERVERS_MAX];
     size_t mcp_servers_len;
     sc_policy_config_t policy;

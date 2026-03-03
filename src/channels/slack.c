@@ -531,73 +531,110 @@ static const sc_channel_vtable_t slack_vtable = {
     .stop_typing = slack_stop_typing,
 };
 
-/* \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80 REST polling (conversations.history) \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80 */
+/* \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80 REST polling (conversations.history)
+ * \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80 */
 
 sc_error_t sc_slack_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_loop_msg_t *msgs,
                          size_t max_msgs, size_t *out_count) {
     sc_slack_ctx_t *ctx = (sc_slack_ctx_t *)channel_ctx;
-    if (!ctx || !msgs || !out_count) return SC_ERR_INVALID_ARGUMENT;
+    if (!ctx || !msgs || !out_count)
+        return SC_ERR_INVALID_ARGUMENT;
     *out_count = 0;
 #if SC_IS_TEST
-    (void)alloc; (void)max_msgs;
+    (void)alloc;
+    (void)max_msgs;
     return SC_OK;
 #else
-    if (!ctx->token || ctx->token_len == 0) return SC_OK;
-    if (!ctx->channel_ids || ctx->channel_ids_count == 0) return SC_OK;
-    if (!ctx->running) return SC_OK;
+    if (!ctx->token || ctx->token_len == 0)
+        return SC_OK;
+    if (!ctx->channel_ids || ctx->channel_ids_count == 0)
+        return SC_OK;
+    if (!ctx->running)
+        return SC_OK;
     char auth_buf[512];
-    int na = snprintf(auth_buf, sizeof(auth_buf), "Authorization: Bearer %.*s", (int)ctx->token_len, ctx->token);
-    if (na <= 0 || (size_t)na >= sizeof(auth_buf)) return SC_ERR_INTERNAL;
+    int na = snprintf(auth_buf, sizeof(auth_buf), "Authorization: Bearer %.*s", (int)ctx->token_len,
+                      ctx->token);
+    if (na <= 0 || (size_t)na >= sizeof(auth_buf))
+        return SC_ERR_INTERNAL;
     size_t cnt = 0;
     for (size_t ch_idx = 0; ch_idx < ctx->channel_ids_count && cnt < max_msgs; ch_idx++) {
         const char *ch_id = ctx->channel_ids[ch_idx];
-        if (!ch_id) continue;
+        if (!ch_id)
+            continue;
         size_t ch_id_len = strlen(ch_id);
         char url_buf[512];
         const char *last_ts = (ctx->last_ts && ctx->last_ts[ch_idx]) ? ctx->last_ts[ch_idx] : NULL;
         int nu;
         if (last_ts && *last_ts)
-            nu = snprintf(url_buf, sizeof(url_buf), "%s%s?channel=%.*s&oldest=%s&limit=10", SLACK_API_BASE, SLACK_CONVERSATIONS_HISTORY, (int)ch_id_len, ch_id, last_ts);
+            nu = snprintf(url_buf, sizeof(url_buf), "%s%s?channel=%.*s&oldest=%s&limit=10",
+                          SLACK_API_BASE, SLACK_CONVERSATIONS_HISTORY, (int)ch_id_len, ch_id,
+                          last_ts);
         else
-            nu = snprintf(url_buf, sizeof(url_buf), "%s%s?channel=%.*s&limit=10", SLACK_API_BASE, SLACK_CONVERSATIONS_HISTORY, (int)ch_id_len, ch_id);
-        if (nu < 0 || (size_t)nu >= sizeof(url_buf)) continue;
+            nu = snprintf(url_buf, sizeof(url_buf), "%s%s?channel=%.*s&limit=10", SLACK_API_BASE,
+                          SLACK_CONVERSATIONS_HISTORY, (int)ch_id_len, ch_id);
+        if (nu < 0 || (size_t)nu >= sizeof(url_buf))
+            continue;
         sc_http_response_t resp = {0};
         sc_error_t err = sc_http_get(alloc, url_buf, auth_buf, &resp);
-        if (err != SC_OK) { if (resp.owned && resp.body) sc_http_response_free(alloc, &resp); continue; }
-        if (resp.status_code != 200 || !resp.body || resp.body_len == 0) { if (resp.owned && resp.body) sc_http_response_free(alloc, &resp); continue; }
+        if (err != SC_OK) {
+            if (resp.owned && resp.body)
+                sc_http_response_free(alloc, &resp);
+            continue;
+        }
+        if (resp.status_code != 200 || !resp.body || resp.body_len == 0) {
+            if (resp.owned && resp.body)
+                sc_http_response_free(alloc, &resp);
+            continue;
+        }
         sc_json_value_t *parsed = NULL;
         err = sc_json_parse(alloc, resp.body, resp.body_len, &parsed);
-        if (resp.owned && resp.body) sc_http_response_free(alloc, &resp);
-        if (err != SC_OK || !parsed) continue;
+        if (resp.owned && resp.body)
+            sc_http_response_free(alloc, &resp);
+        if (err != SC_OK || !parsed)
+            continue;
         bool ok = sc_json_get_bool(parsed, "ok", false);
-        if (!ok) { sc_json_free(alloc, parsed); continue; }
+        if (!ok) {
+            sc_json_free(alloc, parsed);
+            continue;
+        }
         sc_json_value_t *messages = sc_json_object_get(parsed, "messages");
-        if (!messages || messages->type != SC_JSON_ARRAY) { sc_json_free(alloc, parsed); continue; }
+        if (!messages || messages->type != SC_JSON_ARRAY) {
+            sc_json_free(alloc, parsed);
+            continue;
+        }
         size_t arr_len = messages->data.array.len;
         for (size_t j = arr_len; j > 0 && cnt < max_msgs; j--) {
             size_t i = j - 1;
             sc_json_value_t *msg = messages->data.array.items[i];
-            if (!msg || msg->type != SC_JSON_OBJECT) continue;
+            if (!msg || msg->type != SC_JSON_OBJECT)
+                continue;
             const char *subtype = sc_json_get_string(msg, "subtype");
-            if (subtype) continue;
+            if (subtype)
+                continue;
             const char *user = sc_json_get_string(msg, "user");
-            if (!user) continue;
-            if (ctx->bot_user_id && strcmp(user, ctx->bot_user_id) == 0) continue;
+            if (!user)
+                continue;
+            if (ctx->bot_user_id && strcmp(user, ctx->bot_user_id) == 0)
+                continue;
             const char *text = sc_json_get_string(msg, "text");
-            if (!text || strlen(text) == 0) continue;
+            if (!text || strlen(text) == 0)
+                continue;
             const char *ts = sc_json_get_string(msg, "ts");
             if (ts && ctx->alloc) {
                 if (ctx->last_ts && ctx->last_ts[ch_idx])
-                    ctx->alloc->free(ctx->alloc->ctx, ctx->last_ts[ch_idx], strlen(ctx->last_ts[ch_idx]) + 1);
+                    ctx->alloc->free(ctx->alloc->ctx, ctx->last_ts[ch_idx],
+                                     strlen(ctx->last_ts[ch_idx]) + 1);
                 size_t ts_len = strlen(ts);
                 ctx->last_ts[ch_idx] = (char *)ctx->alloc->alloc(ctx->alloc->ctx, ts_len + 1);
-                if (ctx->last_ts[ch_idx]) memcpy(ctx->last_ts[ch_idx], ts, ts_len + 1);
+                if (ctx->last_ts[ch_idx])
+                    memcpy(ctx->last_ts[ch_idx], ts, ts_len + 1);
             }
             size_t sk_len = ch_id_len < SLACK_SESSION_KEY_MAX ? ch_id_len : SLACK_SESSION_KEY_MAX;
             memcpy(msgs[cnt].session_key, ch_id, sk_len);
             msgs[cnt].session_key[sk_len] = '\0';
             size_t ct_len = strlen(text);
-            if (ct_len > SLACK_CONTENT_MAX) ct_len = SLACK_CONTENT_MAX;
+            if (ct_len > SLACK_CONTENT_MAX)
+                ct_len = SLACK_CONTENT_MAX;
             memcpy(msgs[cnt].content, text, ct_len);
             msgs[cnt].content[ct_len] = '\0';
             cnt++;
@@ -610,33 +647,54 @@ sc_error_t sc_slack_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_lo
 }
 
 sc_error_t sc_slack_create_ex(sc_allocator_t *alloc, const char *token, size_t token_len,
-                               const char *const *channel_ids, size_t channel_ids_count,
-                               sc_channel_t *out) {
-    if (!alloc || !out) return SC_ERR_INVALID_ARGUMENT;
-    if (channel_ids_count > SLACK_MAX_CHANNELS) return SC_ERR_INVALID_ARGUMENT;
+                              const char *const *channel_ids, size_t channel_ids_count,
+                              sc_channel_t *out) {
+    if (!alloc || !out)
+        return SC_ERR_INVALID_ARGUMENT;
+    if (channel_ids_count > SLACK_MAX_CHANNELS)
+        return SC_ERR_INVALID_ARGUMENT;
     sc_slack_ctx_t *c = (sc_slack_ctx_t *)calloc(1, sizeof(*c));
-    if (!c) return SC_ERR_OUT_OF_MEMORY;
+    if (!c)
+        return SC_ERR_OUT_OF_MEMORY;
     c->alloc = alloc;
     if (token && token_len > 0) {
         c->token = (char *)malloc(token_len + 1);
-        if (!c->token) { free(c); return SC_ERR_OUT_OF_MEMORY; }
+        if (!c->token) {
+            free(c);
+            return SC_ERR_OUT_OF_MEMORY;
+        }
         memcpy(c->token, token, token_len);
         c->token[token_len] = '\0';
         c->token_len = token_len;
     }
     if (channel_ids && channel_ids_count > 0) {
         c->channel_ids = (char **)calloc(channel_ids_count, sizeof(char *));
-        if (!c->channel_ids) { if (c->token) free(c->token); free(c); return SC_ERR_OUT_OF_MEMORY; }
+        if (!c->channel_ids) {
+            if (c->token)
+                free(c->token);
+            free(c);
+            return SC_ERR_OUT_OF_MEMORY;
+        }
         c->last_ts = (char **)calloc(channel_ids_count, sizeof(char *));
-        if (!c->last_ts) { free(c->channel_ids); if (c->token) free(c->token); free(c); return SC_ERR_OUT_OF_MEMORY; }
+        if (!c->last_ts) {
+            free(c->channel_ids);
+            if (c->token)
+                free(c->token);
+            free(c);
+            return SC_ERR_OUT_OF_MEMORY;
+        }
         for (size_t i = 0; i < channel_ids_count; i++) {
             if (channel_ids[i]) {
                 size_t len = strlen(channel_ids[i]);
                 c->channel_ids[i] = (char *)malloc(len + 1);
                 if (!c->channel_ids[i]) {
-                    for (size_t j = 0; j < i; j++) free(c->channel_ids[j]);
-                    free(c->channel_ids); free(c->last_ts);
-                    if (c->token) free(c->token); free(c);
+                    for (size_t j = 0; j < i; j++)
+                        free(c->channel_ids[j]);
+                    free(c->channel_ids);
+                    free(c->last_ts);
+                    if (c->token)
+                        free(c->token);
+                    free(c);
                     return SC_ERR_OUT_OF_MEMORY;
                 }
                 memcpy(c->channel_ids[i], channel_ids[i], len + 1);
@@ -657,18 +715,21 @@ sc_error_t sc_slack_create(sc_allocator_t *alloc, const char *token, size_t toke
 void sc_slack_destroy(sc_channel_t *ch) {
     if (ch && ch->ctx) {
         sc_slack_ctx_t *c = (sc_slack_ctx_t *)ch->ctx;
-        if (c->token) free(c->token);
+        if (c->token)
+            free(c->token);
         if (c->bot_user_id && c->alloc)
             c->alloc->free(c->alloc->ctx, c->bot_user_id, strlen(c->bot_user_id) + 1);
         if (c->channel_ids) {
             for (size_t i = 0; i < c->channel_ids_count; i++)
-                if (c->channel_ids[i]) free(c->channel_ids[i]);
+                if (c->channel_ids[i])
+                    free(c->channel_ids[i]);
             free(c->channel_ids);
         }
         if (c->last_ts) {
             if (c->alloc && c->alloc->free)
                 for (size_t i = 0; i < c->channel_ids_count; i++)
-                    if (c->last_ts[i]) c->alloc->free(c->alloc->ctx, c->last_ts[i], strlen(c->last_ts[i]) + 1);
+                    if (c->last_ts[i])
+                        c->alloc->free(c->alloc->ctx, c->last_ts[i], strlen(c->last_ts[i]) + 1);
             free(c->last_ts);
         }
         free(c);

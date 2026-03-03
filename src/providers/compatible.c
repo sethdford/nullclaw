@@ -379,6 +379,72 @@ static void compatible_deinit(void *ctx, sc_allocator_t *alloc) {
     free(cc);
 }
 
+static const sc_provider_vtable_t compatible_vtable;
+
+static bool compatible_supports_streaming(void *ctx) {
+    (void)ctx;
+    return true;
+}
+
+static sc_error_t compatible_stream_chat(void *ctx, sc_allocator_t *alloc,
+                                         const sc_chat_request_t *request, const char *model,
+                                         size_t model_len, double temperature,
+                                         sc_stream_callback_t callback, void *callback_ctx,
+                                         sc_stream_chat_result_t *out) {
+#if SC_IS_TEST
+    (void)ctx;
+    (void)alloc;
+    (void)request;
+    (void)model;
+    (void)model_len;
+    (void)temperature;
+    (void)callback_ctx;
+    sc_stream_chunk_t chunk;
+    memset(&chunk, 0, sizeof(chunk));
+    chunk.delta = "test";
+    chunk.delta_len = 4;
+    chunk.is_final = false;
+    if (callback)
+        callback(callback_ctx, &chunk);
+    memset(&chunk, 0, sizeof(chunk));
+    chunk.is_final = true;
+    if (callback)
+        callback(callback_ctx, &chunk);
+    if (out) {
+        out->content = sc_strndup(alloc, "test", 4);
+        out->content_len = 4;
+    }
+    return SC_OK;
+#else
+    sc_chat_response_t resp;
+    memset(&resp, 0, sizeof(resp));
+    sc_error_t err =
+        compatible_vtable.chat(ctx, alloc, request, model, model_len, temperature, &resp);
+    if (err != SC_OK)
+        return err;
+    if (resp.content && resp.content_len > 0) {
+        sc_stream_chunk_t chunk;
+        memset(&chunk, 0, sizeof(chunk));
+        chunk.delta = resp.content;
+        chunk.delta_len = resp.content_len;
+        chunk.is_final = false;
+        if (callback)
+            callback(callback_ctx, &chunk);
+        memset(&chunk, 0, sizeof(chunk));
+        chunk.is_final = true;
+        if (callback)
+            callback(callback_ctx, &chunk);
+    }
+    if (out) {
+        out->content = resp.content;
+        out->content_len = resp.content_len;
+    } else if (resp.content) {
+        alloc->free(alloc->ctx, resp.content, resp.content_len + 1);
+    }
+    return SC_OK;
+#endif
+}
+
 static const sc_provider_vtable_t compatible_vtable = {
     .chat_with_system = compatible_chat_with_system,
     .chat = compatible_chat,
@@ -387,10 +453,10 @@ static const sc_provider_vtable_t compatible_vtable = {
     .deinit = compatible_deinit,
     .warmup = NULL,
     .chat_with_tools = NULL,
-    .supports_streaming = NULL,
+    .supports_streaming = compatible_supports_streaming,
     .supports_vision = NULL,
     .supports_vision_for_model = NULL,
-    .stream_chat = NULL,
+    .stream_chat = compatible_stream_chat,
 };
 
 sc_error_t sc_compatible_create(sc_allocator_t *alloc, const char *api_key, size_t api_key_len,

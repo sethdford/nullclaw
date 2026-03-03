@@ -4,7 +4,9 @@
 #include "seaclaw/core/json.h"
 #include "seaclaw/core/string.h"
 #include "seaclaw/tool.h"
+#ifdef SC_HAS_TOOLS_ADVANCED
 #include "seaclaw/tools/claude_code.h"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,8 +21,10 @@
     "\"working_directory\":{\"type\":\"string\"}},\"required\":[\"agent\",\"prompt\"]}"
 
 typedef struct sc_delegate_ctx {
+#ifdef SC_HAS_TOOLS_ADVANCED
     sc_tool_t claude_code_tool;
     bool has_claude_code;
+#endif
 } sc_delegate_ctx_t;
 
 static sc_error_t delegate_execute(void *ctx, sc_allocator_t *alloc, const sc_json_value_t *args,
@@ -54,9 +58,11 @@ static sc_error_t delegate_execute(void *ctx, sc_allocator_t *alloc, const sc_js
     *out = sc_tool_result_ok_owned(msg, len);
     return SC_OK;
 #else
+#ifdef SC_HAS_TOOLS_ADVANCED
     if (strcmp(agent, "claude_code") == 0 && dctx && dctx->has_claude_code) {
         return dctx->claude_code_tool.vtable->execute(dctx->claude_code_tool.ctx, alloc, args, out);
     }
+#endif
 
     size_t need = 48 + strlen(agent);
     char *msg = (char *)alloc->alloc(alloc->ctx, need + 1);
@@ -64,7 +70,7 @@ static sc_error_t delegate_execute(void *ctx, sc_allocator_t *alloc, const sc_js
         *out = sc_tool_result_fail("out of memory", 13);
         return SC_ERR_OUT_OF_MEMORY;
     }
-    int n = snprintf(msg, need + 1, "Unknown agent '%s'. Available: claude_code", agent);
+    int n = snprintf(msg, need + 1, "Unknown agent '%s'. Available: (none)", agent);
     size_t len = (n > 0 && (size_t)n <= need) ? (size_t)n : need;
     msg[len] = '\0';
     *out = sc_tool_result_fail_owned(msg, len);
@@ -88,10 +94,12 @@ static void delegate_deinit(void *ctx, sc_allocator_t *alloc) {
     if (!ctx)
         return;
     sc_delegate_ctx_t *dctx = (sc_delegate_ctx_t *)ctx;
+#ifdef SC_HAS_TOOLS_ADVANCED
     if (dctx->has_claude_code && dctx->claude_code_tool.vtable &&
         dctx->claude_code_tool.vtable->deinit) {
         dctx->claude_code_tool.vtable->deinit(dctx->claude_code_tool.ctx, alloc);
     }
+#endif
     alloc->free(alloc->ctx, dctx, sizeof(*dctx));
 }
 
@@ -111,8 +119,10 @@ sc_error_t sc_delegate_create(sc_allocator_t *alloc, sc_security_policy_t *polic
         return SC_ERR_OUT_OF_MEMORY;
     memset(c, 0, sizeof(*c));
 
+#ifdef SC_HAS_TOOLS_ADVANCED
     sc_error_t err = sc_claude_code_create(alloc, policy, &c->claude_code_tool);
     c->has_claude_code = (err == SC_OK);
+#endif
 
     out->ctx = c;
     out->vtable = &delegate_vtable;

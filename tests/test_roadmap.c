@@ -691,6 +691,12 @@ static void test_integ_plugin_registry(void) {
     sc_plugin_registry_destroy(reg);
 }
 
+
+static void test_update_apply_test_mode(void) {
+    sc_error_t err = sc_update_apply();
+    SC_ASSERT(err == SC_OK);
+}
+
 void run_roadmap_tests(void) {
     SC_TEST_SUITE("Roadmap: Agent Pool (1A)");
     SC_RUN_TEST(test_pool_create_destroy);
@@ -766,6 +772,7 @@ void run_roadmap_tests(void) {
     SC_RUN_TEST(test_daemon_start_returns_valid);
     SC_RUN_TEST(test_update_check_returns_valid);
     SC_RUN_TEST(test_update_check_null_buf);
+    SC_RUN_TEST(test_update_apply_test_mode);
     SC_TEST_SUITE("Integration");
     SC_RUN_TEST(test_integ_config_defaults);
     SC_RUN_TEST(test_integ_config_parse_pool);
@@ -780,4 +787,8 @@ void run_roadmap_tests(void) {
     SC_RUN_TEST(test_integ_mailbox_roundtrip);
     SC_RUN_TEST(test_integ_thread_binding);
     SC_RUN_TEST(test_integ_plugin_registry);
+
+    SC_RUN_TEST(test_update_check_returns_valid);
+    SC_RUN_TEST(test_update_check_null_buf);
+    SC_RUN_TEST(test_update_apply_test_mode);
 }

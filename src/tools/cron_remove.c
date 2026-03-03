@@ -9,8 +9,8 @@
 #include <string.h>
 
 #include "seaclaw/tools/schema_common.h"
-#define SC_CRON_REMOVE_NAME "cron_remove"
-#define SC_CRON_REMOVE_DESC "Remove cron job"
+#define SC_CRON_REMOVE_NAME   "cron_remove"
+#define SC_CRON_REMOVE_DESC   "Remove cron job"
 #define SC_CRON_REMOVE_PARAMS SC_SCHEMA_ID_ONLY
 
 typedef struct {

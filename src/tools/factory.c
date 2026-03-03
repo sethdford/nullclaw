@@ -8,18 +8,24 @@
 #include "seaclaw/tools/agent_query.h"
 #include "seaclaw/tools/agent_spawn.h"
 #include "seaclaw/tools/apply_patch.h"
+#ifdef SC_HAS_TOOLS_BROWSER
 #include "seaclaw/tools/browser.h"
 #include "seaclaw/tools/browser_open.h"
+#include "seaclaw/tools/screenshot.h"
+#endif
+#ifdef SC_HAS_TOOLS_ADVANCED
 #include "seaclaw/tools/canvas.h"
 #include "seaclaw/tools/claude_code.h"
 #include "seaclaw/tools/composio.h"
+#include "seaclaw/tools/database.h"
+#include "seaclaw/tools/notebook.h"
+#endif
 #include "seaclaw/tools/cron_add.h"
 #include "seaclaw/tools/cron_list.h"
 #include "seaclaw/tools/cron_remove.h"
 #include "seaclaw/tools/cron_run.h"
 #include "seaclaw/tools/cron_runs.h"
 #include "seaclaw/tools/cron_update.h"
-#include "seaclaw/tools/database.h"
 #include "seaclaw/tools/delegate.h"
 #include "seaclaw/tools/diff.h"
 #include "seaclaw/tools/file_append.h"
@@ -40,12 +46,10 @@
 #include "seaclaw/tools/memory_recall.h"
 #include "seaclaw/tools/memory_store.h"
 #include "seaclaw/tools/message.h"
-#include "seaclaw/tools/notebook.h"
 #include "seaclaw/tools/pdf.h"
 #include "seaclaw/tools/pushover.h"
 #include "seaclaw/tools/schedule.h"
 #include "seaclaw/tools/schema.h"
-#include "seaclaw/tools/screenshot.h"
 #include "seaclaw/tools/shell.h"
 #include "seaclaw/tools/spawn.h"
 #include "seaclaw/tools/web_fetch.h"
@@ -53,12 +57,24 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SC_TOOLS_COUNT_BASE 40
-#ifdef SC_HAS_PERIPHERALS
-#define SC_TOOLS_COUNT (SC_TOOLS_COUNT_BASE + 4)
+#define SC_TOOLS_COUNT_BASE 32
+#ifdef SC_HAS_TOOLS_BROWSER
+#define SC_TOOLS_BROWSER_COUNT 3
 #else
-#define SC_TOOLS_COUNT SC_TOOLS_COUNT_BASE
+#define SC_TOOLS_BROWSER_COUNT 0
 #endif
+#ifdef SC_HAS_TOOLS_ADVANCED
+#define SC_TOOLS_ADVANCED_COUNT 5
+#else
+#define SC_TOOLS_ADVANCED_COUNT 0
+#endif
+#ifdef SC_HAS_PERIPHERALS
+#define SC_TOOLS_HW_COUNT 4
+#else
+#define SC_TOOLS_HW_COUNT 0
+#endif
+#define SC_TOOLS_COUNT \
+    (SC_TOOLS_COUNT_BASE + SC_TOOLS_BROWSER_COUNT + SC_TOOLS_ADVANCED_COUNT + SC_TOOLS_HW_COUNT)
 
 static sc_error_t add_tool_ws(sc_allocator_t *alloc, sc_tool_t *tools, size_t *idx, const char *ws,
                               size_t ws_len, sc_security_policy_t *policy,
@@ -132,17 +148,19 @@ sc_error_t sc_tools_create_default(sc_allocator_t *alloc, const char *workspace_
         goto fail;
     idx++;
 
+#ifdef SC_HAS_TOOLS_BROWSER
     err = sc_browser_create(alloc, false, policy, &tools[idx]);
     if (err != SC_OK)
         goto fail;
     idx++;
 
-    err = sc_image_create(alloc, NULL, 0, &tools[idx]);
+    err = sc_screenshot_create(alloc, false, policy, &tools[idx]);
     if (err != SC_OK)
         goto fail;
     idx++;
+#endif
 
-    err = sc_screenshot_create(alloc, false, policy, &tools[idx]);
+    err = sc_image_create(alloc, NULL, 0, &tools[idx]);
     if (err != SC_OK)
         goto fail;
     idx++;
@@ -212,6 +230,7 @@ sc_error_t sc_tools_create_default(sc_allocator_t *alloc, const char *workspace_
         goto fail;
     idx++;
 
+#ifdef SC_HAS_TOOLS_BROWSER
     {
         const char *domains[] = {"example.com"};
         err = sc_browser_open_create(alloc, domains, 1, policy, &tools[idx]);
@@ -219,11 +238,14 @@ sc_error_t sc_tools_create_default(sc_allocator_t *alloc, const char *workspace_
     if (err != SC_OK)
         goto fail;
     idx++;
+#endif
 
+#ifdef SC_HAS_TOOLS_ADVANCED
     err = sc_composio_create(alloc, NULL, 0, "default", 7, &tools[idx]);
     if (err != SC_OK)
         goto fail;
     idx++;
+#endif
 
 #ifdef SC_HAS_PERIPHERALS
     err = sc_hardware_memory_create(alloc, NULL, 0, &tools[idx]);
@@ -264,6 +286,7 @@ sc_error_t sc_tools_create_default(sc_allocator_t *alloc, const char *workspace_
     idx++;
 #endif
 
+#ifdef SC_HAS_TOOLS_ADVANCED
     err = sc_claude_code_create(alloc, policy, &tools[idx]);
     if (err != SC_OK)
         goto fail;
@@ -274,17 +297,18 @@ sc_error_t sc_tools_create_default(sc_allocator_t *alloc, const char *workspace_
         goto fail;
     idx++;
 
-    err = sc_diff_tool_create(alloc, &tools[idx]);
-    if (err != SC_OK)
-        goto fail;
-    idx++;
-
     err = sc_notebook_create(alloc, policy, &tools[idx]);
     if (err != SC_OK)
         goto fail;
     idx++;
 
     err = sc_canvas_create(alloc, &tools[idx]);
+    if (err != SC_OK)
+        goto fail;
+    idx++;
+#endif
+
+    err = sc_diff_tool_create(alloc, &tools[idx]);
     if (err != SC_OK)
         goto fail;
     idx++;

@@ -38,6 +38,9 @@ static void test_config_load_nonexistent_uses_defaults(void) {
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_NOT_NULL(cfg.default_provider);
     SC_ASSERT_NOT_NULL(cfg.default_model);
+    SC_ASSERT(cfg.nodes_len >= 1u);
+    SC_ASSERT_STR_EQ(cfg.nodes[0].name, "local");
+    SC_ASSERT_STR_EQ(cfg.nodes[0].status, "online");
     sc_config_deinit(&cfg);
     if (old_home) { setenv("HOME", old_home, 1); free(old_home); }
     else unsetenv("HOME");

@@ -343,8 +343,8 @@ sc_memory_t sc_lucid_memory_create(sc_allocator_t *alloc, const char *db_path,
 
 #ifdef SC_ENABLE_SQLITE
 
-#include <sqlite3.h>
 #include "seaclaw/memory/sql_common.h"
+#include <sqlite3.h>
 
 typedef struct sc_lucid_memory_prod {
     sc_allocator_t *alloc;

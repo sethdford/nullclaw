@@ -1,9 +1,9 @@
 /* Comprehensive channel tests (~45 tests). Uses SC_HAS_* guards for conditional channels. */
-#include "test_framework.h"
-#include "seaclaw/core/allocator.h"
-#include "seaclaw/core/error.h"
 #include "seaclaw/channel.h"
 #include "seaclaw/channels/cli.h"
+#include "seaclaw/core/allocator.h"
+#include "seaclaw/core/error.h"
+#include "test_framework.h"
 #include <string.h>
 
 #if SC_HAS_TELEGRAM
@@ -11,8 +11,8 @@
 #endif
 
 #if SC_HAS_DISCORD
-#include "seaclaw/channels/discord.h"
 #include "seaclaw/channel_loop.h"
+#include "seaclaw/channels/discord.h"
 #endif
 #if SC_HAS_SLACK
 #include "seaclaw/channels/slack.h"
@@ -21,29 +21,19 @@
 #include "seaclaw/channels/whatsapp.h"
 #endif
 #if SC_HAS_MATRIX
-extern sc_error_t sc_matrix_create(sc_allocator_t *alloc,
-    const char *homeserver, size_t homeserver_len,
-    const char *access_token, size_t access_token_len,
-    sc_channel_t *out);
-extern void sc_matrix_destroy(sc_channel_t *ch);
+#include "seaclaw/channels/matrix.h"
 #endif
 #if SC_HAS_IRC
-extern sc_error_t sc_irc_create(sc_allocator_t *alloc,
-    const char *server, size_t server_len, uint16_t port,
-    sc_channel_t *out);
-extern void sc_irc_destroy(sc_channel_t *ch);
+#include "seaclaw/channels/irc.h"
 #endif
 #if SC_HAS_LINE
-extern sc_error_t sc_line_create(sc_allocator_t *alloc,
-    const char *channel_token, size_t channel_token_len,
-    sc_channel_t *out);
+extern sc_error_t sc_line_create(sc_allocator_t *alloc, const char *channel_token,
+                                 size_t channel_token_len, sc_channel_t *out);
 extern void sc_line_destroy(sc_channel_t *ch);
 #endif
 #if SC_HAS_LARK
-extern sc_error_t sc_lark_create(sc_allocator_t *alloc,
-    const char *app_id, size_t app_id_len,
-    const char *app_secret, size_t app_secret_len,
-    sc_channel_t *out);
+extern sc_error_t sc_lark_create(sc_allocator_t *alloc, const char *app_id, size_t app_id_len,
+                                 const char *app_secret, size_t app_secret_len, sc_channel_t *out);
 extern void sc_lark_destroy(sc_channel_t *ch);
 #endif
 #if SC_HAS_WEB
@@ -56,24 +46,20 @@ extern void sc_lark_destroy(sc_channel_t *ch);
 #include "seaclaw/channels/imessage.h"
 #endif
 #if SC_HAS_MATTERMOST
-extern sc_error_t sc_mattermost_create(sc_allocator_t *alloc,
-    const char *url, size_t url_len,
-    const char *token, size_t token_len,
-    sc_channel_t *out);
+extern sc_error_t sc_mattermost_create(sc_allocator_t *alloc, const char *url, size_t url_len,
+                                       const char *token, size_t token_len, sc_channel_t *out);
 extern void sc_mattermost_destroy(sc_channel_t *ch);
 #endif
 #if SC_HAS_ONEBOT
-extern sc_error_t sc_onebot_create(sc_allocator_t *alloc,
-    const char *api_base, size_t api_base_len,
-    const char *access_token, size_t access_token_len,
-    sc_channel_t *out);
+extern sc_error_t sc_onebot_create(sc_allocator_t *alloc, const char *api_base, size_t api_base_len,
+                                   const char *access_token, size_t access_token_len,
+                                   sc_channel_t *out);
 extern void sc_onebot_destroy(sc_channel_t *ch);
 #endif
 #if SC_HAS_DINGTALK
-extern sc_error_t sc_dingtalk_create(sc_allocator_t *alloc,
-    const char *app_key, size_t app_key_len,
-    const char *app_secret, size_t app_secret_len,
-    sc_channel_t *out);
+extern sc_error_t sc_dingtalk_create(sc_allocator_t *alloc, const char *app_key, size_t app_key_len,
+                                     const char *app_secret, size_t app_secret_len,
+                                     sc_channel_t *out);
 extern void sc_dingtalk_destroy(sc_channel_t *ch);
 #endif
 
@@ -225,7 +211,8 @@ static void test_slack_send_long_message(void) {
     sc_channel_t ch;
     sc_slack_create(&alloc, "t", 1, &ch);
     char buf[5000];
-    for (size_t i = 0; i < sizeof(buf) - 1; i++) buf[i] = 'm';
+    for (size_t i = 0; i < sizeof(buf) - 1; i++)
+        buf[i] = 'm';
     buf[sizeof(buf) - 1] = '\0';
     sc_error_t err = ch.vtable->send(ch.ctx, "ch", 2, buf, sizeof(buf) - 1, NULL, 0);
     SC_ASSERT_EQ(err, SC_OK);
@@ -359,6 +346,24 @@ static void test_matrix_send(void) {
     sc_error_t err = ch.vtable->send(ch.ctx, "#room:matrix.org", 16, "test", 4, NULL, 0);
     SC_ASSERT_EQ(err, SC_OK);
     sc_matrix_destroy(&ch);
+}
+
+static void test_matrix_poll_test_mode(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch = {0};
+    sc_error_t err = sc_matrix_create(&alloc, "https://example.com", 19, "test-token", 10, &ch);
+    SC_ASSERT(err == SC_OK);
+    sc_channel_loop_msg_t msgs[4];
+    size_t count = 99;
+    err = sc_matrix_poll(ch.ctx, &alloc, msgs, 4, &count);
+    SC_ASSERT(err == SC_OK);
+    SC_ASSERT(count == 0);
+    sc_matrix_destroy(&ch);
+}
+
+static void test_matrix_poll_null_args(void) {
+    sc_error_t err = sc_matrix_poll(NULL, NULL, NULL, 0, NULL);
+    SC_ASSERT(err == SC_ERR_INVALID_ARGUMENT);
 }
 #endif
 
@@ -834,7 +839,8 @@ static void test_signal_send_long_message(void) {
     sc_channel_t ch;
     sc_signal_create(&alloc, "http://localhost", 16, "a", 1, &ch);
     char buf[2000];
-    for (size_t i = 0; i < sizeof(buf) - 1; i++) buf[i] = 'x';
+    for (size_t i = 0; i < sizeof(buf) - 1; i++)
+        buf[i] = 'x';
     buf[sizeof(buf) - 1] = '\0';
     sc_error_t err = ch.vtable->send(ch.ctx, NULL, 0, buf, sizeof(buf) - 1, NULL, 0);
     SC_ASSERT_EQ(err, SC_OK);
@@ -880,10 +886,9 @@ static void test_nostr_health_check(void) {
 #endif
 
 #if SC_HAS_QQ
-extern sc_error_t sc_qq_create(sc_allocator_t *alloc,
-    const char *api_base, size_t api_base_len,
-    const char *access_token, size_t access_token_len,
-    sc_channel_t *out);
+extern sc_error_t sc_qq_create(sc_allocator_t *alloc, const char *api_base, size_t api_base_len,
+                               const char *access_token, size_t access_token_len,
+                               sc_channel_t *out);
 extern void sc_qq_destroy(sc_channel_t *ch);
 static void test_qq_create(void) {
     sc_allocator_t alloc = sc_system_allocator();
@@ -976,7 +981,8 @@ static void test_cli_send_long_message(void) {
     sc_channel_t ch;
     sc_cli_create(&alloc, &ch);
     char buf[1024];
-    for (size_t i = 0; i < sizeof(buf) - 1; i++) buf[i] = 'a';
+    for (size_t i = 0; i < sizeof(buf) - 1; i++)
+        buf[i] = 'a';
     buf[sizeof(buf) - 1] = '\0';
     sc_error_t err = ch.vtable->send(ch.ctx, NULL, 0, buf, sizeof(buf) - 1, NULL, 0);
     SC_ASSERT_EQ(err, SC_OK);
@@ -1040,7 +1046,8 @@ static void test_telegram_send_long_message(void) {
     sc_channel_t ch;
     sc_telegram_create(&alloc, "t", 1, &ch);
     char buf[5000];
-    for (size_t i = 0; i < sizeof(buf) - 1; i++) buf[i] = 'a';
+    for (size_t i = 0; i < sizeof(buf) - 1; i++)
+        buf[i] = 'a';
     buf[sizeof(buf) - 1] = '\0';
     sc_error_t err = ch.vtable->send(ch.ctx, "123", 3, buf, sizeof(buf) - 1, NULL, 0);
     SC_ASSERT_EQ(err, SC_OK);
@@ -1099,7 +1106,7 @@ static void test_discord_poll_test_mode(void) {
 static void test_discord_poll_empty(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_channel_t ch;
-    const char *ch_ids[] = { "123456789" };
+    const char *ch_ids[] = {"123456789"};
     sc_error_t err = sc_discord_create_ex(&alloc, "t", 1, ch_ids, 1, NULL, 0, &ch);
     SC_ASSERT_EQ(err, SC_OK);
     sc_channel_loop_msg_t msgs[4];
@@ -1121,6 +1128,24 @@ static void test_web_send_empty_target(void) {
     sc_web_destroy(&ch);
 }
 #endif
+
+static void test_irc_poll_test_mode(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch = {0};
+    sc_error_t err = sc_irc_create(&alloc, "irc.example.com", 15, 6667, &ch);
+    SC_ASSERT(err == SC_OK);
+    sc_channel_loop_msg_t msgs[4];
+    size_t count = 99;
+    err = sc_irc_poll(ch.ctx, &alloc, msgs, 4, &count);
+    SC_ASSERT(err == SC_OK);
+    SC_ASSERT(count == 0);
+    sc_irc_destroy(&ch);
+}
+
+static void test_irc_poll_null_args(void) {
+    sc_error_t err = sc_irc_poll(NULL, NULL, NULL, 0, NULL);
+    SC_ASSERT(err == SC_ERR_INVALID_ARGUMENT);
+}
 
 void run_channel_all_tests(void) {
     SC_TEST_SUITE("Channel All");
@@ -1206,12 +1231,16 @@ void run_channel_all_tests(void) {
     SC_RUN_TEST(test_matrix_name);
     SC_RUN_TEST(test_matrix_health_check);
     SC_RUN_TEST(test_matrix_send);
+    SC_RUN_TEST(test_matrix_poll_test_mode);
+    SC_RUN_TEST(test_matrix_poll_null_args);
 #endif
 #if SC_HAS_IRC
     SC_RUN_TEST(test_irc_create);
     SC_RUN_TEST(test_irc_name);
     SC_RUN_TEST(test_irc_health_check);
     SC_RUN_TEST(test_irc_send);
+    SC_RUN_TEST(test_irc_poll_test_mode);
+    SC_RUN_TEST(test_irc_poll_null_args);
 #endif
 #if SC_HAS_LINE
     SC_RUN_TEST(test_line_start_stop_lifecycle);

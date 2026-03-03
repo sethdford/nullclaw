@@ -12,10 +12,13 @@
 #include "seaclaw/session.h"
 #include "seaclaw/skillforge.h"
 #include "seaclaw/tool.h"
+#include "seaclaw/update.h"
+#include "seaclaw/version.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #ifdef SC_GATEWAY_POSIX
 
@@ -841,13 +844,65 @@ static sc_error_t handle_nodes_list(sc_allocator_t *alloc, const sc_app_context_
 
     sc_json_value_t *arr = sc_json_array_new(alloc);
 
-    sc_json_value_t *local = sc_json_object_new(alloc);
-    json_set_str(alloc, local, "id", "local");
-    json_set_str(alloc, local, "type", "gateway");
-    json_set_str(alloc, local, "status", "online");
-    sc_json_object_set(alloc, local, "ws_connections",
-                       sc_json_number_new(alloc, (app && app->config) ? 1.0 : 0.0));
-    sc_json_array_push(alloc, arr, local);
+    size_t node_count = 0;
+    const char *default_id = "local";
+    const char *default_status = "online";
+
+    if (app && app->config && app->config->nodes_len > 0) {
+        node_count = app->config->nodes_len;
+        for (size_t i = 0; i < node_count; i++) {
+            sc_json_value_t *n = sc_json_object_new(alloc);
+            const char *name = app->config->nodes[i].name ? app->config->nodes[i].name : default_id;
+            const char *status =
+                app->config->nodes[i].status ? app->config->nodes[i].status : default_status;
+            json_set_str(alloc, n, "id", name);
+            json_set_str(alloc, n, "type", "gateway");
+            json_set_str(alloc, n, "status", status);
+            if (strcmp(name, "local") == 0) {
+                json_set_str(alloc, n, "version", sc_version_string());
+#if !defined(SC_IS_TEST)
+                {
+                    char hostname[256] = {0};
+                    if (gethostname(hostname, sizeof(hostname) - 1) == 0)
+                        json_set_str(alloc, n, "hostname", hostname);
+#if defined(__APPLE__) || defined(__linux__)
+                    struct timespec ts;
+                    if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
+                        sc_json_object_set(alloc, n, "uptime_secs",
+                                           sc_json_number_new(alloc, (double)ts.tv_sec));
+#endif
+                }
+#endif
+                sc_json_object_set(alloc, n, "ws_connections", sc_json_number_new(alloc, 1.0));
+            } else {
+                sc_json_object_set(alloc, n, "ws_connections", sc_json_number_new(alloc, 0.0));
+            }
+            sc_json_array_push(alloc, arr, n);
+        }
+    } else {
+        /* Backward compatibility: no config or no nodes configured → default local node */
+        sc_json_value_t *local = sc_json_object_new(alloc);
+        json_set_str(alloc, local, "id", default_id);
+        json_set_str(alloc, local, "type", "gateway");
+        json_set_str(alloc, local, "status", default_status);
+        json_set_str(alloc, local, "version", sc_version_string());
+#if !defined(SC_IS_TEST)
+        {
+            char hostname[256] = {0};
+            if (gethostname(hostname, sizeof(hostname) - 1) == 0)
+                json_set_str(alloc, local, "hostname", hostname);
+#if defined(__APPLE__) || defined(__linux__)
+            struct timespec ts;
+            if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
+                sc_json_object_set(alloc, local, "uptime_secs",
+                                   sc_json_number_new(alloc, (double)ts.tv_sec));
+#endif
+        }
+#endif
+        sc_json_object_set(alloc, local, "ws_connections",
+                           sc_json_number_new(alloc, (app && app->config) ? 1.0 : 0.0));
+        sc_json_array_push(alloc, arr, local);
+    }
 
     sc_json_object_set(alloc, obj, "nodes", arr);
     sc_error_t err = sc_json_stringify(alloc, obj, out, out_len);
@@ -861,8 +916,20 @@ static sc_error_t handle_update_check(sc_allocator_t *alloc, char **out, size_t 
     sc_json_value_t *obj = sc_json_object_new(alloc);
     if (!obj)
         return SC_ERR_OUT_OF_MEMORY;
-    sc_json_object_set(alloc, obj, "available", sc_json_bool_new(alloc, false));
-    json_set_str(alloc, obj, "current", "0.1.0");
+    const char *current = sc_version_string();
+    json_set_str(alloc, obj, "current", current);
+    char latest[64] = {0};
+    sc_error_t check_err = sc_update_check(latest, sizeof(latest));
+    if (check_err == SC_OK && latest[0]) {
+        json_set_str(alloc, obj, "latest", latest);
+        sc_json_object_set(alloc, obj, "available",
+                           sc_json_bool_new(alloc, strcmp(latest, current) != 0));
+    } else {
+        json_set_str(alloc, obj, "latest", current);
+        sc_json_object_set(alloc, obj, "available", sc_json_bool_new(alloc, false));
+        if (check_err != SC_OK)
+            json_set_str(alloc, obj, "error", sc_error_string(check_err));
+    }
     sc_error_t err = sc_json_stringify(alloc, obj, out, out_len);
     sc_json_free(alloc, obj);
     return err;
@@ -874,7 +941,13 @@ static sc_error_t handle_update_run(sc_allocator_t *alloc, char **out, size_t *o
     sc_json_value_t *obj = sc_json_object_new(alloc);
     if (!obj)
         return SC_ERR_OUT_OF_MEMORY;
-    json_set_str(alloc, obj, "status", "up_to_date");
+    sc_error_t apply_err = sc_update_apply();
+    if (apply_err == SC_OK)
+        json_set_str(alloc, obj, "status", "updated");
+    else {
+        json_set_str(alloc, obj, "status", sc_error_string(apply_err));
+        json_set_str(alloc, obj, "error", sc_error_string(apply_err));
+    }
     sc_error_t err = sc_json_stringify(alloc, obj, out, out_len);
     sc_json_free(alloc, obj);
     return err;

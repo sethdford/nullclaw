@@ -1,12 +1,17 @@
 #include "seaclaw/channel.h"
+#include "seaclaw/channel_loop.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
 #include "seaclaw/core/http.h"
 #include "seaclaw/core/json.h"
+#include "seaclaw/core/string.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#define MATRIX_SESSION_KEY_MAX 127
+#define MATRIX_CONTENT_MAX     4095
 
 typedef struct sc_matrix_ctx {
     sc_allocator_t *alloc;
@@ -15,6 +20,8 @@ typedef struct sc_matrix_ctx {
     char *access_token;
     size_t access_token_len;
     bool running;
+    char *since_token;
+    char *user_id;
 } sc_matrix_ctx_t;
 
 static sc_error_t matrix_start(void *ctx) {
@@ -125,6 +132,120 @@ static const sc_channel_vtable_t matrix_vtable = {
     .stop_typing = NULL,
 };
 
+sc_error_t sc_matrix_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_loop_msg_t *msgs,
+                          size_t max_msgs, size_t *out_count) {
+    sc_matrix_ctx_t *ctx = (sc_matrix_ctx_t *)channel_ctx;
+    if (!ctx || !msgs || !out_count)
+        return SC_ERR_INVALID_ARGUMENT;
+    *out_count = 0;
+#if SC_IS_TEST
+    (void)alloc;
+    (void)max_msgs;
+    return SC_OK;
+#else
+    if (!ctx->homeserver || ctx->homeserver_len == 0)
+        return SC_OK;
+    if (!ctx->access_token || ctx->access_token_len == 0)
+        return SC_OK;
+    if (!ctx->running)
+        return SC_OK;
+    char url_buf[1024];
+    int nu;
+    if (ctx->since_token)
+        nu = snprintf(url_buf, sizeof(url_buf),
+                      "%.*s/_matrix/client/r0/"
+                      "sync?timeout=5000&since=%s&filter={\"room\":{\"timeline\":{\"limit\":10}}}",
+                      (int)ctx->homeserver_len, ctx->homeserver, ctx->since_token);
+    else
+        nu = snprintf(
+            url_buf, sizeof(url_buf),
+            "%.*s/_matrix/client/r0/sync?timeout=0&filter={\"room\":{\"timeline\":{\"limit\":10}}}",
+            (int)ctx->homeserver_len, ctx->homeserver);
+    if (nu < 0 || (size_t)nu >= sizeof(url_buf))
+        return SC_ERR_INTERNAL;
+    char auth_buf[512];
+    int na = snprintf(auth_buf, sizeof(auth_buf), "Authorization: Bearer %.*s",
+                      (int)ctx->access_token_len, ctx->access_token);
+    if (na <= 0 || (size_t)na >= sizeof(auth_buf))
+        return SC_ERR_INTERNAL;
+    sc_http_response_t resp = {0};
+    sc_error_t err = sc_http_get(alloc, url_buf, auth_buf, &resp);
+    if (err != SC_OK) {
+        if (resp.owned && resp.body)
+            sc_http_response_free(alloc, &resp);
+        return SC_OK;
+    }
+    if (resp.status_code != 200 || !resp.body) {
+        if (resp.owned && resp.body)
+            sc_http_response_free(alloc, &resp);
+        return SC_OK;
+    }
+    sc_json_value_t *parsed = NULL;
+    err = sc_json_parse(alloc, resp.body, resp.body_len, &parsed);
+    if (resp.owned && resp.body)
+        sc_http_response_free(alloc, &resp);
+    if (err != SC_OK || !parsed)
+        return SC_OK;
+    const char *next_batch = sc_json_get_string(parsed, "next_batch");
+    if (next_batch) {
+        if (ctx->since_token)
+            ctx->alloc->free(ctx->alloc->ctx, ctx->since_token, strlen(ctx->since_token) + 1);
+        ctx->since_token = sc_strndup(ctx->alloc, next_batch, strlen(next_batch));
+    }
+    size_t cnt = 0;
+    sc_json_value_t *rooms = sc_json_object_get(parsed, "rooms");
+    if (rooms) {
+        sc_json_value_t *join = sc_json_object_get(rooms, "join");
+        if (join && join->type == SC_JSON_OBJECT && join->data.object.pairs) {
+            for (size_t r = 0; r < join->data.object.len && cnt < max_msgs; r++) {
+                const char *room_id = join->data.object.pairs[r].key;
+                sc_json_value_t *room = join->data.object.pairs[r].value;
+                if (!room || room->type != SC_JSON_OBJECT)
+                    continue;
+                sc_json_value_t *tl = sc_json_object_get(room, "timeline");
+                if (!tl)
+                    continue;
+                sc_json_value_t *events = sc_json_object_get(tl, "events");
+                if (!events || events->type != SC_JSON_ARRAY)
+                    continue;
+                for (size_t e = 0; e < events->data.array.len && cnt < max_msgs; e++) {
+                    sc_json_value_t *ev = events->data.array.items[e];
+                    if (!ev || ev->type != SC_JSON_OBJECT)
+                        continue;
+                    const char *ev_type = sc_json_get_string(ev, "type");
+                    if (!ev_type || strcmp(ev_type, "m.room.message") != 0)
+                        continue;
+                    const char *sender = sc_json_get_string(ev, "sender");
+                    if (sender && ctx->user_id && strcmp(sender, ctx->user_id) == 0)
+                        continue;
+                    sc_json_value_t *content = sc_json_object_get(ev, "content");
+                    if (!content)
+                        continue;
+                    const char *body = sc_json_get_string(content, "body");
+                    if (!body || strlen(body) == 0)
+                        continue;
+                    size_t sk_len = room_id ? strlen(room_id) : 0;
+                    if (sk_len > MATRIX_SESSION_KEY_MAX)
+                        sk_len = MATRIX_SESSION_KEY_MAX;
+                    if (room_id)
+                        memcpy(msgs[cnt].session_key, room_id, sk_len);
+                    msgs[cnt].session_key[sk_len] = '\0';
+                    size_t ct_len = strlen(body);
+                    if (ct_len > MATRIX_CONTENT_MAX)
+                        ct_len = MATRIX_CONTENT_MAX;
+                    memcpy(msgs[cnt].content, body, ct_len);
+                    msgs[cnt].content[ct_len] = '\0';
+                    cnt++;
+                }
+            }
+        }
+    }
+    sc_json_free(alloc, parsed);
+    *out_count = cnt;
+    return SC_OK;
+#endif
+}
+
 sc_error_t sc_matrix_create(sc_allocator_t *alloc, const char *homeserver, size_t homeserver_len,
                             const char *access_token, size_t access_token_len, sc_channel_t *out) {
     if (!alloc || !out)
@@ -167,6 +288,10 @@ void sc_matrix_destroy(sc_channel_t *ch) {
             free(c->homeserver);
         if (c->access_token)
             free(c->access_token);
+        if (c->since_token && c->alloc)
+            c->alloc->free(c->alloc->ctx, c->since_token, strlen(c->since_token) + 1);
+        if (c->user_id && c->alloc)
+            c->alloc->free(c->alloc->ctx, c->user_id, strlen(c->user_id) + 1);
         free(c);
         ch->ctx = NULL;
         ch->vtable = NULL;

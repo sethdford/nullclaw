@@ -8,10 +8,10 @@
 #include <string.h>
 
 #include "seaclaw/tools/schema_common.h"
-#define SC_MEMORY_FORGET_NAME "memory_forget"
-#define SC_MEMORY_FORGET_DESC "Forget memory by key"
+#define SC_MEMORY_FORGET_NAME   "memory_forget"
+#define SC_MEMORY_FORGET_DESC   "Forget memory by key"
 #define SC_MEMORY_FORGET_PARAMS SC_SCHEMA_KEY_ONLY
-#define SC_MEMORY_KEY_MAX 1024
+#define SC_MEMORY_KEY_MAX       1024
 
 typedef struct sc_memory_forget_ctx {
     sc_memory_t *memory;

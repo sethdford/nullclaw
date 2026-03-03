@@ -151,6 +151,43 @@ static void set_defaults(sc_config_t *cfg, sc_allocator_t *a) {
     cfg->cron.interval_minutes = 30;
     cfg->cron.max_run_history = 50;
     cfg->scheduler.max_concurrent = 4;
+    cfg->nodes_len = 1;
+    cfg->nodes[0].name = sc_strdup(a, "local");
+    cfg->nodes[0].status = sc_strdup(a, "online");
+}
+
+static sc_error_t parse_nodes(sc_allocator_t *a, sc_config_t *cfg, const sc_json_value_t *arr) {
+    if (!arr || arr->type != SC_JSON_ARRAY)
+        return SC_OK;
+    for (size_t i = 0; i < cfg->nodes_len; i++) {
+        if (cfg->nodes[i].name) {
+            a->free(a->ctx, cfg->nodes[i].name, strlen(cfg->nodes[i].name) + 1);
+            cfg->nodes[i].name = NULL;
+        }
+        if (cfg->nodes[i].status) {
+            a->free(a->ctx, cfg->nodes[i].status, strlen(cfg->nodes[i].status) + 1);
+            cfg->nodes[i].status = NULL;
+        }
+    }
+    cfg->nodes_len = 0;
+    size_t cap = arr->data.array.len;
+    if (cap > SC_NODES_MAX)
+        cap = SC_NODES_MAX;
+    size_t n = 0;
+    for (size_t i = 0; i < cap; i++) {
+        const sc_json_value_t *item = arr->data.array.items[i];
+        if (!item || item->type != SC_JSON_OBJECT)
+            continue;
+        const char *name = sc_json_get_string(item, "name");
+        if (!name)
+            continue;
+        const char *status = sc_json_get_string(item, "status");
+        cfg->nodes[n].name = sc_strdup(a, name);
+        cfg->nodes[n].status = status && status[0] ? sc_strdup(a, status) : sc_strdup(a, "online");
+        n++;
+    }
+    cfg->nodes_len = n;
+    return SC_OK;
 }
 
 static sc_error_t parse_providers(sc_allocator_t *a, sc_config_t *cfg, const sc_json_value_t *arr) {
@@ -684,36 +721,63 @@ static void parse_discord_channel(sc_allocator_t *a, sc_config_t *cfg, const sc_
 }
 
 static void parse_slack_channel(sc_allocator_t *a, sc_config_t *cfg, const sc_json_value_t *obj) {
-    if (!obj) return;
+    if (!obj)
+        return;
     sc_slack_channel_config_t *sl = &cfg->channels.slack;
     const sc_json_value_t *val = obj;
-    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items) val = obj->data.array.items[0];
-    if (val->type != SC_JSON_OBJECT) return;
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items)
+        val = obj->data.array.items[0];
+    if (val->type != SC_JSON_OBJECT)
+        return;
     const char *s = sc_json_get_string(val, "token");
-    if (s) { if (sl->token) a->free(a->ctx, sl->token, strlen(sl->token) + 1); sl->token = sc_strdup(a, s); }
+    if (s) {
+        if (sl->token)
+            a->free(a->ctx, sl->token, strlen(sl->token) + 1);
+        sl->token = sc_strdup(a, s);
+    }
     sc_json_value_t *ch_ids = sc_json_object_get(val, "channel_ids");
     if (ch_ids && ch_ids->type == SC_JSON_ARRAY && ch_ids->data.array.items) {
-        for (size_t i = 0; i < sl->channel_ids_count; i++) if (sl->channel_ids[i]) a->free(a->ctx, sl->channel_ids[i], strlen(sl->channel_ids[i]) + 1);
+        for (size_t i = 0; i < sl->channel_ids_count; i++)
+            if (sl->channel_ids[i])
+                a->free(a->ctx, sl->channel_ids[i], strlen(sl->channel_ids[i]) + 1);
         sl->channel_ids_count = 0;
-        for (size_t i = 0; i < ch_ids->data.array.len && sl->channel_ids_count < SC_SLACK_CHANNEL_IDS_MAX; i++) {
+        for (size_t i = 0;
+             i < ch_ids->data.array.len && sl->channel_ids_count < SC_SLACK_CHANNEL_IDS_MAX; i++) {
             sc_json_value_t *item = ch_ids->data.array.items[i];
-            if (item && item->type == SC_JSON_STRING && item->data.string.ptr) sl->channel_ids[sl->channel_ids_count++] = sc_strdup(a, item->data.string.ptr);
+            if (item && item->type == SC_JSON_STRING && item->data.string.ptr)
+                sl->channel_ids[sl->channel_ids_count++] = sc_strdup(a, item->data.string.ptr);
         }
     }
 }
 
-static void parse_whatsapp_channel(sc_allocator_t *a, sc_config_t *cfg, const sc_json_value_t *obj) {
-    if (!obj) return;
+static void parse_whatsapp_channel(sc_allocator_t *a, sc_config_t *cfg,
+                                   const sc_json_value_t *obj) {
+    if (!obj)
+        return;
     sc_whatsapp_channel_config_t *wa = &cfg->channels.whatsapp;
     const sc_json_value_t *val = obj;
-    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items) val = obj->data.array.items[0];
-    if (val->type != SC_JSON_OBJECT) return;
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items)
+        val = obj->data.array.items[0];
+    if (val->type != SC_JSON_OBJECT)
+        return;
     const char *s = sc_json_get_string(val, "phone_number_id");
-    if (s) { if (wa->phone_number_id) a->free(a->ctx, wa->phone_number_id, strlen(wa->phone_number_id) + 1); wa->phone_number_id = sc_strdup(a, s); }
+    if (s) {
+        if (wa->phone_number_id)
+            a->free(a->ctx, wa->phone_number_id, strlen(wa->phone_number_id) + 1);
+        wa->phone_number_id = sc_strdup(a, s);
+    }
     s = sc_json_get_string(val, "token");
-    if (s) { if (wa->token) a->free(a->ctx, wa->token, strlen(wa->token) + 1); wa->token = sc_strdup(a, s); }
+    if (s) {
+        if (wa->token)
+            a->free(a->ctx, wa->token, strlen(wa->token) + 1);
+        wa->token = sc_strdup(a, s);
+    }
     s = sc_json_get_string(val, "verify_token");
-    if (s) { if (wa->verify_token) a->free(a->ctx, wa->verify_token, strlen(wa->verify_token) + 1); wa->verify_token = sc_strdup(a, s); }
+    if (s) {
+        if (wa->verify_token)
+            a->free(a->ctx, wa->verify_token, strlen(wa->verify_token) + 1);
+        wa->verify_token = sc_strdup(a, s);
+    }
 }
 
 static sc_error_t parse_channels(sc_allocator_t *a, sc_config_t *cfg, const sc_json_value_t *obj) {
@@ -1339,6 +1403,10 @@ sc_error_t sc_config_parse_json(sc_config_t *cfg, const char *content, size_t le
     sc_json_value_t *mcp_obj = sc_json_object_get(root, "mcp_servers");
     if (mcp_obj)
         parse_mcp_servers(a, cfg, mcp_obj);
+
+    sc_json_value_t *nodes_obj = sc_json_object_get(root, "nodes");
+    if (nodes_obj)
+        parse_nodes(a, cfg, nodes_obj);
 
     sc_json_value_t *policy_obj = sc_json_object_get(root, "policy");
     if (policy_obj)

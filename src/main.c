@@ -721,12 +721,12 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
     }
 #endif
 
-
 #if SC_HAS_SLACK
     sc_channel_t slack_ch = {0};
     if (cfg.channels.slack.token && cfg.channels.slack.channel_ids_count > 0) {
         const char **sl_ids = (const char **)cfg.channels.slack.channel_ids;
-        err = sc_slack_create_ex(alloc, cfg.channels.slack.token, strlen(cfg.channels.slack.token), sl_ids, cfg.channels.slack.channel_ids_count, &slack_ch);
+        err = sc_slack_create_ex(alloc, cfg.channels.slack.token, strlen(cfg.channels.slack.token),
+                                 sl_ids, cfg.channels.slack.channel_ids_count, &slack_ch);
         if (err == SC_OK) {
             channels[ch_count].channel_ctx = slack_ch.ctx;
             channels[ch_count].channel = &slack_ch;
@@ -734,7 +734,8 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
             channels[ch_count].interval_ms = 3000;
             channels[ch_count].last_poll_ms = 0;
             ch_count++;
-            fprintf(stderr, "[%s] slack channel configured (polling %zu channels)\n", SC_CODENAME, cfg.channels.slack.channel_ids_count);
+            fprintf(stderr, "[%s] slack channel configured (polling %zu channels)\n", SC_CODENAME,
+                    cfg.channels.slack.channel_ids_count);
         }
     }
 #endif
@@ -742,7 +743,10 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
 #if SC_HAS_WHATSAPP
     sc_channel_t whatsapp_ch = {0};
     if (cfg.channels.whatsapp.phone_number_id && cfg.channels.whatsapp.token) {
-        err = sc_whatsapp_create(alloc, cfg.channels.whatsapp.phone_number_id, strlen(cfg.channels.whatsapp.phone_number_id), cfg.channels.whatsapp.token, strlen(cfg.channels.whatsapp.token), &whatsapp_ch);
+        err = sc_whatsapp_create(alloc, cfg.channels.whatsapp.phone_number_id,
+                                 strlen(cfg.channels.whatsapp.phone_number_id),
+                                 cfg.channels.whatsapp.token, strlen(cfg.channels.whatsapp.token),
+                                 &whatsapp_ch);
         if (err == SC_OK) {
             channels[ch_count].channel_ctx = whatsapp_ch.ctx;
             channels[ch_count].channel = &whatsapp_ch;

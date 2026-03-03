@@ -36,16 +36,9 @@
 #include "agent/profile.h"
 #include "agent/spawn.h"
 #include "channels/thread_binding.h"
+#ifdef SC_HAS_OTEL
 #include "observability/otel.h"
-#include "plugin.h"
-#include "security/policy_engine.h"
-#include "security/replay.h"
-
-#include "agent/mailbox.h"
-#include "agent/profile.h"
-#include "agent/spawn.h"
-#include "channels/thread_binding.h"
-#include "observability/otel.h"
+#endif
 #include "plugin.h"
 #include "security/policy_engine.h"
 #include "security/replay.h"

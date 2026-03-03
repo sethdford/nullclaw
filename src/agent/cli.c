@@ -13,7 +13,9 @@
 #include "seaclaw/memory/retrieval.h"
 #include "seaclaw/memory/vector.h"
 #include "seaclaw/observability/log_observer.h"
+#ifdef SC_HAS_OTEL
 #include "seaclaw/observability/otel.h"
+#endif
 #include "seaclaw/plugin.h"
 #include "seaclaw/provider.h"
 #include "seaclaw/providers/factory.h"
@@ -500,6 +502,7 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
         }
     }
 
+#ifdef SC_HAS_OTEL
     sc_observer_t otel_observer = {0};
     if (cfg.diagnostics.otel_endpoint && cfg.diagnostics.otel_endpoint[0]) {
         sc_otel_config_t otel_cfg = {
@@ -518,6 +521,7 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
             agent.observer = &otel_observer;
         }
     }
+#endif
 
     sc_agent_set_retrieval_engine(&agent, &retrieval_engine);
 
@@ -545,8 +549,10 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
         if (log_fp)
             fclose(log_fp);
         sc_tools_destroy_default(alloc, tools, tools_count);
+#ifdef SC_HAS_OTEL
         if (otel_observer.vtable && otel_observer.vtable->deinit)
             otel_observer.vtable->deinit(otel_observer.ctx);
+#endif
         if (agent.policy_engine)
             sc_policy_engine_destroy(agent.policy_engine);
         if (cli_mailbox)
@@ -675,8 +681,10 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
     if (log_fp)
         fclose(log_fp);
     sc_tools_destroy_default(alloc, tools, tools_count);
+#ifdef SC_HAS_OTEL
     if (otel_observer.vtable && otel_observer.vtable->deinit)
         otel_observer.vtable->deinit(otel_observer.ctx);
+#endif
     if (agent.policy_engine)
         sc_policy_engine_destroy(agent.policy_engine);
     if (cli_mailbox)

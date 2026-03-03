@@ -20,6 +20,9 @@ option(SC_ENABLE_TUI "Enable rich TUI mode with split-pane terminal UI (vendor/t
 option(SC_ENABLE_PERIPHERALS "Build hardware peripheral support (Arduino, STM32, RPi, SPI, I2C)" OFF)
 option(SC_ENABLE_TUNNELS "Build tunnel providers (ngrok, cloudflare, tailscale)" OFF)
 option(SC_ENABLE_RUNTIME_EXOTIC "Build exotic runtime adapters (WASM, Cloudflare Workers)" OFF)
+option(SC_ENABLE_TOOLS_BROWSER "Build browser automation tools (browser, screenshot, browser_open)" ON)
+option(SC_ENABLE_TOOLS_ADVANCED "Build advanced tools (composio, claude_code, canvas, notebook, database)" ON)
+option(SC_ENABLE_OTEL "Build OpenTelemetry observability exporter" ON)
 
 # WASM build: cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/wasm32-wasi.cmake -DSC_BUILD_WASM=ON ..
 
@@ -312,14 +315,12 @@ set(SC_CORE_SOURCES
     src/tools/web_search_providers/searxng.c
     src/tools/web_fetch.c
     src/tools/http_request.c
-    src/tools/browser.c
     src/tools/memory_store.c
     src/tools/memory_recall.c
     src/tools/memory_list.c
     src/tools/memory_forget.c
     src/tools/message.c
     src/tools/delegate.c
-    src/tools/database.c
     src/tools/spawn.c
     src/tools/cron_add.c
     src/tools/cron_list.c
@@ -327,20 +328,14 @@ set(SC_CORE_SOURCES
     src/tools/cron_run.c
     src/tools/cron_runs.c
     src/tools/cron_update.c
-    src/tools/browser_open.c
-    src/tools/composio.c
     src/tools/schedule.c
     src/tools/schema.c
     src/tools/schema_clean.c
     src/tools/pushover.c
     src/tools/image.c
-    src/tools/screenshot.c
-    src/tools/claude_code.c
     src/tools/agent_spawn.c
     src/tools/agent_query.c
-    src/tools/canvas.c
     src/tools/apply_patch.c
-    src/tools/notebook.c
     src/tools/pdf.c
     src/tools/diff.c
     src/tools/factory.c
@@ -348,7 +343,6 @@ set(SC_CORE_SOURCES
     src/channels/thread_binding.c
     src/security/policy_engine.c
     src/security/replay.c
-    src/observability/otel.c
     src/plugins/registry.c
     src/skillforge.c
     src/onboard.c
@@ -432,6 +426,33 @@ endif()
 # WASI sandbox is cross-platform
 list(APPEND SC_CORE_SOURCES src/security/wasi_sandbox.c)
 
+# Browser automation tools
+if(SC_ENABLE_TOOLS_BROWSER)
+    list(APPEND SC_CORE_SOURCES
+        src/tools/browser.c
+        src/tools/browser_open.c
+        src/tools/screenshot.c
+    )
+endif()
+
+# Advanced tools: composio, claude_code, canvas, notebook, database
+if(SC_ENABLE_TOOLS_ADVANCED)
+    list(APPEND SC_CORE_SOURCES
+        src/tools/composio.c
+        src/tools/claude_code.c
+        src/tools/canvas.c
+        src/tools/notebook.c
+        src/tools/database.c
+    )
+endif()
+
+# OpenTelemetry observability exporter
+if(SC_ENABLE_OTEL)
+    list(APPEND SC_CORE_SOURCES
+        src/observability/otel.c
+    )
+endif()
+
 # Crypto sources (generic C fallbacks + dispatch)
 set(SC_CRYPTO_SOURCES
     asm/generic/chacha20.c
@@ -481,6 +502,15 @@ if(SC_ENABLE_TUNNELS)
 endif()
 if(SC_ENABLE_RUNTIME_EXOTIC)
     target_compile_definitions(seaclaw_core PRIVATE SC_HAS_RUNTIME_EXOTIC=1)
+endif()
+if(SC_ENABLE_TOOLS_BROWSER)
+    target_compile_definitions(seaclaw_core PRIVATE SC_HAS_TOOLS_BROWSER=1)
+endif()
+if(SC_ENABLE_TOOLS_ADVANCED)
+    target_compile_definitions(seaclaw_core PRIVATE SC_HAS_TOOLS_ADVANCED=1)
+endif()
+if(SC_ENABLE_OTEL)
+    target_compile_definitions(seaclaw_core PRIVATE SC_HAS_OTEL=1)
 endif()
 
 # --- Compile definitions for enabled channels (for conditional compilation in source) ---
@@ -797,12 +827,24 @@ endif()
 if(NOT WIN32)
     list(APPEND SC_TEST_EXTRA_MODULES src/security/appcontainer.c)
 endif()
+if(NOT SC_ENABLE_TOOLS_BROWSER)
+    list(APPEND SC_TEST_EXTRA_MODULES
+        src/tools/browser.c src/tools/browser_open.c src/tools/screenshot.c)
+endif()
+if(NOT SC_ENABLE_TOOLS_ADVANCED)
+    list(APPEND SC_TEST_EXTRA_MODULES
+        src/tools/composio.c src/tools/claude_code.c src/tools/canvas.c
+        src/tools/notebook.c src/tools/database.c)
+endif()
+if(NOT SC_ENABLE_OTEL)
+    list(APPEND SC_TEST_EXTRA_MODULES src/observability/otel.c)
+endif()
 add_library(seaclaw_core_test STATIC ${SC_CORE_SOURCES} ${SC_TEST_EXTRA_CHANNELS} ${SC_TEST_EXTRA_MODULES} ${SC_CRYPTO_SOURCES} ${SC_ASM_SOURCES})
 target_include_directories(seaclaw_core_test PUBLIC ${SC_ROOT}/include)
 target_include_directories(seaclaw_core_test PRIVATE ${SC_ROOT}/asm/generic)
 target_compile_definitions(seaclaw_core_test PRIVATE SC_IS_TEST=1)
 # Tests always have all module groups available
-target_compile_definitions(seaclaw_core_test PRIVATE SC_HAS_PERIPHERALS=1 SC_HAS_TUNNELS=1 SC_HAS_RUNTIME_EXOTIC=1)
+target_compile_definitions(seaclaw_core_test PRIVATE SC_HAS_PERIPHERALS=1 SC_HAS_TUNNELS=1 SC_HAS_RUNTIME_EXOTIC=1 SC_HAS_TOOLS_BROWSER=1 SC_HAS_TOOLS_ADVANCED=1 SC_HAS_OTEL=1)
 if(Threads_FOUND)
     target_link_libraries(seaclaw_core_test PUBLIC Threads::Threads)
 endif()
