@@ -62,3 +62,6 @@ apps/android/local.properties
 node_modules/
 ui/dist/
 ui/node_modules/
+ui/test-results/
+ui/playwright-report/
+ui/blob-report/

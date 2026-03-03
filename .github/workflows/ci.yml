@@ -71,6 +71,14 @@ jobs:
       - run: npm run format:check
       - run: npm run test
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: ui/test-results/
+          retention-days: 7
 
   completions:
     runs-on: ubuntu-latest
