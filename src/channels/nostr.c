@@ -1,4 +1,5 @@
 #include "seaclaw/channels/nostr.h"
+#include "seaclaw/core/json.h"
 #include "seaclaw/core/process_util.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,6 +7,8 @@
 #include <unistd.h>
 
 #define SC_NOSTR_MAX_MSG       65536
+#define SC_NOSTR_SESSION_MAX   127
+#define SC_NOSTR_CONTENT_MAX   4095
 #define SC_NOSTR_MAX_TARGET    128
 #define SC_NOSTR_LAST_MSG_SIZE 4096
 
@@ -140,6 +143,107 @@ static const sc_channel_vtable_t nostr_vtable = {
     .start_typing = NULL,
     .stop_typing = NULL,
 };
+
+sc_error_t sc_nostr_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_loop_msg_t *msgs,
+                        size_t max_msgs, size_t *out_count) {
+    sc_nostr_ctx_t *ctx = (sc_nostr_ctx_t *)channel_ctx;
+    if (!ctx || !msgs || !out_count)
+        return SC_ERR_INVALID_ARGUMENT;
+    *out_count = 0;
+#if SC_IS_TEST
+    (void)alloc;
+    (void)max_msgs;
+    return SC_OK;
+#else
+#ifdef SC_GATEWAY_POSIX
+    if (!ctx->nak_path || ctx->nak_path[0] == '\0')
+        return SC_OK;
+    if (!ctx->relay_url || ctx->relay_url[0] == '\0')
+        return SC_OK;
+    if (!ctx->running)
+        return SC_OK;
+
+    /* nak req -k 1 -k 4 -r <relay> fetches kind 1 (notes) and kind 4 (DMs) */
+    char cmd[2048];
+    int nc = snprintf(cmd, sizeof(cmd), "%s req -k 1 -k 4 -r %s 2>/dev/null",
+                      ctx->nak_path, ctx->relay_url);
+    if (nc < 0 || nc >= (int)sizeof(cmd))
+        return SC_OK;
+
+    char *sh_cmd = (char *)ctx->alloc->alloc(ctx->alloc->ctx, (size_t)nc + 1);
+    if (!sh_cmd)
+        return SC_OK;
+    memcpy(sh_cmd, cmd, (size_t)nc + 1);
+
+    const char *argv[] = {"sh", "-c", sh_cmd, NULL};
+    sc_run_result_t run = {0};
+    sc_error_t err = sc_process_run(ctx->alloc, argv, NULL, 65536, &run);
+    ctx->alloc->free(ctx->alloc->ctx, sh_cmd, (size_t)nc + 1);
+    if (err != SC_OK || !run.success || !run.stdout_buf || run.stdout_len == 0) {
+        sc_run_result_free(ctx->alloc, &run);
+        return SC_OK;
+    }
+
+    /* Parse NDJSON or JSON array: one event per line or [event,...] */
+    size_t cnt = 0;
+    const char *p = run.stdout_buf;
+    const char *end = run.stdout_buf + run.stdout_len;
+
+    while (p < end && cnt < max_msgs) {
+        const char *line_start = p;
+        while (p < end && *p != '\n')
+            p++;
+        size_t line_len = (size_t)(p - line_start);
+        if (p < end)
+            p++;
+        if (line_len == 0)
+            continue;
+
+        sc_json_value_t *ev = NULL;
+        if (sc_json_parse(alloc, line_start, line_len, &ev) != SC_OK || !ev)
+            continue;
+        if (ev->type != SC_JSON_OBJECT) {
+            sc_json_free(alloc, ev);
+            continue;
+        }
+        int kind = (int)sc_json_get_number(ev, "kind", -1);
+        if (kind != 1 && kind != 4) {
+            sc_json_free(alloc, ev);
+            continue;
+        }
+        const char *content = sc_json_get_string(ev, "content");
+        if (!content || strlen(content) == 0) {
+            sc_json_free(alloc, ev);
+            continue;
+        }
+        const char *pubkey = sc_json_get_string(ev, "pubkey");
+        if (pubkey) {
+            size_t sk = strlen(pubkey);
+            if (sk > SC_NOSTR_SESSION_MAX)
+                sk = SC_NOSTR_SESSION_MAX;
+            memcpy(msgs[cnt].session_key, pubkey, sk);
+            msgs[cnt].session_key[sk] = '\0';
+        } else {
+            msgs[cnt].session_key[0] = '\0';
+        }
+        size_t ct = strlen(content);
+        if (ct > SC_NOSTR_CONTENT_MAX)
+            ct = SC_NOSTR_CONTENT_MAX;
+        memcpy(msgs[cnt].content, content, ct);
+        msgs[cnt].content[ct] = '\0';
+        cnt++;
+        sc_json_free(alloc, ev);
+    }
+    sc_run_result_free(ctx->alloc, &run);
+    *out_count = cnt;
+    return SC_OK;
+#else
+    (void)alloc;
+    (void)max_msgs;
+    return SC_ERR_NOT_SUPPORTED;
+#endif
+#endif
+}
 
 sc_error_t sc_nostr_create(sc_allocator_t *alloc, const char *nak_path, size_t nak_path_len,
                            const char *bot_pubkey, size_t bot_pubkey_len, const char *relay_url,

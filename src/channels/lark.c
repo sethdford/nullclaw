@@ -1,4 +1,5 @@
 #include "seaclaw/channel.h"
+#include "seaclaw/channel_loop.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
 #include "seaclaw/core/http.h"
@@ -7,6 +8,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+#define LARK_QUEUE_MAX       32
+#define LARK_SESSION_KEY_MAX 127
+#define LARK_CONTENT_MAX     4095
+
+typedef struct sc_lark_queued_msg {
+    char session_key[128];
+    char content[4096];
+} sc_lark_queued_msg_t;
+
 typedef struct sc_lark_ctx {
     sc_allocator_t *alloc;
     char *app_id;
@@ -14,6 +25,10 @@ typedef struct sc_lark_ctx {
     char *app_secret;
     size_t app_secret_len;
     bool running;
+    sc_lark_queued_msg_t queue[LARK_QUEUE_MAX];
+    size_t queue_head;
+    size_t queue_tail;
+    size_t queue_count;
 } sc_lark_ctx_t;
 
 static sc_error_t lark_start(void *ctx) {
@@ -190,6 +205,69 @@ static const sc_channel_vtable_t lark_vtable = {
     .start_typing = NULL,
     .stop_typing = NULL,
 };
+
+
+static void lark_queue_push(sc_lark_ctx_t *c, const char *from, size_t from_len,
+                             const char *body, size_t body_len) {
+    if (c->queue_count >= LARK_QUEUE_MAX) return;
+    sc_lark_queued_msg_t *slot = &c->queue[c->queue_tail];
+    size_t sk = from_len < LARK_SESSION_KEY_MAX ? from_len : LARK_SESSION_KEY_MAX;
+    memcpy(slot->session_key, from, sk);
+    slot->session_key[sk] = '\0';
+    size_t ct = body_len < LARK_CONTENT_MAX ? body_len : LARK_CONTENT_MAX;
+    memcpy(slot->content, body, ct);
+    slot->content[ct] = '\0';
+    c->queue_tail = (c->queue_tail + 1) % LARK_QUEUE_MAX;
+    c->queue_count++;
+}
+
+sc_error_t sc_lark_on_webhook(void *channel_ctx, sc_allocator_t *alloc, const char *body,
+                               size_t body_len) {
+    sc_lark_ctx_t *c = (sc_lark_ctx_t *)channel_ctx;
+    if (!c || !body || body_len == 0) return SC_ERR_INVALID_ARGUMENT;
+#if SC_IS_TEST
+    (void)alloc;
+    lark_queue_push(c, "test-sender", 11, body, body_len);
+    return SC_OK;
+#else
+    sc_json_value_t *parsed = NULL;
+    sc_error_t err = sc_json_parse(alloc, body, body_len, &parsed);
+    if (err != SC_OK || !parsed) return SC_OK;
+        sc_json_value_t *ev = sc_json_object_get(parsed, "event");
+    if (ev && ev->type == SC_JSON_OBJECT) {
+        sc_json_value_t *msg = sc_json_object_get(ev, "message");
+        sc_json_value_t *sender = sc_json_object_get(ev, "sender");
+        if (msg && sender) {
+            sc_json_value_t *sid = sc_json_object_get(sender, "sender_id");
+            const char *open_id = sid ? sc_json_get_string(sid, "open_id") : NULL;
+            const char *content = sc_json_get_string(msg, "content");
+            if (open_id && content && strlen(content) > 0)
+                lark_queue_push(c, open_id, strlen(open_id), content, strlen(content));
+        }
+    }
+    sc_json_free(alloc, parsed);
+    return SC_OK;
+#endif
+}
+
+sc_error_t sc_lark_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_loop_msg_t *msgs,
+                         size_t max_msgs, size_t *out_count) {
+    (void)alloc;
+    sc_lark_ctx_t *c = (sc_lark_ctx_t *)channel_ctx;
+    if (!c || !msgs || !out_count) return SC_ERR_INVALID_ARGUMENT;
+    *out_count = 0;
+    size_t cnt = 0;
+    while (c->queue_count > 0 && cnt < max_msgs) {
+        sc_lark_queued_msg_t *slot = &c->queue[c->queue_head];
+        memcpy(msgs[cnt].session_key, slot->session_key, sizeof(slot->session_key));
+        memcpy(msgs[cnt].content, slot->content, sizeof(slot->content));
+        c->queue_head = (c->queue_head + 1) % LARK_QUEUE_MAX;
+        c->queue_count--;
+        cnt++;
+    }
+    *out_count = cnt;
+    return SC_OK;
+}
 
 sc_error_t sc_lark_create(sc_allocator_t *alloc, const char *app_id, size_t app_id_len,
                           const char *app_secret, size_t app_secret_len, sc_channel_t *out) {

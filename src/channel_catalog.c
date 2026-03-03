@@ -28,10 +28,10 @@ static const sc_channel_meta_t catalog[] = {
     {SC_CHANNEL_IRC, "irc", "IRC", "", SC_LISTENER_POLLING},
 #endif
 #ifdef SC_HAS_LINE
-    {SC_CHANNEL_LINE, "line", "LINE", "", SC_LISTENER_WEBHOOK_ONLY},
+    {SC_CHANNEL_LINE, "line", "LINE", "", SC_LISTENER_POLLING},
 #endif
 #ifdef SC_HAS_LARK
-    {SC_CHANNEL_LARK, "lark", "Lark", "", SC_LISTENER_WEBHOOK_ONLY},
+    {SC_CHANNEL_LARK, "lark", "Lark", "", SC_LISTENER_POLLING},
 #endif
 #ifdef SC_HAS_WEB
     {SC_CHANNEL_WEB, "web", "Web", "", SC_LISTENER_GATEWAY},
@@ -43,13 +43,13 @@ static const sc_channel_meta_t catalog[] = {
     {SC_CHANNEL_IMESSAGE, "imessage", "iMessage", "", SC_LISTENER_POLLING},
 #endif
 #ifdef SC_HAS_MATTERMOST
-    {SC_CHANNEL_MATTERMOST, "mattermost", "Mattermost", "", SC_LISTENER_WEBHOOK_ONLY},
+    {SC_CHANNEL_MATTERMOST, "mattermost", "Mattermost", "", SC_LISTENER_POLLING},
 #endif
 #ifdef SC_HAS_ONEBOT
-    {SC_CHANNEL_ONEBOT, "onebot", "OneBot", "", SC_LISTENER_WEBHOOK_ONLY},
+    {SC_CHANNEL_ONEBOT, "onebot", "OneBot", "", SC_LISTENER_POLLING},
 #endif
 #ifdef SC_HAS_DINGTALK
-    {SC_CHANNEL_DINGTALK, "dingtalk", "DingTalk", "", SC_LISTENER_WEBHOOK_ONLY},
+    {SC_CHANNEL_DINGTALK, "dingtalk", "DingTalk", "", SC_LISTENER_POLLING},
 #endif
 #ifdef SC_HAS_SIGNAL
     {SC_CHANNEL_SIGNAL, "signal", "Signal", "", SC_LISTENER_POLLING},
@@ -58,7 +58,7 @@ static const sc_channel_meta_t catalog[] = {
     {SC_CHANNEL_NOSTR, "nostr", "Nostr", "", SC_LISTENER_POLLING},
 #endif
 #ifdef SC_HAS_QQ
-    {SC_CHANNEL_QQ, "qq", "QQ", "", SC_LISTENER_WEBHOOK_ONLY},
+    {SC_CHANNEL_QQ, "qq", "QQ", "", SC_LISTENER_POLLING},
 #endif
 #ifdef SC_HAS_MAIXCAM
     {SC_CHANNEL_MAIXCAM, "maixcam", "MaixCam", "", SC_LISTENER_SEND_ONLY},

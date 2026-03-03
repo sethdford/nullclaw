@@ -867,6 +867,7 @@ static void test_signal_send_long_message(void) {
 #endif
 
 #if SC_HAS_NOSTR
+#include "seaclaw/channel_loop.h"
 #include "seaclaw/channels/nostr.h"
 static void test_nostr_create(void) {
     sc_allocator_t alloc = sc_system_allocator();
@@ -899,6 +900,20 @@ static void test_nostr_health_check(void) {
     sc_channel_t ch;
     sc_nostr_create(&alloc, "/tmp", 4, "npub", 4, NULL, 0, NULL, 0, &ch);
     SC_ASSERT_TRUE(ch.vtable->health_check(ch.ctx));
+    sc_nostr_destroy(&ch);
+}
+
+static void test_nostr_poll_test_mode(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch = {0};
+    sc_error_t err = sc_nostr_create(&alloc, "/tmp/nak", 8, "npub1x", 6, "wss://relay.example.com",
+                                    21, "seckey", 6, &ch);
+    SC_ASSERT(err == SC_OK);
+    sc_channel_loop_msg_t msgs[4];
+    size_t count = 99;
+    err = sc_nostr_poll(ch.ctx, &alloc, msgs, 4, &count);
+    SC_ASSERT(err == SC_OK);
+    SC_ASSERT(count == 0);
     sc_nostr_destroy(&ch);
 }
 #endif
@@ -1171,6 +1186,7 @@ void run_channel_all_tests(void) {
     SC_RUN_TEST(test_nostr_destroy_lifecycle);
     SC_RUN_TEST(test_nostr_send);
     SC_RUN_TEST(test_nostr_health_check);
+    SC_RUN_TEST(test_nostr_poll_test_mode);
 #endif
 #if SC_HAS_QQ
     SC_RUN_TEST(test_qq_create);

@@ -152,6 +152,7 @@ sc_error_t sc_irc_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_loop
     (void)max_msgs;
     return SC_OK;
 #else
+#ifdef SC_GATEWAY_POSIX
     if (!ctx->connected || ctx->sock_fd < 0 || !ctx->running)
         return SC_OK;
     struct timeval tv = {0, 100000};
@@ -213,6 +214,11 @@ sc_error_t sc_irc_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_loop
     *out_count = cnt;
     (void)alloc;
     return SC_OK;
+#else
+    (void)alloc;
+    (void)max_msgs;
+    return SC_ERR_NOT_SUPPORTED;
+#endif
 #endif
 }
 

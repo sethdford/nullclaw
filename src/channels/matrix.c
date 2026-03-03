@@ -143,6 +143,7 @@ sc_error_t sc_matrix_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_l
     (void)max_msgs;
     return SC_OK;
 #else
+#if defined(SC_HTTP_CURL)
     if (!ctx->homeserver || ctx->homeserver_len == 0)
         return SC_OK;
     if (!ctx->access_token || ctx->access_token_len == 0)
@@ -153,13 +154,13 @@ sc_error_t sc_matrix_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_l
     int nu;
     if (ctx->since_token)
         nu = snprintf(url_buf, sizeof(url_buf),
-                      "%.*s/_matrix/client/r0/"
+                      "%.*s/_matrix/client/v3/"
                       "sync?timeout=5000&since=%s&filter={\"room\":{\"timeline\":{\"limit\":10}}}",
                       (int)ctx->homeserver_len, ctx->homeserver, ctx->since_token);
     else
         nu = snprintf(
             url_buf, sizeof(url_buf),
-            "%.*s/_matrix/client/r0/sync?timeout=0&filter={\"room\":{\"timeline\":{\"limit\":10}}}",
+            "%.*s/_matrix/client/v3/sync?timeout=0&filter={\"room\":{\"timeline\":{\"limit\":10}}}",
             (int)ctx->homeserver_len, ctx->homeserver);
     if (nu < 0 || (size_t)nu >= sizeof(url_buf))
         return SC_ERR_INTERNAL;
@@ -243,6 +244,11 @@ sc_error_t sc_matrix_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_l
     sc_json_free(alloc, parsed);
     *out_count = cnt;
     return SC_OK;
+#else
+    (void)alloc;
+    (void)max_msgs;
+    return SC_ERR_NOT_SUPPORTED;
+#endif
 #endif
 }
 

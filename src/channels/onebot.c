@@ -1,4 +1,5 @@
 #include "seaclaw/channel.h"
+#include "seaclaw/channel_loop.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
 #include "seaclaw/core/http.h"
@@ -7,6 +8,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+#define ONEBOT_QUEUE_MAX       32
+#define ONEBOT_SESSION_KEY_MAX 127
+#define ONEBOT_CONTENT_MAX     4095
+
+typedef struct sc_onebot_queued_msg {
+    char session_key[128];
+    char content[4096];
+} sc_onebot_queued_msg_t;
+
 typedef struct sc_onebot_ctx {
     sc_allocator_t *alloc;
     char *api_base;
@@ -14,6 +25,10 @@ typedef struct sc_onebot_ctx {
     char *access_token;
     size_t access_token_len;
     bool running;
+    sc_onebot_queued_msg_t queue[ONEBOT_QUEUE_MAX];
+    size_t queue_head;
+    size_t queue_tail;
+    size_t queue_count;
 } sc_onebot_ctx_t;
 
 static sc_error_t onebot_start(void *ctx) {
@@ -131,6 +146,69 @@ static const sc_channel_vtable_t onebot_vtable = {
     .start_typing = NULL,
     .stop_typing = NULL,
 };
+
+
+static void onebot_queue_push(sc_onebot_ctx_t *c, const char *from, size_t from_len,
+                             const char *body, size_t body_len) {
+    if (c->queue_count >= ONEBOT_QUEUE_MAX) return;
+    sc_onebot_queued_msg_t *slot = &c->queue[c->queue_tail];
+    size_t sk = from_len < ONEBOT_SESSION_KEY_MAX ? from_len : ONEBOT_SESSION_KEY_MAX;
+    memcpy(slot->session_key, from, sk);
+    slot->session_key[sk] = '\0';
+    size_t ct = body_len < ONEBOT_CONTENT_MAX ? body_len : ONEBOT_CONTENT_MAX;
+    memcpy(slot->content, body, ct);
+    slot->content[ct] = '\0';
+    c->queue_tail = (c->queue_tail + 1) % ONEBOT_QUEUE_MAX;
+    c->queue_count++;
+}
+
+sc_error_t sc_onebot_on_webhook(void *channel_ctx, sc_allocator_t *alloc, const char *body,
+                               size_t body_len) {
+    sc_onebot_ctx_t *c = (sc_onebot_ctx_t *)channel_ctx;
+    if (!c || !body || body_len == 0) return SC_ERR_INVALID_ARGUMENT;
+#if SC_IS_TEST
+    (void)alloc;
+    onebot_queue_push(c, "test-sender", 11, body, body_len);
+    return SC_OK;
+#else
+    sc_json_value_t *parsed = NULL;
+    sc_error_t err = sc_json_parse(alloc, body, body_len, &parsed);
+    if (err != SC_OK || !parsed) return SC_OK;
+        const char *msg_type = sc_json_get_string(parsed, "post_type");
+    if (msg_type && strcmp(msg_type, "message") == 0) {
+        const char *message = sc_json_get_string(parsed, "raw_message");
+        if (!message) message = sc_json_get_string(parsed, "message");
+        const char *user_id = sc_json_get_string(parsed, "user_id");
+        if (!user_id) {
+            sc_json_value_t *sender = sc_json_object_get(parsed, "sender");
+            user_id = sender ? sc_json_get_string(sender, "user_id") : NULL;
+        }
+        if (message && user_id && strlen(message) > 0)
+            onebot_queue_push(c, user_id, strlen(user_id), message, strlen(message));
+    }
+    sc_json_free(alloc, parsed);
+    return SC_OK;
+#endif
+}
+
+sc_error_t sc_onebot_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_loop_msg_t *msgs,
+                         size_t max_msgs, size_t *out_count) {
+    (void)alloc;
+    sc_onebot_ctx_t *c = (sc_onebot_ctx_t *)channel_ctx;
+    if (!c || !msgs || !out_count) return SC_ERR_INVALID_ARGUMENT;
+    *out_count = 0;
+    size_t cnt = 0;
+    while (c->queue_count > 0 && cnt < max_msgs) {
+        sc_onebot_queued_msg_t *slot = &c->queue[c->queue_head];
+        memcpy(msgs[cnt].session_key, slot->session_key, sizeof(slot->session_key));
+        memcpy(msgs[cnt].content, slot->content, sizeof(slot->content));
+        c->queue_head = (c->queue_head + 1) % ONEBOT_QUEUE_MAX;
+        c->queue_count--;
+        cnt++;
+    }
+    *out_count = cnt;
+    return SC_OK;
+}
 
 sc_error_t sc_onebot_create(sc_allocator_t *alloc, const char *api_base, size_t api_base_len,
                             const char *access_token, size_t access_token_len, sc_channel_t *out) {

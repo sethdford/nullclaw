@@ -4,16 +4,62 @@
 #include "seaclaw/core/http.h"
 #include "seaclaw/core/json.h"
 #include "seaclaw/core/string.h"
+#include <stdio.h>
 #include <string.h>
 
 #define SC_PUSH_INITIAL_CAP 4
 #define SC_FCM_URL          "https://fcm.googleapis.com/fcm/send"
+#define SC_APNS_URL_BASE    "https://api.push.apple.com/3/device/"
 
 #ifndef SC_IS_TEST
 static const char *fcm_url(const sc_push_config_t *config) {
     if (config->endpoint && config->endpoint[0])
         return config->endpoint;
     return SC_FCM_URL;
+}
+
+/* APNS: POST to https://api.push.apple.com/3/device/{token}
+ * Headers: authorization: bearer {jwt}, apns-topic: {bundle_id}, apns-push-type: alert
+ * Payload: {"aps":{"alert":{"title":"...","body":"..."},"sound":"default"}}
+ * JWT requires P8 key signing (ES256) - not implemented yet. */
+static sc_error_t sc_push_apns_send(sc_push_manager_t *mgr, const char *device_token,
+                                   const char *title, const char *body,
+                                   const char *data_json) {
+    (void)data_json;
+#if defined(SC_HTTP_CURL)
+    if (!mgr->config.endpoint || mgr->config.endpoint[0] == '\0')
+        return SC_ERR_INVALID_ARGUMENT;
+    /* Build URL: api.push.apple.com/3/device/{token} */
+    size_t url_cap = strlen(SC_APNS_URL_BASE) + strlen(device_token) + 1;
+    char *url = (char *)mgr->alloc->alloc(mgr->alloc->ctx, url_cap);
+    if (!url)
+        return SC_ERR_OUT_OF_MEMORY;
+    snprintf(url, url_cap, "%s%s", SC_APNS_URL_BASE, device_token);
+
+    sc_json_buf_t buf;
+    if (sc_json_buf_init(&buf, mgr->alloc) != SC_OK) {
+        mgr->alloc->free(mgr->alloc->ctx, url, url_cap);
+        return SC_ERR_OUT_OF_MEMORY;
+    }
+    sc_error_t err = sc_json_buf_append_raw(&buf, "{\"aps\":{\"alert\":{\"title\":", 28);
+    if (err == SC_OK)
+        err = sc_json_append_string(&buf, title ? title : "", title ? strlen(title) : 0);
+    if (err == SC_OK)
+        err = sc_json_buf_append_raw(&buf, ",\"body\":", 8);
+    if (err == SC_OK)
+        err = sc_json_append_string(&buf, body ? body : "", body ? strlen(body) : 0);
+    if (err == SC_OK)
+        err = sc_json_buf_append_raw(&buf, "},\"sound\":\"default\"}}", 22);
+    if (err != SC_OK) {
+        sc_json_buf_free(&buf);
+        mgr->alloc->free(mgr->alloc->ctx, url, url_cap);
+        return err;
+    }
+    /* JWT generation requires P8 key signing (ES256) - not implemented. */
+    mgr->alloc->free(mgr->alloc->ctx, url, url_cap);
+    sc_json_buf_free(&buf);
+#endif
+    return SC_ERR_NOT_SUPPORTED;
 }
 #endif
 
@@ -133,7 +179,7 @@ sc_error_t sc_push_send_to(sc_push_manager_t *mgr, const char *device_token, con
     case SC_PUSH_NONE:
         return SC_OK;
     case SC_PUSH_APNS:
-        return SC_ERR_NOT_SUPPORTED;
+        return sc_push_apns_send(mgr, device_token, title, body, data_json);
     case SC_PUSH_FCM: {
         if (!mgr->config.server_key || mgr->config.server_key_len == 0)
             return SC_ERR_INVALID_ARGUMENT;

@@ -1181,6 +1181,17 @@ static void test_push_send_to_mock(void) {
     sc_push_deinit(&mgr);
 }
 
+static void test_push_apns_test_mode_returns_ok(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_push_config_t config = { .provider = SC_PUSH_APNS, .endpoint = "com.example.app" };
+    sc_push_manager_t mgr = {0};
+    sc_push_init(&mgr, &alloc, &config);
+    sc_push_register_token(&mgr, "apns-device-token", SC_PUSH_APNS);
+    sc_error_t err = sc_push_send(&mgr, "Alert", "Body", NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_push_deinit(&mgr);
+}
+
 /* ─── Push extended (NULL alloc, config, edge cases) ──────────────────────── */
 static void test_push_init_null_alloc(void) {
     sc_push_config_t config = { .provider = SC_PUSH_NONE };
@@ -1765,6 +1776,7 @@ void run_new_modules_tests(void) {
     SC_RUN_TEST(test_push_send_no_tokens);
     SC_RUN_TEST(test_push_send_mock);
     SC_RUN_TEST(test_push_send_to_mock);
+    SC_RUN_TEST(test_push_apns_test_mode_returns_ok);
     /* Push extended */
     SC_RUN_TEST(test_push_init_null_alloc);
     SC_RUN_TEST(test_push_init_null_config);
