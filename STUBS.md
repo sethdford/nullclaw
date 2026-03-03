@@ -4,116 +4,127 @@ Last updated: 2026-03-03
 
 ## Summary
 
-| Metric                         | Value              |
-| ------------------------------ | ------------------ |
-| Source files (src/ + include/) | **463**            |
-| Lines of C/H code              | **~56K**           |
-| Test files                     | 72                 |
-| Tests passing                  | **2168/2168 (100%)** |
-| Binary size (MinSizeRel+LTO)  | **381 KB**         |
-| SeaClaw module parity          | **100%**           |
+| Metric                         | Value                  |
+| ------------------------------ | ---------------------- |
+| Source files (src/ + include/) | **~430+**              |
+| Lines of C/H/ASM code          | **~52K**               |
+| Test files                     | 66+                    |
+| Tests passing                  | **2,168/2,168 (100%)** |
+| Binary size (MinSizeRel)       | **349 KB**             |
 
-## Module Parity with SeaClaw
+## Channels — Honest Status
 
-| Subsystem        | Zig Ref | SeaClaw | Status                      |
-| ---------------- | ------- | ------- | --------------------------- |
-| Providers        | 18      | 18      | **Full parity**             |
-| Channels         | 20      | 21      | **Full parity** (+1 extras) |
-| Tools            | 36      | 46      | **Full parity** (+10 extras)|
-| Security         | 11      | 20      | **Full parity** (+9 extras) |
-| Agent            | 8       | 15      | **Full parity** (+7 extras) |
-| Memory Engines   | 10      | 10      | **Full parity**             |
-| Memory Lifecycle | 8       | 8       | **Full parity**             |
-| Memory Retrieval | 8       | 10      | **Full parity** (+2 extras) |
-| Memory Vector    | 12      | 15      | **Full parity** (+3 extras) |
+### Full send + receive (5 channels)
 
-**All SeaClaw modules have been ported. Zero gaps remain.**
+| Channel  | send()         | listen()               | Config Required               |
+| -------- | -------------- | ---------------------- | ----------------------------- |
+| CLI      | stdout         | readline               | None                          |
+| Telegram | HTTP API       | Long-poll (getUpdates) | `token`                       |
+| Discord  | HTTP API       | GET /messages poll     | `token`, `channel_ids`        |
+| Email    | curl SMTP      | curl IMAP poll         | SMTP/IMAP config              |
+| iMessage | AppleScript    | chat.db SQLite poll    | `default_target` (macOS only) |
+| Signal   | signal-cli RPC | signal-cli poll        | `http_url`, `account`         |
 
-## What Works (Real Implementation)
+### Send only — no inbound polling (13 channels)
 
-### Core
+| Channel    | send()         | listen()            | Config Required                       |
+| ---------- | -------------- | ------------------- | ------------------------------------- |
+| Slack      | HTTP API       | Webhook only        | `token`                               |
+| WhatsApp   | Graph API      | Webhook only        | `phone_number_id`, `token`            |
+| Matrix     | HTTP PUT       | Not implemented     | `homeserver`, `access_token`          |
+| IRC        | TCP socket     | Not implemented     | `server`, `port`                      |
+| LINE       | Push API       | Webhook only        | `channel_token`                       |
+| Lark       | HTTP API       | Webhook only        | `app_id`, `app_secret`                |
+| Mattermost | HTTP API       | Webhook only        | `url`, `token`                        |
+| OneBot     | HTTP API       | Webhook only        | `api_base`, `access_token`            |
+| DingTalk   | HTTP POST      | Webhook only        | `target` (webhook URL)                |
+| Nostr      | nak CLI        | Not implemented     | `nak_path`, `relay_url`, `seckey_hex` |
+| QQ         | HTTP API       | Webhook only        | `app_id`, `bot_token`                 |
+| MaixCam    | Serial (Linux) | Send-only by design | `host` (serial path)                  |
+| Web        | In-memory      | Gateway events      | `auth_token` (optional)               |
 
-- **Full agent loop**: `seaclaw agent` — interactive turn-based conversation
-- **Config loading**: JSON config parsing, env var overrides, validation
-- **46 tools registered**: All execute with proper vtable dispatch
-- **21 channels**: CLI fully functional, others have send() via HTTP client
-- **18 providers**: OpenAI, Anthropic, Gemini, Ollama, OpenRouter, Compatible, Claude CLI, Codex CLI, OpenAI Codex + reliable/router wrappers
-- **HTTP client**: libcurl-based, with SSE streaming support
+### Special
 
-### Tools (Real)
+| Channel  | Purpose                  |
+| -------- | ------------------------ |
+| Dispatch | Forwards to sub-channels |
 
-- **apply_patch**: Real unified diff line-by-line patch application engine
-- **canvas**: Collaborative document store with file-backed persistence (~/.seaclaw/canvas/)
-- **shell**: Command execution with security policy enforcement
-- **file_read / file_write / file_edit / file_append**: File operations with path validation
-- **web_search / web_fetch / http_request**: HTTP-based tools
-- **git**: Git operations via shell delegation
-- **memory_store / memory_recall / memory_list / memory_forget**: Memory tool wrappers
-- **agent_spawn / agent_query**: Sub-agent pool management
-- **cron_add / cron_list / cron_remove / cron_run / cron_update / cron_runs**: Cron scheduling
-- **database / notebook / diff / image / screenshot / message**: Utility tools
-- **hardware_info / hardware_memory / i2c / spi**: Peripheral access tools
-- **delegate / spawn / pushover / composio / schedule / validation / schema / schema_clean**: Extended tools
+## Tools — All 42 Real
 
-### Memory
+Every tool has a real implementation. In test mode (`SC_IS_TEST`), they return mock
+data to avoid side effects. Highlights:
 
-- **SQLite memory engine**: Full CRUD, session store, health checks
-- **LRU memory engine**: In-memory cache with hash table + doubly-linked list
-- **Markdown memory engine**: File-based memory backend
-- **None memory engine**: No-op backend
-- **Memory registry**: Backend factory with capability descriptors
-- **Embedding abstraction**: vtable + 3 providers (Gemini, Ollama, Voyage)
-- **Provider router**: Routes embedding requests by model/config
-- **Vector store abstraction**: vtable + in-memory, pgvector (stub), qdrant (stub) backends
-- **Outbox**: Async embedding queue with batch flush
-- **Semantic cache**: Embedding similarity cache with exact-match fallback
-- **Retrieval**: Keyword search, RRF, MMR, QMD, adaptive strategy, query expansion, LLM reranker, temporal decay
-- **Lifecycle**: Cache, hygiene, snapshot, summarizer, diagnostics, migration, rollout
+- **File I/O**: read, write, edit, append, diff, apply_patch
+- **Shell/Process**: shell, spawn, claude_code, delegate
+- **Web**: web_search (Brave/DuckDuckGo/Tavily), web_fetch, http_request
+- **Browser**: open, read (HTTP), CDP automation (click/type/scroll — needs Chrome)
+- **Memory**: store, recall, list, forget (backed by SQLite/LRU/Markdown)
+- **Cron**: add, list, remove, run, runs, update
+- **Hardware**: i2c, spi (Linux only), hardware_info, hardware_memory
+- **Other**: database (SQLite), notebook, canvas, schema, pushover, composio, message, image, screenshot, agent*query, agent_spawn, mcp*\*
 
-### Security
+## Providers — All Real
 
-- **Policy enforcement**: Autonomy levels, command risk assessment, blocklists
-- **Pairing**: Code + token authentication with lockout
-- **Secrets**: ChaCha20 + HMAC-SHA256 encryption
-- **Audit logging**: Event-based security audit trail
-- **Sandbox**: Abstraction for bubblewrap, firejail, landlock, docker, appcontainer, seccomp, seatbelt, firecracker
-- **Rate tracking**: Per-key/per-window rate limiting
+9 core providers + 90+ compatible service mappings. All make real HTTP API calls:
 
-### Session Management
+| Provider     | Streaming | Env Var                           |
+| ------------ | --------- | --------------------------------- |
+| openai       | Yes (SSE) | `OPENAI_API_KEY`                  |
+| anthropic    | Yes (SSE) | `ANTHROPIC_API_KEY`               |
+| gemini       | Yes (SSE) | `GEMINI_API_KEY`                  |
+| ollama       | No        | None (local)                      |
+| openrouter   | No        | `OPENROUTER_API_KEY`              |
+| compatible   | No        | Per-provider or `SEACLAW_API_KEY` |
+| claude_cli   | No        | `ANTHROPIC_API_KEY`               |
+| codex_cli    | No        | `OPENAI_API_KEY`                  |
+| openai-codex | No        | API key from config               |
 
-- **Session CRUD**: Create, get, delete, patch, list, evict idle sessions
-- **File persistence**: Save/load all sessions to ~/.seaclaw/sessions.json on startup/shutdown
-- **Message history**: Per-session message append with role/content + turn tracking
+Compatible covers: Groq, Mistral, DeepSeek, xAI, Cerebras, Perplexity, Cohere,
+Together, Fireworks, HuggingFace, LMStudio, and 80+ more.
 
-### Infrastructure
+## Gateway Control Protocol — 27+ Methods
 
-- **Gateway**: POSIX HTTP server with routing, rate limiting, HMAC verification
-- **Tunnels**: None, Cloudflare, Ngrok, Custom
-- **Peripherals**: Arduino, STM32, RPi factory + vtable
-- **Agent subsystems**: Dispatcher (pthread), compaction, planner, context tokens, max tokens, prompt builder, commands, CLI, TUI, mailbox, profile, spawn
-- **Agent pool**: Multi-agent orchestration with spawn/query/cancel/status
-- **Cron**: Cron expression parsing, job scheduling, execution
-- **Heartbeat**: Periodic task engine
-- **Cost tracking**: Per-model pricing, budget enforcement
-- **Event bus**: Pub/sub for cross-module communication
-- **Identity**: Bot identity, permission resolution
-- **WASM**: Build target, WASI bindings, bump allocator, wasm provider/channel
-- **WebSocket client**: Basic ws:// support (connect, send, recv, close). WSS (TLS) not yet supported.
-- **Channel adapters**: Polling descriptors for 5 channels (telegram, matrix, irc, signal, nostr). Partially implemented.
-- **Web UI**: Lit-based dashboard served by gateway
-- **TLS docs**: Production reverse proxy guide (Caddy, nginx, Cloudflare Tunnel)
+All real (backed by app context), except:
 
-## What's Stubbed (Interface Defined, Returns SC_ERR_NOT_SUPPORTED)
+| Method       | Status  | Notes                         |
+| ------------ | ------- | ----------------------------- |
+| update.check | Stub    | Always returns "up_to_date"   |
+| update.run   | Stub    | Always returns "up_to_date"   |
+| nodes.list   | Partial | Single hardcoded "local" node |
 
-- **postgres.c, redis.c, lancedb.c, lucid.c**: Memory engines (need external libs)
-- **store_pgvector.c**: Vector store (needs libpq + pgvector)
-- **WebSocket WSS (TLS)**: ws:// works; wss:// connections not supported
-- **Browser tool CDP**: click, type, scroll require Chrome DevTools Protocol; currently only open/read via shell/HTTP
-- **claude_cli, codex_cli providers**: Shell delegation stubs
-- **iMessage, email, nostr channels**: Interface defined, transport not connected
-- **landlock, seccomp, appcontainer, seatbelt sandboxes**: Linux/Windows-specific, stub on other platforms
-- **Voice I/O, multimodal**: Interfaces defined, no TTS/STT integration yet
-- **Auth, update, migration, daemon**: Framework-level stubs
+Everything else (health, capabilities, config.get/set, chat.send/history/abort,
+sessions.list/patch/delete, tools.catalog, channels.status, cron._, skills._,
+models.list, usage.summary, push.\*) returns real data and modifies real state.
+
+## What's Stubbed (Returns SC_ERR_NOT_SUPPORTED)
+
+- **postgres.c, redis.c, lancedb.c, lucid.c, api.c**: Memory engines — need external libs
+- **store_pgvector.c**: Vector store — needs libpq + pgvector
+- **MCP client transport**: Protocol defined, stdio/HTTP transport not implemented
+- **Voice I/O (server-side)**: No TTS/STT integration; UI uses browser SpeechRecognition
+- **Self-update**: Always returns "up_to_date"
+- **Sub-agent spawning**: Interface defined, partially wired
+
+## Web UI Dashboard
+
+14 views, all connected to the gateway via WebSocket:
+
+| View     | Data Source                              | Interactive?                       |
+| -------- | ---------------------------------------- | ---------------------------------- |
+| Overview | health, capabilities, channels, sessions | Refresh                            |
+| Chat     | chat.send/history, events                | Full: type, send, streaming, abort |
+| Sessions | sessions.list/patch/delete, chat.history | Select, rename, delete, resume     |
+| Agents   | config.get, sessions.list, capabilities  | Navigate to config                 |
+| Models   | models.list, config.get                  | Display only                       |
+| Voice    | chat.send + browser STT                  | Mic button, speech-to-text         |
+| Tools    | tools.catalog                            | Search, expand params              |
+| Channels | channels.status                          | Display only                       |
+| Skills   | skills.list/install/enable/disable       | Install, toggle                    |
+| Cron     | cron.list/add/remove/run                 | Add, run, delete jobs              |
+| Config   | config.get/set/schema                    | Edit fields, raw JSON, save        |
+| Nodes    | nodes.list, health                       | Display only                       |
+| Usage    | usage.summary                            | Display only                       |
+| Logs     | WebSocket events                         | Filter, clear                      |
 
 ## External Dependencies
 
@@ -122,6 +133,7 @@ Last updated: 2026-03-03
 | libc               | Linked         | Everything                        |
 | SQLite3 (vendored) | Linked         | Memory engine                     |
 | libcurl            | Linked         | HTTP client, provider API calls   |
-| pthread            | Linked         | Agent dispatcher, agent pool      |
+| pthread            | Linked         | Agent dispatcher                  |
 | libpq              | Optional (OFF) | PostgreSQL memory engine          |
+| OpenSSL            | Optional       | WSS, TLS for WebSocket            |
 | math (-lm)         | Linked         | Vector math, retrieval algorithms |
