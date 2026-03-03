@@ -53,15 +53,17 @@ export class ScDialog extends LitElement {
       background: color-mix(in srgb, var(--sc-bg-overlay), transparent 5%);
       backdrop-filter: blur(var(--sc-blur-lg, 24px));
       -webkit-backdrop-filter: blur(var(--sc-blur-lg, 24px));
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--sc-border-subtle);
       border-radius: var(--sc-radius-xl);
-      box-shadow: var(--sc-shadow-lg);
+      box-shadow: var(--sc-shadow-xl);
       padding: var(--sc-space-lg);
-      animation: sc-scale-in var(--sc-duration-normal) var(--sc-ease-out);
+      animation: sc-bounce-in var(--sc-duration-normal) var(--sc-ease-out);
     }
 
     .panel.closing {
-      animation: sc-scale-out var(--sc-duration-fast) var(--sc-ease-in) forwards;
+      animation:
+        sc-fade-out var(--sc-duration-fast) var(--sc-ease-in) forwards,
+        sc-scale-out var(--sc-duration-fast) var(--sc-ease-in) forwards;
     }
 
     @media (prefers-reduced-motion: reduce) {

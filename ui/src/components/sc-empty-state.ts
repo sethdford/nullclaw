@@ -18,9 +18,7 @@ export class ScEmptyState extends LitElement {
       height: 3.5rem;
       margin-bottom: var(--sc-space-md);
       color: var(--sc-text-faint);
-      animation:
-        sc-fade-in var(--sc-duration-normal) var(--sc-ease-out) both,
-        sc-slide-up var(--sc-duration-normal) var(--sc-ease-out) both;
+      animation: sc-bounce-in var(--sc-duration-normal) var(--sc-ease-out) both;
     }
 
     .icon svg {
@@ -40,6 +38,7 @@ export class ScEmptyState extends LitElement {
       color: var(--sc-text-muted);
       max-width: 320px;
       line-height: var(--sc-leading-relaxed);
+      animation: sc-fade-in var(--sc-duration-normal) var(--sc-ease-out) 100ms both;
     }
 
     .slot {

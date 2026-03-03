@@ -123,7 +123,7 @@ export class ScSecurityView extends GatewayAwareLitElement {
     .domain-tag {
       font-family: var(--sc-font-mono);
       font-size: var(--sc-text-xs);
-      padding: 2px var(--sc-space-xs);
+      padding: var(--sc-space-2xs) var(--sc-space-xs);
       background: var(--sc-bg-elevated);
       border-radius: var(--sc-radius-sm);
       color: var(--sc-text-muted);

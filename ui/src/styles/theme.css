@@ -116,6 +116,19 @@ body {
   color: var(--sc-text-muted);
 }
 
+/* ─── Surface utilities ──────────────────────────────────────────── */
+.sc-surface-glow {
+  position: relative;
+}
+.sc-surface-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--sc-surface-glow);
+  pointer-events: none;
+}
+
 /* ─── Layout Utilities ────────────────────────────────────────────── */
 .sc-container {
   max-width: 960px;
@@ -231,7 +244,7 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--sc-border);
-  border-radius: 3px;
+  border-radius: var(--sc-radius-sm);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -269,7 +282,7 @@ body {
 @keyframes sc-slide-up {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(var(--sc-space-sm));
   }
   to {
     opacity: 1;
@@ -280,7 +293,7 @@ body {
 @keyframes sc-slide-down {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(calc(-1 * var(--sc-space-sm)));
   }
   to {
     opacity: 1;
@@ -345,10 +358,10 @@ body {
 @keyframes sc-accent-glow {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(20, 184, 166, 0);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--sc-accent) 0%, transparent);
   }
   50% {
-    box-shadow: 0 0 12px 2px rgba(20, 184, 166, 0.15);
+    box-shadow: 0 0 12px 2px color-mix(in srgb, var(--sc-accent) 15%, transparent);
   }
 }
 
@@ -364,6 +377,108 @@ body {
   }
   100% {
     transform: scale(1);
+  }
+}
+
+/* ─── Pixar Principles (Animation) ─────────────────────────────────────── */
+@keyframes sc-anticipate {
+  0% {
+    transform: scale(1);
+  }
+  20% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes sc-squash {
+  0% {
+    transform: scaleY(1) scaleX(1);
+  }
+  30% {
+    transform: scaleY(0.9) scaleX(1.05);
+  }
+  60% {
+    transform: scaleY(1.05) scaleX(0.97);
+  }
+  100% {
+    transform: scaleY(1) scaleX(1);
+  }
+}
+
+@keyframes sc-overshoot-in {
+  0% {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  70% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+  85% {
+    transform: translateY(1px);
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes sc-wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-2deg);
+  }
+  75% {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes sc-spotlight {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--sc-accent) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--sc-accent) 20%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--sc-accent) 0%, transparent);
+  }
+}
+
+@keyframes sc-bounce-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  70% {
+    transform: scale(0.96);
+  }
+  85% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes sc-slide-out-down {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
   }
 }
 

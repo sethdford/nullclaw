@@ -104,11 +104,11 @@ export class ScLogsView extends GatewayAwareLitElement {
     }
     .log-area::-webkit-scrollbar-track {
       background: var(--sc-bg-elevated);
-      border-radius: 4px;
+      border-radius: var(--sc-radius-sm);
     }
     .log-area::-webkit-scrollbar-thumb {
       background: var(--sc-border);
-      border-radius: 4px;
+      border-radius: var(--sc-radius-sm);
     }
     .log-area::-webkit-scrollbar-thumb:hover {
       background: var(--sc-text-muted);

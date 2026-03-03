@@ -41,7 +41,7 @@ export class ScSkillsView extends GatewayAwareLitElement {
       align-items: center;
     }
     .install-row input {
-      padding: 0.5rem 0.75rem;
+      padding: var(--sc-space-sm) 0.75rem;
       background: var(--sc-bg);
       border: 1px solid var(--sc-border);
       border-radius: var(--sc-radius);
@@ -78,7 +78,7 @@ export class ScSkillsView extends GatewayAwareLitElement {
       width: 44px;
       height: 24px;
       background: var(--sc-border);
-      border-radius: 12px;
+      border-radius: var(--sc-radius-lg);
       cursor: pointer;
       transition: background var(--sc-duration-fast);
     }
@@ -88,8 +88,8 @@ export class ScSkillsView extends GatewayAwareLitElement {
     .toggle::after {
       content: "";
       position: absolute;
-      top: 2px;
-      left: 2px;
+      top: var(--sc-space-2xs);
+      left: var(--sc-space-2xs);
       width: 20px;
       height: 20px;
       background: white;

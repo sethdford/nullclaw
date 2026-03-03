@@ -16,17 +16,6 @@ interface ToastItem extends ToastOptions {
 @customElement("sc-toast")
 export class ScToast extends LitElement {
   static override styles = css`
-    @keyframes sc-slide-in-right {
-      from {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
-
     :host {
       position: fixed;
       bottom: var(--sc-space-lg);
@@ -60,15 +49,14 @@ export class ScToast extends LitElement {
       pointer-events: auto;
       font-family: var(--sc-font);
       font-size: var(--sc-text-sm);
-      animation: sc-slide-in-right var(--sc-duration-normal) var(--sc-spring-out);
+      animation: sc-overshoot-in var(--sc-duration-normal) var(--sc-ease-out);
       transition:
         transform var(--sc-duration-normal) var(--sc-ease-out),
         opacity var(--sc-duration-normal);
     }
 
     .toast.exiting {
-      transform: translateX(120%);
-      opacity: 0;
+      animation: sc-slide-out-down var(--sc-duration-fast) var(--sc-ease-in) forwards;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -76,7 +64,7 @@ export class ScToast extends LitElement {
         transition: none;
       }
       .toast.exiting {
-        opacity: 0;
+        animation: sc-fade-out var(--sc-duration-instant) forwards;
       }
     }
 

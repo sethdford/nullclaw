@@ -1,22 +1,15 @@
 {
-  "plugins": ["stylelint-declaration-strict-value"],
   "rules": {
-    "scale-unlimited/declaration-strict-value": [
-      ["font-family", "color", "background-color", "border-color", "box-shadow", "border-radius"],
-      {
-        "ignoreValues": [
-          "inherit",
-          "initial",
-          "unset",
-          "currentColor",
-          "transparent",
-          "none",
-          "0",
-          "auto"
-        ],
-        "disableFix": true,
-        "message": "Use design tokens (--sc-*) instead of raw values for '${property}'"
+    "color-no-hex": true,
+    "function-disallowed-list": ["rgb", "rgba", "hsl", "hsla"]
+  },
+  "overrides": [
+    {
+      "files": ["src/styles/_tokens.css", "catalog.html"],
+      "rules": {
+        "color-no-hex": null,
+        "function-disallowed-list": null
       }
-    ]
-  }
+    }
+  ]
 }

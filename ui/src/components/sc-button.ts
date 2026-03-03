@@ -37,8 +37,7 @@ export class ScButton extends LitElement {
         background-color var(--sc-duration-fast) var(--sc-ease-out),
         color var(--sc-duration-fast) var(--sc-ease-out),
         box-shadow var(--sc-duration-fast) var(--sc-ease-out),
-        transform var(--sc-duration-fast) var(--sc-ease-out),
-        filter var(--sc-duration-fast) var(--sc-ease-out);
+        transform var(--sc-duration-fast) var(--sc-ease-out);
       border-radius: var(--sc-radius);
     }
 
@@ -50,16 +49,19 @@ export class ScButton extends LitElement {
     /* Variants */
     button.variant-primary {
       background: var(--sc-accent);
+      background-image: var(--sc-button-gradient-primary);
       color: var(--sc-on-accent, #ffffff);
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
       box-shadow: var(--sc-elevation-0);
     }
     button.variant-primary:hover:not(:disabled) {
       background: var(--sc-accent-hover);
+      background-image: var(--sc-button-gradient-primary);
       box-shadow: var(--sc-shadow-md);
-      filter: brightness(1.05);
+      transform: scale(1.01);
     }
     button.variant-primary:active:not(:disabled) {
-      animation: sc-spring-scale var(--sc-duration-normal) var(--sc-ease-out);
+      animation: sc-squash var(--sc-duration-fast) var(--sc-ease-out);
       box-shadow: var(--sc-shadow-sm);
     }
 
@@ -72,7 +74,7 @@ export class ScButton extends LitElement {
       background: var(--sc-bg-overlay);
     }
     button.variant-secondary:active:not(:disabled) {
-      transform: scale(0.97);
+      animation: sc-squash var(--sc-duration-fast) var(--sc-ease-out);
       box-shadow: var(--sc-shadow-sm);
     }
 
@@ -93,7 +95,7 @@ export class ScButton extends LitElement {
       color: var(--sc-text);
     }
     button.variant-ghost:active:not(:disabled) {
-      transform: scale(0.97);
+      animation: sc-squash var(--sc-duration-fast) var(--sc-ease-out);
       background: var(--sc-accent-subtle);
     }
 

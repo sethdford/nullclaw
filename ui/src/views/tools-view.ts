@@ -25,7 +25,7 @@ export class ScToolsView extends GatewayAwareLitElement {
     }
     .search input {
       width: 100%;
-      padding: 0.5rem 1rem;
+      padding: var(--sc-space-sm) var(--sc-space-md);
       background: var(--sc-bg-surface);
       border: 1px solid var(--sc-border);
       border-radius: var(--sc-radius);

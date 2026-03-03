@@ -5,6 +5,8 @@ import { customElement, property } from "lit/decorators.js";
 export class ScCard extends LitElement {
   @property({ type: Boolean }) hoverable = false;
   @property({ type: Boolean }) clickable = false;
+  @property({ type: Boolean }) accent = false;
+  @property({ type: Boolean }) elevated = false;
 
   static styles = css`
     :host {
@@ -12,12 +14,29 @@ export class ScCard extends LitElement {
     }
 
     .card {
+      position: relative;
       background: var(--sc-bg-surface);
+      background-image: var(--sc-surface-gradient);
       border: 1px solid var(--sc-border-subtle);
       border-radius: var(--sc-radius-lg);
       padding: var(--sc-space-xl);
       box-shadow: var(--sc-shadow-card);
       border-top: 3px solid transparent;
+    }
+    .card.elevated {
+      box-shadow: var(--sc-shadow-md);
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: var(--sc-surface-glow);
+      pointer-events: none;
+    }
+    .card > * {
+      position: relative;
+      z-index: 1;
     }
     .card.accent {
       border-top-color: var(--sc-accent);
@@ -40,9 +59,7 @@ export class ScCard extends LitElement {
     }
     .card.hoverable:hover {
       transform: translateY(-2px);
-      box-shadow:
-        0 1px 2px rgba(0, 0, 0, 0.06),
-        0 8px 24px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--sc-shadow-md);
     }
     .card.hoverable:active {
       transform: translateY(0);
@@ -72,7 +89,13 @@ export class ScCard extends LitElement {
   }
 
   render() {
-    const classes = ["card", this.hoverable ? "hoverable" : "", this.clickable ? "clickable" : ""]
+    const classes = [
+      "card",
+      this.hoverable ? "hoverable" : "",
+      this.clickable ? "clickable" : "",
+      this.accent ? "accent" : "",
+      this.elevated ? "elevated" : "",
+    ]
       .filter(Boolean)
       .join(" ");
 

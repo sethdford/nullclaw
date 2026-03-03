@@ -49,6 +49,7 @@ export class ScOverviewView extends GatewayAwareLitElement {
     :host {
       display: block;
       max-width: 1200px;
+      background-image: var(--sc-hero-gradient);
     }
     .header {
       display: flex;
@@ -90,6 +91,7 @@ export class ScOverviewView extends GatewayAwareLitElement {
       font-weight: var(--sc-weight-bold);
       font-variant-numeric: tabular-nums;
       color: var(--sc-text);
+      animation: sc-overshoot-in var(--sc-duration-normal) var(--sc-ease-out) backwards;
     }
     .gateway-content {
       display: flex;
@@ -285,7 +287,7 @@ export class ScOverviewView extends GatewayAwareLitElement {
       ${this.error ? html`<p class="error">${this.error}</p>` : nothing}
       <div class="bento sc-stagger">
         <!-- 1. Gateway Status (2 cols) -->
-        <sc-card hoverable class="gateway-card">
+        <sc-card hoverable accent elevated class="gateway-card">
           <div class="stat-label">Gateway Status</div>
           <div class="gateway-content">
             <span class="status-dot ${gwOk ? "operational" : "offline"}" aria-hidden="true"></span>

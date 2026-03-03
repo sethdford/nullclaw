@@ -36,7 +36,7 @@ test.describe("Accessibility", () => {
 
   test("command palette is keyboard navigable", async ({ page }) => {
     await page.goto("/");
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press("Control+k");
     await page.waitForTimeout(200);
     // Type to filter
     await page.keyboard.type("chat");
@@ -48,7 +48,7 @@ test.describe("Accessibility", () => {
 
   test("modal traps focus", async ({ page }) => {
     await page.goto("/");
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press("Control+k");
     await page.waitForTimeout(200);
     // Escape closes
     await page.keyboard.press("Escape");

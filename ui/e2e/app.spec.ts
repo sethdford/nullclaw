@@ -58,6 +58,69 @@ test.describe("SeaClaw Control UI", () => {
     await expect(logsView).toBeAttached({ timeout: 5000 });
   });
 
+  test("hash navigation loads agents view", async ({ page }) => {
+    await page.goto("/#agents");
+    await page.waitForTimeout(500);
+    const view = page.locator("sc-app >> sc-agents-view");
+    await expect(view).toBeAttached({ timeout: 5000 });
+  });
+
+  test("hash navigation loads sessions view", async ({ page }) => {
+    await page.goto("/#sessions");
+    await page.waitForTimeout(500);
+    const view = page.locator("sc-app >> sc-sessions-view");
+    await expect(view).toBeAttached({ timeout: 5000 });
+  });
+
+  test("hash navigation loads channels view", async ({ page }) => {
+    await page.goto("/#channels");
+    await page.waitForTimeout(500);
+    const view = page.locator("sc-app >> sc-channels-view");
+    await expect(view).toBeAttached({ timeout: 5000 });
+  });
+
+  test("hash navigation loads skills view", async ({ page }) => {
+    await page.goto("/#skills");
+    await page.waitForTimeout(500);
+    const view = page.locator("sc-app >> sc-skills-view");
+    await expect(view).toBeAttached({ timeout: 5000 });
+  });
+
+  test("hash navigation loads cron view", async ({ page }) => {
+    await page.goto("/#cron");
+    await page.waitForTimeout(500);
+    const view = page.locator("sc-app >> sc-cron-view");
+    await expect(view).toBeAttached({ timeout: 5000 });
+  });
+
+  test("hash navigation loads voice view", async ({ page }) => {
+    await page.goto("/#voice");
+    await page.waitForTimeout(500);
+    const view = page.locator("sc-app >> sc-voice-view");
+    await expect(view).toBeAttached({ timeout: 5000 });
+  });
+
+  test("hash navigation loads nodes view", async ({ page }) => {
+    await page.goto("/#nodes");
+    await page.waitForTimeout(500);
+    const view = page.locator("sc-app >> sc-nodes-view");
+    await expect(view).toBeAttached({ timeout: 5000 });
+  });
+
+  test("hash navigation loads usage view", async ({ page }) => {
+    await page.goto("/#usage");
+    await page.waitForTimeout(500);
+    const view = page.locator("sc-app >> sc-usage-view");
+    await expect(view).toBeAttached({ timeout: 5000 });
+  });
+
+  test("hash navigation loads security view", async ({ page }) => {
+    await page.goto("/#security");
+    await page.waitForTimeout(500);
+    const view = page.locator("sc-app >> sc-security-view");
+    await expect(view).toBeAttached({ timeout: 5000 });
+  });
+
   test("invalid hash falls back to overview", async ({ page }) => {
     await page.goto("/#nonexistent");
     await page.waitForTimeout(500);

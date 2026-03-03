@@ -74,12 +74,12 @@ export class ScVoiceView extends GatewayAwareLitElement {
       }
     }
     .transcript-area {
-      margin-bottom: 1rem;
+      margin-bottom: var(--sc-space-md);
     }
     .transcript-area textarea {
       width: 100%;
       min-height: 80px;
-      padding: 0.75rem 1rem;
+      padding: 0.75rem var(--sc-space-md);
       background: var(--sc-bg-surface);
       border: 1px solid var(--sc-border);
       border-radius: var(--sc-radius);
@@ -127,7 +127,7 @@ export class ScVoiceView extends GatewayAwareLitElement {
       background: var(--sc-bg-elevated);
       border: 1px solid var(--sc-border);
       border-radius: var(--sc-radius-lg);
-      border-top-left-radius: 4px;
+      border-top-left-radius: var(--sc-radius-sm);
       min-height: 80px;
       font-size: 0.875rem;
       line-height: 1.6;
@@ -140,7 +140,7 @@ export class ScVoiceView extends GatewayAwareLitElement {
     .response-area::before {
       content: "";
       position: absolute;
-      left: -8px;
+      left: calc(-1 * var(--sc-space-sm));
       top: 12px;
       width: 0;
       height: 0;

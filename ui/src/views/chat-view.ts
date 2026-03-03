@@ -167,7 +167,7 @@ export class ScChatView extends GatewayAwareLitElement {
       font-family: var(--sc-font-mono);
       font-size: var(--sc-text-sm);
       background: var(--sc-bg-elevated);
-      padding: 0.15rem 0.35rem;
+      padding: var(--sc-space-2xs) var(--sc-space-xs);
       border-radius: var(--sc-radius-sm);
     }
     .message pre code {
@@ -693,7 +693,7 @@ export class ScChatView extends GatewayAwareLitElement {
                           : nothing}
                         ${t.result != null
                           ? html`
-                              <div class="label" style="margin-top: 0.5rem">Output</div>
+                              <div class="label" style="margin-top: var(--sc-space-sm)">Output</div>
                               <div>${t.result}</div>
                             `
                           : t.status === "running"

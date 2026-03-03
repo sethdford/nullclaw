@@ -33,9 +33,9 @@ export class ScSheet extends LitElement {
       position: fixed;
       inset: 0;
       z-index: 9998;
-      background: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
+      background: color-mix(in srgb, var(--sc-bg) 50%, transparent);
+      backdrop-filter: blur(var(--sc-blur-sm, 4px));
+      -webkit-backdrop-filter: blur(var(--sc-blur-sm, 4px));
       opacity: 0;
       visibility: hidden;
       transition:

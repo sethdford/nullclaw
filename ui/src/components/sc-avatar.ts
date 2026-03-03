@@ -85,7 +85,7 @@ export class ScAvatar extends LitElement {
         box-shadow: 0 0 0 0 var(--sc-success);
       }
       50% {
-        box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.3);
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--sc-success) 30%, transparent);
       }
     }
 

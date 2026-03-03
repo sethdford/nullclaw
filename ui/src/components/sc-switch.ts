@@ -1,11 +1,12 @@
 import { LitElement, html, css } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 
 @customElement("sc-switch")
 export class ScSwitch extends LitElement {
   @property({ type: Boolean }) checked = false;
   @property({ type: Boolean }) disabled = false;
   @property({ type: String }) label = "";
+  @state() private _hasToggled = false;
 
   static override styles = css`
     :host {
@@ -61,9 +62,21 @@ export class ScSwitch extends LitElement {
       transform: translateX(1rem);
     }
 
+    .switch.animated .thumb {
+      transition: none;
+      animation: sc-thumb-slide-off var(--sc-duration-normal) var(--sc-ease-out) forwards;
+    }
+
+    .switch.animated.checked .thumb {
+      animation: sc-thumb-slide-on var(--sc-duration-normal) var(--sc-ease-out) forwards;
+    }
+
     @media (prefers-reduced-motion: reduce) {
-      .thumb {
-        transition: none;
+      .switch.animated .thumb {
+        animation: none;
+      }
+      .switch.animated.checked .thumb {
+        transform: translateX(1rem);
       }
     }
 
@@ -89,6 +102,7 @@ export class ScSwitch extends LitElement {
 
   private _onClick(): void {
     if (this.disabled) return;
+    this._hasToggled = true;
     this.checked = !this.checked;
     this.dispatchEvent(
       new CustomEvent("sc-change", {
@@ -109,7 +123,7 @@ export class ScSwitch extends LitElement {
   override render() {
     return html`
       <div
-        class="switch ${this.checked ? "checked" : ""}"
+        class="switch ${this.checked ? "checked" : ""} ${this._hasToggled ? "animated" : ""}"
         role="switch"
         aria-checked=${this.checked}
         aria-label=${this.label || "Toggle"}
