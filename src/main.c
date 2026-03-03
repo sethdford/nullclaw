@@ -863,7 +863,7 @@ static sc_error_t cmd_mcp(sc_allocator_t *alloc, int argc, char **argv) {
         return err;
     }
 
-    sc_agent_pool_t *mcp_pool = sc_agent_pool_create(alloc, cfg.agent.pool_max_concurrent);
+    sc_agent_pool_t *mcp_pool = sc_agent_pool_create(alloc, 8);
 
     sc_tool_t *tools = NULL;
     size_t tool_count = 0;
@@ -1028,7 +1028,7 @@ static sc_error_t cmd_gateway(sc_allocator_t *alloc, int argc, char **argv) {
     sc_tool_t *tools = NULL;
     size_t tools_count = 0;
     err = sc_tools_create_default(alloc, ws, strlen(ws), &policy, &cfg,
-        NULL, cron, &tools, &tools_count);
+        NULL, cron, NULL, &tools, &tools_count);
     if (err != SC_OK) {
         fprintf(stderr, "[%s] Tools init failed: %s\n", SC_CODENAME, sc_error_string(err));
         sc_cost_tracker_deinit(&costs);
@@ -1152,7 +1152,6 @@ cleanup:
     if (gw_sb_storage) sc_sandbox_storage_destroy(gw_sb_storage, &gw_sb_alloc);
     sc_cost_tracker_deinit(&costs);
     sc_session_manager_deinit(&sessions);
-    if (gw_agent_pool) sc_agent_pool_destroy(gw_agent_pool);
     if (cron) sc_cron_destroy(cron, alloc);
     sc_skillforge_destroy(&skills);
     sc_config_deinit(&cfg);
