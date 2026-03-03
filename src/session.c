@@ -178,11 +178,9 @@ sc_session_summary_t *sc_session_list(sc_session_manager_t *mgr,
     *out_count = 0;
     size_t n = mgr->count;
     if (n == 0) return NULL;
-
     sc_session_summary_t *arr = alloc->alloc(alloc->ctx,
         n * sizeof(sc_session_summary_t));
     if (!arr) return NULL;
-
     size_t idx = 0;
     for (size_t i = 0; i < SC_SESSION_MAP_CAP && idx < n; i++) {
         for (sc_session_entry_t *e = mgr->buckets[i]; e; e = e->next) {
@@ -206,7 +204,6 @@ sc_session_summary_t *sc_session_list(sc_session_manager_t *mgr,
 
 sc_error_t sc_session_delete(sc_session_manager_t *mgr, const char *session_key) {
     if (!mgr || !mgr->alloc || !session_key) return SC_ERR_INVALID_ARGUMENT;
-
     sc_session_entry_t **pp = find_bucket(mgr, session_key);
     for (sc_session_entry_t *e = *pp; e; pp = &e->next, e = *pp) {
         if (strcmp(e->key, session_key) != 0) continue;
@@ -223,29 +220,24 @@ sc_error_t sc_session_patch(sc_session_manager_t *mgr, const char *session_key,
                             const char *label) {
     if (!mgr || !session_key) return SC_ERR_INVALID_ARGUMENT;
     if (!label) return SC_ERR_INVALID_ARGUMENT;
-
     sc_session_t *s = find_session(mgr, session_key);
     if (!s) return SC_ERR_NOT_FOUND;
-
     size_t len = strnlen(label, SC_SESSION_LABEL_LEN - 1);
     memcpy(s->label, label, len);
     s->label[len] = '\0';
     return SC_OK;
 }
 
-
-static void json_escape_to_f(FILE *f, const char *s) {
-    for (; *s; s++) {
-        switch (*s) {
-            case '"': fputs("\"" , f); break;
-            case '\': fputs("\\\\", f); break;
-            case '
-': fputs("\n", f); break;
-            case '
-': fputs("\r", f); break;
-            case '	': fputs("\t", f); break;
-            default: if ((unsigned char)*s < 0x20) fprintf(f, "\u%04x", (unsigned char)*s); else fputc(*s, f);
-        }
+static void json_esc(FILE *f, const char *s) {
+    for (; s && *s; s++) {
+        if (*s == '"') fputs("\\\"", f);
+        else if (*s == '\\') fputs("\\\\", f);
+        else if (*s == '\n') fputs("\\n", f);
+        else if (*s == '\r') fputs("\\r", f);
+        else if (*s == '\t') fputs("\\t", f);
+        else if ((unsigned char)*s < 0x20)
+            fprintf(f, "\\u%04x", (unsigned char)*s);
+        else fputc(*s, f);
     }
 }
 
@@ -261,27 +253,26 @@ sc_error_t sc_session_save(sc_session_manager_t *mgr, const char *path) {
             if (!s) continue;
             if (!first_s) fputs(",", f);
             first_s = false;
-            fprintf(f, "
-{"key":"");
-            json_escape_to_f(f, s->session_key);
-            fprintf(f, "","label":"");
-            json_escape_to_f(f, s->label);
-            fprintf(f, "","created_at":%lld,"last_active":%lld,"turn_count":%llu,"messages":[",
-                (long long)s->created_at, (long long)s->last_active, (unsigned long long)s->turn_count);
+            fputs("\n{\"key\":\"", f);
+            json_esc(f, s->session_key);
+            fputs("\",\"label\":\"", f);
+            json_esc(f, s->label);
+            fprintf(f, "\",\"created_at\":%lld,\"last_active\":%lld,"
+                "\"turn_count\":%llu,\"messages\":[",
+                (long long)s->created_at, (long long)s->last_active,
+                (unsigned long long)s->turn_count);
             for (size_t m = 0; m < s->message_count; m++) {
                 if (m > 0) fputc(',', f);
-                fputs("{"role":"", f);
-                json_escape_to_f(f, s->messages[m].role);
-                fputs("","content":"", f);
-                if (s->messages[m].content) json_escape_to_f(f, s->messages[m].content);
-                fputs(""}", f);
+                fputs("{\"role\":\"", f);
+                json_esc(f, s->messages[m].role);
+                fputs("\",\"content\":\"", f);
+                json_esc(f, s->messages[m].content);
+                fputs("\"}", f);
             }
             fputs("]}", f);
         }
     }
-    fputs("
-]
-", f);
+    fputs("\n]\n", f);
     fclose(f);
     return SC_OK;
 }
@@ -290,16 +281,25 @@ sc_error_t sc_session_load(sc_session_manager_t *mgr, const char *path) {
     if (!mgr || !mgr->alloc || !path) return SC_ERR_INVALID_ARGUMENT;
     FILE *f = fopen(path, "r");
     if (!f) return SC_ERR_NOT_FOUND;
-    fseek(f, 0, SEEK_END); long flen = ftell(f); fseek(f, 0, SEEK_SET);
-    if (flen <= 2 || flen > 10*1024*1024) { fclose(f); return SC_OK; }
+    fseek(f, 0, SEEK_END);
+    long flen = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (flen <= 2 || flen > 10 * 1024 * 1024) { fclose(f); return SC_OK; }
     char *buf = mgr->alloc->alloc(mgr->alloc->ctx, (size_t)flen + 1);
     if (!buf) { fclose(f); return SC_ERR_OUT_OF_MEMORY; }
-    size_t rd = fread(buf, 1, (size_t)flen, f); buf[rd] = ' '; fclose(f);
+    size_t rd = fread(buf, 1, (size_t)flen, f);
+    buf[rd] = '\0';
+    fclose(f);
     sc_json_value_t *root = NULL;
     if (sc_json_parse(mgr->alloc, buf, rd, &root) != SC_OK || !root) {
-        mgr->alloc->free(mgr->alloc->ctx, buf, (size_t)flen + 1); return SC_ERR_PARSE;
+        mgr->alloc->free(mgr->alloc->ctx, buf, (size_t)flen + 1);
+        return SC_ERR_PARSE;
     }
-    if (root->type != SC_JSON_ARRAY) { sc_json_free(mgr->alloc, root); mgr->alloc->free(mgr->alloc->ctx, buf, (size_t)flen + 1); return SC_OK; }
+    if (root->type != SC_JSON_ARRAY) {
+        sc_json_free(mgr->alloc, root);
+        mgr->alloc->free(mgr->alloc->ctx, buf, (size_t)flen + 1);
+        return SC_OK;
+    }
     for (size_t i = 0; i < root->data.array.len; i++) {
         sc_json_value_t *item = root->data.array.items[i];
         if (!item || item->type != SC_JSON_OBJECT) continue;
@@ -308,7 +308,12 @@ sc_error_t sc_session_load(sc_session_manager_t *mgr, const char *path) {
         sc_session_t *s = sc_session_get_or_create(mgr, key);
         if (!s) continue;
         const char *label = sc_json_get_string(item, "label");
-        if (label) { size_t llen = strlen(label); if (llen >= SC_SESSION_LABEL_LEN) llen = SC_SESSION_LABEL_LEN - 1; memcpy(s->label, label, llen); s->label[llen] = ' '; }
+        if (label) {
+            size_t llen = strlen(label);
+            if (llen >= SC_SESSION_LABEL_LEN) llen = SC_SESSION_LABEL_LEN - 1;
+            memcpy(s->label, label, llen);
+            s->label[llen] = '\0';
+        }
         s->created_at = (int64_t)sc_json_get_number(item, "created_at", 0);
         s->last_active = (int64_t)sc_json_get_number(item, "last_active", 0);
         s->turn_count = (uint64_t)sc_json_get_number(item, "turn_count", 0);
@@ -319,7 +324,8 @@ sc_error_t sc_session_load(sc_session_manager_t *mgr, const char *path) {
                 if (!msg) continue;
                 const char *role = sc_json_get_string(msg, "role");
                 const char *content = sc_json_get_string(msg, "content");
-                if (role && content) sc_session_append_message(s, mgr->alloc, role, content);
+                if (role && content)
+                    sc_session_append_message(s, mgr->alloc, role, content);
             }
         }
     }
