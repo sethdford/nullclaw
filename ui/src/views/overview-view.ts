@@ -4,12 +4,16 @@ import { formatDate } from "../utils.js";
 import { GatewayAwareLitElement } from "../gateway-aware.js";
 import { icons } from "../icons.js";
 import { observeAllCards } from "../utils/scroll-entrance.js";
+import type { ActivityEvent } from "../components/sc-activity-feed.js";
 import "../components/sc-card.js";
 import "../components/sc-badge.js";
 import "../components/sc-skeleton.js";
 import "../components/sc-empty-state.js";
 import "../components/sc-button.js";
 import "../components/sc-sparkline.js";
+import "../components/sc-animated-number.js";
+import "../components/sc-welcome.js";
+import "../components/sc-activity-feed.js";
 
 interface HealthRes {
   status?: string;

@@ -1140,6 +1140,7 @@ set(SC_TEST_SOURCES
     tests/test_util_modules.c
     tests/test_roadmap.c
     tests/test_new_features.c
+    tests/test_ollama_integration.c
 )
 
 add_executable(seaclaw_tests ${SC_TEST_SOURCES} wasm/wasm_alloc.c)

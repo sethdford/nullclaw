@@ -2,6 +2,7 @@ import { LitElement, html, css } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import type { GatewayClient, GatewayStatus } from "./gateway.js";
 import { GatewayClient as GatewayClientClass } from "./gateway.js";
+import { DemoGatewayClient } from "./demo-gateway.js";
 import { setGateway } from "./gateway-provider.js";
 import { icons } from "./icons.js";
 import "./components/floating-mic.js";
@@ -194,9 +195,15 @@ export class ScApp extends LitElement {
   private _keyHandler = this._onGlobalKey.bind(this);
   private _hashHandler = this._onHashChange.bind(this);
 
+  private get _isDemo(): boolean {
+    return new URLSearchParams(window.location.search).has("demo");
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
-    this.gateway = new GatewayClientClass();
+    this.gateway = this._isDemo
+      ? (new DemoGatewayClient() as unknown as GatewayClient)
+      : new GatewayClientClass();
     setGateway(this.gateway);
     this.gateway.addEventListener("status", ((e: CustomEvent<GatewayStatus>) => {
       this.connectionStatus = e.detail;

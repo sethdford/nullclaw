@@ -2534,6 +2534,112 @@ static void test_compatible_stream_chat_test_mode(void) {
     prov.vtable->deinit(prov.ctx, &alloc);
 }
 
+/* ─── Structured Output ───────────────────────────────────────────── */
+
+static void test_openai_structured_output_json_mode(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_provider_t prov;
+    sc_openai_create(&alloc, "key", 3, NULL, 0, &prov);
+    sc_chat_message_t msgs[1] = {make_user_msg("respond in JSON", 15)};
+    sc_chat_request_t req = make_simple_request(msgs, 1);
+    req.response_format = "json_object";
+    req.response_format_len = 11;
+    sc_chat_response_t resp = {0};
+    sc_error_t err = prov.vtable->chat(prov.ctx, &alloc, &req, "gpt-4", 5, 0.7, &resp);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(resp.content != NULL);
+    if (resp.content)
+        alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    if (prov.vtable->deinit)
+        prov.vtable->deinit(prov.ctx, &alloc);
+}
+
+static void test_anthropic_structured_output_json_mode(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_provider_t prov;
+    sc_anthropic_create(&alloc, "key", 3, NULL, 0, &prov);
+    sc_chat_message_t msgs[1] = {make_user_msg("respond in JSON", 15)};
+    sc_chat_request_t req = make_simple_request(msgs, 1);
+    req.response_format = "json_object";
+    req.response_format_len = 11;
+    sc_chat_response_t resp = {0};
+    sc_error_t err = prov.vtable->chat(prov.ctx, &alloc, &req, "claude-3", 8, 0.7, &resp);
+    SC_ASSERT_EQ(err, SC_OK);
+    if (resp.content)
+        alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    if (prov.vtable->deinit)
+        prov.vtable->deinit(prov.ctx, &alloc);
+}
+
+static void test_gemini_structured_output_json_mode(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_provider_t prov;
+    sc_gemini_create(&alloc, "key", 3, NULL, 0, &prov);
+    sc_chat_message_t msgs[1] = {make_user_msg("respond in JSON", 15)};
+    sc_chat_request_t req = make_simple_request(msgs, 1);
+    req.response_format = "json_object";
+    req.response_format_len = 11;
+    sc_chat_response_t resp = {0};
+    sc_error_t err = prov.vtable->chat(prov.ctx, &alloc, &req, "gemini-pro", 10, 0.7, &resp);
+    SC_ASSERT_EQ(err, SC_OK);
+    if (resp.content)
+        alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    if (prov.vtable->deinit)
+        prov.vtable->deinit(prov.ctx, &alloc);
+}
+
+static void test_compatible_structured_output_json_mode(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_provider_t prov;
+    sc_compatible_create(&alloc, "key", 3, "https://api.example.com/v1/chat/completions", 44,
+                        &prov);
+    sc_chat_message_t msgs[1] = {make_user_msg("respond in JSON", 15)};
+    sc_chat_request_t req = make_simple_request(msgs, 1);
+    req.response_format = "json_object";
+    req.response_format_len = 11;
+    sc_chat_response_t resp = {0};
+    sc_error_t err = prov.vtable->chat(prov.ctx, &alloc, &req, "model", 5, 0.7, &resp);
+    SC_ASSERT_EQ(err, SC_OK);
+    if (resp.content)
+        alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    if (prov.vtable->deinit)
+        prov.vtable->deinit(prov.ctx, &alloc);
+}
+
+static void test_structured_output_null_format_no_crash(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_provider_t prov;
+    sc_openai_create(&alloc, "key", 3, NULL, 0, &prov);
+    sc_chat_message_t msgs[1] = {make_user_msg("hi", 2)};
+    sc_chat_request_t req = make_simple_request(msgs, 1);
+    req.response_format = NULL;
+    req.response_format_len = 0;
+    sc_chat_response_t resp = {0};
+    sc_error_t err = prov.vtable->chat(prov.ctx, &alloc, &req, "gpt-4", 5, 0.7, &resp);
+    SC_ASSERT_EQ(err, SC_OK);
+    if (resp.content)
+        alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    if (prov.vtable->deinit)
+        prov.vtable->deinit(prov.ctx, &alloc);
+}
+
+static void test_ollama_structured_output_json_mode(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_provider_t prov;
+    sc_ollama_create(&alloc, NULL, 0, &prov);
+    sc_chat_message_t msgs[1] = {make_user_msg("respond in JSON", 15)};
+    sc_chat_request_t req = make_simple_request(msgs, 1);
+    req.response_format = "json_object";
+    req.response_format_len = 11;
+    sc_chat_response_t resp = {0};
+    sc_error_t err = prov.vtable->chat(prov.ctx, &alloc, &req, "llama3", 6, 0.7, &resp);
+    SC_ASSERT_EQ(err, SC_OK);
+    if (resp.content)
+        alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    if (prov.vtable->deinit)
+        prov.vtable->deinit(prov.ctx, &alloc);
+}
+
 void run_provider_all_tests(void) {
     SC_TEST_SUITE("Provider All");
     SC_RUN_TEST(test_openai_create_succeeds);
@@ -2553,6 +2659,7 @@ void run_provider_all_tests(void) {
     SC_RUN_TEST(test_openai_temperature_passthrough);
     SC_RUN_TEST(test_openai_chat_null_request_returns_error);
     SC_RUN_TEST(test_openai_chat_empty_messages_graceful);
+    SC_RUN_TEST(test_openai_structured_output_json_mode);
 
     SC_RUN_TEST(test_anthropic_create_succeeds);
     SC_RUN_TEST(test_anthropic_create_null_alloc_fails);
@@ -2569,6 +2676,7 @@ void run_provider_all_tests(void) {
     SC_RUN_TEST(test_anthropic_tool_call_format);
     SC_RUN_TEST(test_anthropic_chat_null_request_returns_error);
     SC_RUN_TEST(test_anthropic_chat_empty_messages_graceful);
+    SC_RUN_TEST(test_anthropic_structured_output_json_mode);
 
     SC_RUN_TEST(test_gemini_create_succeeds);
     SC_RUN_TEST(test_gemini_create_null_alloc_fails);
@@ -2585,6 +2693,7 @@ void run_provider_all_tests(void) {
     SC_RUN_TEST(test_gemini_stream_chat_mock);
     SC_RUN_TEST(test_gemini_chat_null_request_returns_error);
     SC_RUN_TEST(test_gemini_chat_empty_messages_graceful);
+    SC_RUN_TEST(test_gemini_structured_output_json_mode);
 
     SC_RUN_TEST(test_ollama_create_succeeds);
     SC_RUN_TEST(test_ollama_create_null_alloc_fails);
@@ -2599,6 +2708,7 @@ void run_provider_all_tests(void) {
     SC_RUN_TEST(test_ollama_local_model_format);
     SC_RUN_TEST(test_ollama_chat_null_request_returns_error);
     SC_RUN_TEST(test_ollama_chat_empty_messages_graceful);
+    SC_RUN_TEST(test_ollama_structured_output_json_mode);
 
     SC_RUN_TEST(test_openrouter_create_succeeds);
     SC_RUN_TEST(test_openrouter_create_null_alloc_fails);
@@ -2637,6 +2747,8 @@ void run_provider_all_tests(void) {
     SC_RUN_TEST(test_compatible_chat_with_tools_mock);
     SC_RUN_TEST(test_compatible_chat_null_request_returns_error);
     SC_RUN_TEST(test_compatible_chat_empty_messages_graceful);
+    SC_RUN_TEST(test_compatible_structured_output_json_mode);
+    SC_RUN_TEST(test_structured_output_null_format_no_crash);
 
     SC_RUN_TEST(test_claude_cli_create_succeeds);
     SC_RUN_TEST(test_claude_cli_create_null_alloc_fails);
