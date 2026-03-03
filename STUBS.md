@@ -53,7 +53,7 @@ Last updated: 2026-03-03
 | -------- | ------------------------ |
 | Dispatch | Forwards to sub-channels |
 
-## Tools — All 56 Real
+## Tools — All 66 Real
 
 Every tool has a real implementation. In test mode (`SC_IS_TEST`), they return mock
 data to avoid side effects. Highlights:

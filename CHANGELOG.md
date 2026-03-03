@@ -29,7 +29,7 @@ social,crm,analytics,invoice,workflow}.h`
 ### Changed
 
 - `SC_TOOLS_COUNT_BASE` in factory.c: 25 → 35
-- STUBS.md: 46 → 56 tools, 2,226 → 2,258 tests
+- STUBS.md: 56 → 66 tools, 2,238 → 2,258 tests
 
 ## [2026.3.3b] - 2026-03-03
 
