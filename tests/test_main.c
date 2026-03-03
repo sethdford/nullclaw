@@ -53,6 +53,7 @@ void run_channel_manager_tests(void);
 void run_new_modules_tests(void);
 void run_provider_all_tests(void);
 void run_channel_all_tests(void);
+void run_channel_integration_tests(void);
 void run_config_extended_tests(void);
 void run_json_extended_tests(void);
 void run_security_extended_tests(void);
@@ -74,6 +75,7 @@ void run_channel_loop_tests(void);
 void run_util_modules_tests(void);
 void run_roadmap_tests(void);
 void run_new_features_tests(void);
+void run_channel_integration_tests(void);
 
 int main(void) {
     printf("SeaClaw Test Suite\n"); fflush(stdout);
@@ -127,6 +129,7 @@ int main(void) {
     run_new_modules_tests();
     run_provider_all_tests();
     run_channel_all_tests();
+    run_channel_integration_tests();
     run_config_extended_tests();
     run_json_extended_tests();
     run_security_extended_tests();
@@ -148,6 +151,7 @@ int main(void) {
     run_util_modules_tests();
     run_roadmap_tests();
     run_new_features_tests();
+    run_channel_integration_tests();
 
     SC_TEST_REPORT();
     SC_TEST_EXIT();
