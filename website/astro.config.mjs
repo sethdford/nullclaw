@@ -1,11 +1,12 @@
 // @ts-check
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  site: "https://sethdford.github.io",
-  base: "/seaclaw",
+  site: "https://seaclaw.ai",
+  base: "/",
   integrations: [
     starlight({
       title: "SeaClaw",
@@ -29,6 +30,21 @@ export default defineConfig({
             { label: "Quick Start", slug: "getting-started/quickstart" },
             { label: "Configuration", slug: "getting-started/configuration" },
           ],
+        },
+        {
+          label: "Features",
+          items: [
+            { label: "TUI Mode", slug: "features/tui" },
+            { label: "Cron System", slug: "features/cron" },
+            { label: "Skills System", slug: "features/skills" },
+            { label: "MCP Server Integration", slug: "features/mcp" },
+            { label: "Migration from OpenClaw", slug: "features/migrate" },
+            { label: "Tunnel Providers", slug: "features/tunnels" },
+          ],
+        },
+        {
+          label: "Deployment",
+          items: [{ label: "Docker & Nix", slug: "deployment/docker" }],
         },
         {
           label: "Providers",
@@ -63,7 +79,10 @@ export default defineConfig({
         },
         {
           label: "Memory",
-          slug: "memory/overview",
+          items: [
+            { label: "Overview", slug: "memory/overview" },
+            { label: "FTS5 & Vector Memory", slug: "memory/vector" },
+          ],
         },
         {
           label: "Security",
@@ -71,11 +90,17 @@ export default defineConfig({
         },
         {
           label: "Hardware",
-          slug: "peripherals/overview",
+          items: [
+            { label: "Overview", slug: "peripherals/overview" },
+            { label: "Hardware Peripherals", slug: "peripherals/hardware" },
+          ],
         },
         {
-          label: "Gateway API",
-          slug: "api/overview",
+          label: "API",
+          items: [
+            { label: "Overview", slug: "api/overview" },
+            { label: "Gateway API", slug: "api/gateway" },
+          ],
         },
         {
           label: "Contributing",
@@ -83,6 +108,7 @@ export default defineConfig({
         },
       ],
     }),
+    sitemap(),
   ],
   vite: {
     plugins: [tailwindcss()],

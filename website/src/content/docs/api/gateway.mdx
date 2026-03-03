@@ -1,0 +1,93 @@
+---
+title: Gateway API
+description: HTTP and WebSocket API reference for the SeaClaw gateway server.
+---
+
+The gateway is SeaClaw's HTTP server that handles webhooks, the web UI, and API requests.
+
+## Starting the gateway
+
+```bash
+seaclaw gateway                      # Default port 3000
+seaclaw gateway --port 8080          # Custom port
+seaclaw gateway --tunnel cloudflared # With tunnel
+```
+
+## Authentication
+
+All API requests require a pairing token (except the pairing endpoint itself).
+
+```
+Authorization: Bearer <pairing-token>
+```
+
+### Pairing flow
+
+1. Start the gateway — it prints a 6-digit pairing code
+2. Send the code to the pairing endpoint:
+
+```bash
+curl -X POST http://localhost:3000/api/pair \
+  -H "Content-Type: application/json" \
+  -d '{"code": "123456"}'
+```
+
+3. The response includes a long-lived token for subsequent requests
+
+## JSON-RPC API
+
+All API calls use JSON-RPC 2.0 over HTTP POST to `/api/rpc`:
+
+```bash
+curl -X POST http://localhost:3000/api/rpc \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"chat.send","params":{"message":"Hello"}}'
+```
+
+### Available methods
+
+| Method          | Description                         |
+| --------------- | ----------------------------------- |
+| `chat.send`     | Send a message to the agent         |
+| `chat.history`  | Get conversation history            |
+| `sessions.list` | List all sessions                   |
+| `sessions.get`  | Get a specific session              |
+| `config.get`    | Get current configuration           |
+| `config.set`    | Update configuration                |
+| `models.list`   | List available models and providers |
+| `tools.list`    | List available tools                |
+| `channels.list` | List configured channels            |
+| `health.check`  | Get component health status         |
+| `cron.list`     | List scheduled jobs                 |
+| `skills.list`   | List installed skills               |
+| `memory.search` | Search agent memory                 |
+
+## WebSocket
+
+Connect to `ws://localhost:3000/ws` for real-time streaming:
+
+```javascript
+const ws = new WebSocket("ws://localhost:3000/ws");
+ws.send(
+  JSON.stringify({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "chat.send",
+    params: { message: "Hello", stream: true },
+  }),
+);
+```
+
+Streaming responses arrive as individual JSON-RPC notifications with `method: "chat.chunk"`.
+
+## Webhook endpoints
+
+Channels register webhook handlers at `/webhook/<channel>`:
+
+| Endpoint            | Channel              |
+| ------------------- | -------------------- |
+| `/webhook/telegram` | Telegram Bot API     |
+| `/webhook/discord`  | Discord Interactions |
+| `/webhook/slack`    | Slack Events API     |
+| `/webhook/generic`  | Generic JSON webhook |

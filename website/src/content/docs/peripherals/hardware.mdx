@@ -1,0 +1,91 @@
+---
+title: Hardware Peripherals
+description: Connect Arduino, STM32, and Raspberry Pi boards to SeaClaw for physical-world interaction.
+---
+
+SeaClaw can interface with hardware peripherals, letting the agent read sensors, control actuators, and interact with the physical world.
+
+## Supported platforms
+
+| Platform                  | Interface            | Status       |
+| ------------------------- | -------------------- | ------------ |
+| Arduino (Uno, Mega, Nano) | Serial JSON protocol | Stable       |
+| STM32 / Nucleo            | probe-rs CLI         | Stable       |
+| Raspberry Pi              | GPIO via sysfs/gpiod | Stable       |
+| ESP32                     | Serial JSON protocol | Experimental |
+
+## Configuration
+
+```json
+{
+  "peripherals": [
+    {
+      "name": "sensor-hub",
+      "type": "arduino",
+      "port": "/dev/ttyUSB0",
+      "baud_rate": 115200
+    },
+    {
+      "name": "motor-controller",
+      "type": "stm32",
+      "target": "STM32F401RE"
+    },
+    {
+      "name": "gpio-board",
+      "type": "raspberry_pi"
+    }
+  ]
+}
+```
+
+## Arduino
+
+Communication uses a serial JSON protocol:
+
+```json
+// Read request
+{"cmd": "read", "pin": "A0"}
+// Read response
+{"pin": "A0", "value": 512, "type": "analog"}
+
+// Write request
+{"cmd": "write", "pin": 13, "value": 1}
+// Write response
+{"pin": 13, "status": "ok"}
+```
+
+Upload the SeaClaw firmware sketch to your Arduino to enable this protocol.
+
+## STM32 / Nucleo
+
+Uses `probe-rs` for flash programming and debugging:
+
+```bash
+# Flash firmware
+seaclaw peripheral flash sensor-hub firmware.elf
+
+# Read memory
+seaclaw peripheral read sensor-hub 0x20000000 64
+```
+
+## Raspberry Pi
+
+GPIO access via the `gpiod` library:
+
+```bash
+# Read GPIO pin
+seaclaw peripheral read gpio-board --pin 17
+
+# Write GPIO pin
+seaclaw peripheral write gpio-board --pin 18 --value 1
+```
+
+## Agent integration
+
+The agent can interact with peripherals via the `peripheral_read` and `peripheral_write` tools:
+
+```
+Agent: Reading temperature from sensor-hub pin A0...
+Tool call: peripheral_read(device="sensor-hub", pin="A0")
+Result: {"pin": "A0", "value": 23.5, "unit": "celsius"}
+```

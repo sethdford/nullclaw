@@ -1,0 +1,54 @@
+---
+title: Cron System
+description: Schedule recurring agent tasks with the built-in cron scheduler.
+---
+
+SeaClaw includes a cron-like scheduler that lets the agent run tasks on a schedule without external tooling.
+
+## CLI commands
+
+```bash
+seaclaw cron list                    # List all scheduled jobs
+seaclaw cron add "0 9 * * *" "Check email and summarize"
+seaclaw cron remove <id>             # Remove a job by ID
+seaclaw cron pause <id>              # Pause a job
+seaclaw cron resume <id>             # Resume a paused job
+seaclaw cron run <id>                # Manually trigger a job
+```
+
+## Cron expression format
+
+Standard 5-field cron syntax:
+
+```
+┌───────── minute (0-59)
+│ ┌─────── hour (0-23)
+│ │ ┌───── day of month (1-31)
+│ │ │ ┌─── month (1-12)
+│ │ │ │ ┌─ day of week (0-6, Sun=0)
+│ │ │ │ │
+* * * * *
+```
+
+## Examples
+
+| Expression       | Schedule                  |
+| ---------------- | ------------------------- |
+| `0 9 * * *`      | Every day at 9:00 AM      |
+| `*/15 * * * *`   | Every 15 minutes          |
+| `0 0 * * 1`      | Every Monday at midnight  |
+| `0 8,17 * * 1-5` | 8 AM and 5 PM on weekdays |
+
+## Configuration
+
+```json
+{
+  "cron": {
+    "enabled": true,
+    "max_concurrent": 3,
+    "timezone": "America/New_York"
+  }
+}
+```
+
+Jobs are persisted in the SQLite memory database and survive restarts.

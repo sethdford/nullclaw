@@ -1,0 +1,60 @@
+---
+title: TUI Mode
+description: Run SeaClaw with an interactive terminal UI for local development and monitoring.
+---
+
+SeaClaw includes a built-in terminal user interface (TUI) that provides a rich, interactive experience directly in your terminal.
+
+## Starting TUI mode
+
+```bash
+seaclaw agent --tui
+```
+
+## Features
+
+| Feature            | Description                                    |
+| ------------------ | ---------------------------------------------- |
+| Live chat          | Send messages and see responses in real time   |
+| Tool execution     | Watch tool calls execute with inline results   |
+| Session history    | Browse and resume previous conversations       |
+| Status bar         | Connection status, model info, and token usage |
+| Keyboard shortcuts | Vim-style navigation and command mode          |
+
+## Keyboard shortcuts
+
+| Key           | Action                         |
+| ------------- | ------------------------------ |
+| `Enter`       | Send message                   |
+| `Shift+Enter` | New line                       |
+| `Ctrl+C`      | Cancel current generation      |
+| `Ctrl+D`      | Exit TUI                       |
+| `/`           | Enter command mode             |
+| `↑` / `↓`     | Scroll through message history |
+
+## Command mode
+
+Type `/` followed by a command:
+
+| Command         | Description               |
+| --------------- | ------------------------- |
+| `/model <name>` | Switch the active model   |
+| `/clear`        | Clear the conversation    |
+| `/session <id>` | Resume a previous session |
+| `/tools`        | List available tools      |
+| `/help`         | Show available commands   |
+
+## Configuration
+
+TUI behavior can be customized in `~/.seaclaw/config.json`:
+
+```json
+{
+  "tui": {
+    "theme": "dark",
+    "show_tool_calls": true,
+    "show_token_usage": true,
+    "max_history": 100
+  }
+}
+```

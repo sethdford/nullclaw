@@ -1,0 +1,88 @@
+---
+title: Docker & Nix Deployment
+description: Deploy SeaClaw using Docker containers or Nix packages.
+---
+
+## Docker
+
+### Quick start
+
+```bash
+docker run -it --rm \
+  -v ~/.nullclaw:/root/.nullclaw \
+  -p 3000:3000 \
+  ghcr.io/seaclaw/seaclaw:latest \
+  gateway
+```
+
+### Docker Compose
+
+```yaml
+version: "3.8"
+services:
+  seaclaw:
+    image: ghcr.io/seaclaw/seaclaw:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config:/root/.nullclaw
+      - seaclaw-data:/data
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    restart: unless-stopped
+
+volumes:
+  seaclaw-data:
+```
+
+### Building from source
+
+```dockerfile
+FROM alpine:latest AS build
+RUN apk add --no-cache zig sqlite-dev
+COPY . /src
+WORKDIR /src
+RUN zig build -Doptimize=ReleaseSmall
+
+FROM alpine:latest
+RUN apk add --no-cache sqlite-libs
+COPY --from=build /src/zig-out/bin/seaclaw /usr/local/bin/
+ENTRYPOINT ["seaclaw"]
+```
+
+### Environment variables
+
+All configuration can be set via environment variables:
+
+| Variable            | Description                  |
+| ------------------- | ---------------------------- |
+| `SEACLAW_CONFIG`    | Path to config file          |
+| `OPENAI_API_KEY`    | OpenAI API key               |
+| `ANTHROPIC_API_KEY` | Anthropic API key            |
+| `SEACLAW_PORT`      | Gateway port (default: 3000) |
+
+## Nix
+
+### Flake usage
+
+```nix
+{
+  inputs.seaclaw.url = "github:seaclaw/seaclaw";
+
+  outputs = { self, nixpkgs, seaclaw }: {
+    # Add to your system packages
+    environment.systemPackages = [
+      seaclaw.packages.${system}.default
+    ];
+  };
+}
+```
+
+### Development shell
+
+```bash
+nix develop github:seaclaw/seaclaw
+```
+
+This provides `zig`, `sqlite`, and all build dependencies.

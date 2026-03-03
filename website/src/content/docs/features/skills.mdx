@@ -1,0 +1,52 @@
+---
+title: Skills System
+description: Extend agent capabilities with installable skill packages.
+---
+
+Skills are reusable capability packages that give the agent domain-specific knowledge and tool configurations.
+
+## CLI commands
+
+```bash
+seaclaw skills list                  # List installed skills
+seaclaw skills search <query>        # Search the skill registry
+seaclaw skills install <name>        # Install a skill
+seaclaw skills remove <name>         # Remove a skill
+seaclaw skills info <name>           # Show skill details
+seaclaw skills publish <path>        # Publish a skill to the registry
+```
+
+## Skill structure
+
+A skill is a directory with a `skill.json` manifest:
+
+```json
+{
+  "name": "web-research",
+  "version": "1.0.0",
+  "description": "Web research and summarization",
+  "tools": ["web_search", "web_fetch"],
+  "system_prompt": "You are a web research assistant...",
+  "parameters": {
+    "max_results": 10,
+    "summary_length": "brief"
+  }
+}
+```
+
+## Built-in skills
+
+| Skill           | Description                            |
+| --------------- | -------------------------------------- |
+| `code-review`   | Analyze code for bugs and style issues |
+| `web-research`  | Search and summarize web content       |
+| `file-manager`  | Organize and manage files              |
+| `data-analysis` | Analyze CSV/JSON datasets              |
+| `sysadmin`      | System administration tasks            |
+
+## Creating custom skills
+
+1. Create a directory with `skill.json`
+2. Define the system prompt and tool configuration
+3. Test locally with `seaclaw skills install ./my-skill`
+4. Publish with `seaclaw skills publish ./my-skill`

@@ -1,0 +1,94 @@
+---
+title: FTS5 & Vector Memory
+description: Full-text search and vector-based semantic memory for intelligent context retrieval.
+---
+
+SeaClaw supports two advanced memory retrieval mechanisms: SQLite FTS5 for full-text search and vector embeddings for semantic similarity.
+
+## FTS5 (Full-Text Search)
+
+FTS5 is built into SQLite and requires no external dependencies. It enables fast keyword-based search across all stored memories.
+
+### How it works
+
+1. When the agent stores a memory, the text is indexed by FTS5
+2. Search queries use SQLite's `MATCH` syntax with BM25 ranking
+3. Results are ordered by relevance score
+
+### Configuration
+
+```json
+{
+  "memory": {
+    "backend": "sqlite",
+    "fts5": {
+      "enabled": true,
+      "tokenizer": "porter unicode61"
+    }
+  }
+}
+```
+
+### Searching
+
+```bash
+seaclaw memory search "deployment configuration"
+```
+
+The agent automatically uses FTS5 when recalling context for conversations.
+
+## Vector Memory
+
+Vector memory uses embeddings to find semantically similar content, even when the exact words differ.
+
+### Supported embedding providers
+
+| Provider | Model                    | Dimensions |
+| -------- | ------------------------ | ---------- |
+| OpenAI   | `text-embedding-3-small` | 1536       |
+| Ollama   | `nomic-embed-text`       | 768        |
+| Local    | Built-in TF-IDF          | Variable   |
+
+### Configuration
+
+```json
+{
+  "memory": {
+    "backend": "sqlite",
+    "embeddings": {
+      "enabled": true,
+      "provider": "openai",
+      "model": "text-embedding-3-small",
+      "dimensions": 1536
+    }
+  }
+}
+```
+
+### How it works
+
+1. Text is converted to a vector embedding via the configured provider
+2. Embeddings are stored alongside the memory entry in SQLite
+3. Queries are also embedded, and cosine similarity finds the best matches
+4. Results combine FTS5 keyword scores with vector similarity for hybrid ranking
+
+### Hybrid search
+
+When both FTS5 and vector search are enabled, SeaClaw uses reciprocal rank fusion (RRF) to combine results:
+
+```
+final_score = (1 / (k + fts5_rank)) + (1 / (k + vector_rank))
+```
+
+This ensures both keyword matches and semantic matches contribute to the final ranking.
+
+## Storage
+
+All memory data is stored in `~/.nullclaw/memory.db`. The database includes:
+
+| Table          | Purpose                       |
+| -------------- | ----------------------------- |
+| `memories`     | Core memory entries           |
+| `memories_fts` | FTS5 virtual table            |
+| `embeddings`   | Vector embeddings (BLOB)      |
+| `metadata`     | Tags, timestamps, source info |

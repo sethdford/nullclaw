@@ -1,0 +1,65 @@
+---
+title: MCP Server Integration
+description: Connect SeaClaw to Model Context Protocol servers for extended tool access.
+---
+
+SeaClaw can connect to MCP (Model Context Protocol) servers, giving the agent access to external tools and data sources through a standardized protocol.
+
+## Configuration
+
+Add MCP servers in `~/.nullclaw/config.json`:
+
+```json
+{
+  "mcp": {
+    "servers": [
+      {
+        "name": "filesystem",
+        "command": "npx",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-filesystem",
+          "/home/user/docs"
+        ],
+        "transport": "stdio"
+      },
+      {
+        "name": "github",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"],
+        "env": {
+          "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+        },
+        "transport": "stdio"
+      }
+    ]
+  }
+}
+```
+
+## Transport types
+
+| Transport | Description                                         |
+| --------- | --------------------------------------------------- |
+| `stdio`   | Communicate via stdin/stdout (default, most common) |
+| `sse`     | Server-Sent Events over HTTP                        |
+
+## How it works
+
+1. SeaClaw spawns each MCP server as a child process
+2. Tool definitions are discovered via the MCP `tools/list` method
+3. When the agent calls an MCP tool, SeaClaw forwards the request
+4. Results are returned to the agent as standard tool results
+
+## Managing MCP servers
+
+```bash
+seaclaw mcp list           # List configured MCP servers
+seaclaw mcp test <name>    # Test connectivity to a server
+```
+
+## Security
+
+- MCP servers run in the sandbox if sandboxing is enabled
+- Environment variables can reference secrets: `${SECRET_NAME}`
+- Network access follows the gateway's proxy rules

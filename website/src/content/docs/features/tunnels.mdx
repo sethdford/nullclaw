@@ -1,0 +1,67 @@
+---
+title: Tunnel Providers
+description: Expose your local SeaClaw gateway to the internet for webhook integrations.
+---
+
+Tunnels let you expose your local gateway to the internet, enabling webhooks from services like Telegram, Discord, and Slack.
+
+## Supported providers
+
+| Provider   | Command            | Notes                      |
+| ---------- | ------------------ | -------------------------- |
+| Cloudflare | `cloudflared`      | Free, stable, recommended  |
+| ngrok      | `ngrok`            | Free tier available        |
+| Tailscale  | `tailscale funnel` | Requires Tailscale account |
+| Custom     | Any command        | Bring your own tunnel      |
+
+## Configuration
+
+```json
+{
+  "tunnel": {
+    "provider": "cloudflared",
+    "port": 3000
+  }
+}
+```
+
+## Cloudflare Tunnel (recommended)
+
+Install `cloudflared` and SeaClaw handles the rest:
+
+```bash
+brew install cloudflared     # macOS
+# or download from https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+
+seaclaw gateway --tunnel cloudflared
+```
+
+## ngrok
+
+```bash
+seaclaw gateway --tunnel ngrok
+```
+
+Requires `ngrok` in your PATH. Set your auth token via `NGROK_AUTHTOKEN` or in the config.
+
+## Tailscale Funnel
+
+```bash
+seaclaw gateway --tunnel tailscale
+```
+
+Requires Tailscale to be running with Funnel enabled on your account.
+
+## Custom tunnel
+
+```json
+{
+  "tunnel": {
+    "provider": "custom",
+    "command": "my-tunnel --port {port}",
+    "url_pattern": "https://{subdomain}.my-tunnel.dev"
+  }
+}
+```
+
+The `{port}` placeholder is replaced with the gateway port. SeaClaw parses stdout for the public URL.
