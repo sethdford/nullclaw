@@ -160,7 +160,7 @@ export class ScSidebar extends LitElement {
         background var(--sc-duration-fast),
         color var(--sc-duration-fast),
         border-color var(--sc-duration-fast),
-        transform var(--sc-duration-fast) var(--sc-ease-out);
+        transform var(--sc-duration-normal) var(--sc-spring-out);
       margin-bottom: var(--sc-space-xs);
       text-align: left;
       font-family: inherit;

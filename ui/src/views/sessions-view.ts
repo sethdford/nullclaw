@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { GatewayAwareLitElement } from "../gateway-aware.js";
 import { formatRelative } from "../utils.js";
 import { icons } from "../icons.js";
+import "../components/sc-input.js";
 import "../components/sc-card.js";
 import "../components/sc-skeleton.js";
 import "../components/sc-empty-state.js";
@@ -273,10 +274,10 @@ export class ScSessionsView extends GatewayAwareLitElement {
         ? html`
             <div class="layout">
               <div class="session-list sc-stagger">
-                <sc-skeleton variant="card" height="72px"></sc-skeleton>
-                <sc-skeleton variant="card" height="72px"></sc-skeleton>
-                <sc-skeleton variant="card" height="72px"></sc-skeleton>
-                <sc-skeleton variant="card" height="72px"></sc-skeleton>
+                <sc-skeleton variant="session-card"></sc-skeleton>
+                <sc-skeleton variant="session-card"></sc-skeleton>
+                <sc-skeleton variant="session-card"></sc-skeleton>
+                <sc-skeleton variant="session-card"></sc-skeleton>
               </div>
               <div class="detail">
                 <sc-card class="history-inner" style="flex: 1; min-height: 120px;">
@@ -319,12 +320,12 @@ export class ScSessionsView extends GatewayAwareLitElement {
                         ${this.renaming
                           ? html`
                               <div class="rename-row">
-                                <input
+                                <sc-input
                                   type="text"
                                   .value=${this.renameValue}
-                                  @input=${(e: Event) =>
-                                    (this.renameValue = (e.target as HTMLInputElement).value)}
-                                />
+                                  @sc-input=${(e: CustomEvent<{ value: string }>) =>
+                                    (this.renameValue = e.detail.value)}
+                                ></sc-input>
                                 <sc-button variant="primary" @click=${() => this.saveRename()}>
                                   Save
                                 </sc-button>

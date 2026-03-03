@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { GatewayClient } from "../gateway.js";
 import { GatewayAwareLitElement } from "../gateway-aware.js";
 import { EVENT_NAMES } from "../utils.js";
+import "../components/sc-input.js";
 
 interface LogEntry {
   ts: string;
@@ -230,14 +231,13 @@ export class ScLogsView extends GatewayAwareLitElement {
       <div class="header">
         <h2>Logs</h2>
         <div class="controls">
-          <input
+          <sc-input
             type="text"
-            class="filter-input"
             placeholder="Filter..."
             aria-label="Filter log events"
             .value=${this.filter}
-            @input=${(e: Event) => (this.filter = (e.target as HTMLInputElement).value)}
-          />
+            @sc-input=${(e: CustomEvent<{ value: string }>) => (this.filter = e.detail.value)}
+          ></sc-input>
           <button class="btn" aria-label="Clear all logs" @click=${this.clearLogs}>Clear</button>
         </div>
       </div>

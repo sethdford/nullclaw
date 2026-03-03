@@ -206,6 +206,27 @@ body {
   }
 }
 
+/* ─── Scroll entrance (IntersectionObserver driven) ──────────────── */
+.sc-entrance {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity var(--sc-duration-moderate) var(--sc-ease-out),
+    transform var(--sc-duration-moderate) var(--sc-spring-out);
+}
+.sc-entrance.sc-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-entrance {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 /* ─── Tabular numbers for data ────────────────────────────────────── */
 .sc-tabular-nums {
   font-variant-numeric: tabular-nums;

@@ -3,11 +3,13 @@ import { customElement, state } from "lit/decorators.js";
 import { formatDate } from "../utils.js";
 import { GatewayAwareLitElement } from "../gateway-aware.js";
 import { icons } from "../icons.js";
+import { observeAllCards } from "../utils/scroll-entrance.js";
 import "../components/sc-card.js";
 import "../components/sc-badge.js";
 import "../components/sc-skeleton.js";
 import "../components/sc-empty-state.js";
 import "../components/sc-button.js";
+import "../components/sc-sparkline.js";
 
 interface HealthRes {
   status?: string;
@@ -82,16 +84,50 @@ export class ScOverviewView extends GatewayAwareLitElement {
     }
     .stat-label {
       font-size: var(--sc-text-xs);
-      letter-spacing: 0.02em;
+      font-weight: var(--sc-weight-medium);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
       color: var(--sc-text-muted);
       margin-bottom: var(--sc-space-xs);
     }
     .stat-value {
-      font-size: var(--sc-text-xl);
+      font-size: var(--sc-text-3xl, 1.875rem);
       font-weight: var(--sc-weight-bold);
+      letter-spacing: -0.03em;
       font-variant-numeric: tabular-nums;
       color: var(--sc-text);
-      animation: sc-overshoot-in var(--sc-duration-normal) var(--sc-ease-out) backwards;
+      animation: sc-overshoot-in var(--sc-duration-moderate) var(--sc-spring-out) backwards;
+    }
+    .stat-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--sc-space-md);
+    }
+    .stat-main {
+      flex: 1;
+      min-width: 0;
+    }
+    .trend {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sc-space-2xs);
+      font-size: var(--sc-text-xs);
+      font-weight: var(--sc-weight-medium);
+      margin-top: var(--sc-space-2xs);
+    }
+    .trend svg {
+      width: 14px;
+      height: 14px;
+    }
+    .trend.up {
+      color: var(--sc-success);
+    }
+    .trend.down {
+      color: var(--sc-error);
+    }
+    .trend.flat {
+      color: var(--sc-text-muted);
     }
     .gateway-content {
       display: flex;
@@ -190,6 +226,12 @@ export class ScOverviewView extends GatewayAwareLitElement {
     }
   `;
 
+  override updated(): void {
+    if (!this.loading && this.shadowRoot) {
+      observeAllCards(this.shadowRoot);
+    }
+  }
+
   @state() private health: HealthRes = {};
   @state() private capabilities: CapabilitiesRes = {};
   @state() private channels: ChannelItem[] = [];
@@ -264,11 +306,10 @@ export class ScOverviewView extends GatewayAwareLitElement {
           <div class="skeleton-gateway">
             <sc-skeleton variant="card" height="120px"></sc-skeleton>
           </div>
-          <sc-skeleton variant="card" height="100px"></sc-skeleton>
-          <sc-skeleton variant="card" height="100px"></sc-skeleton>
-          <sc-skeleton variant="card" height="100px"></sc-skeleton>
-          <sc-skeleton variant="card" height="100px"></sc-skeleton>
-          <sc-skeleton variant="card" height="100px"></sc-skeleton>
+          <sc-skeleton variant="stat-card"></sc-skeleton>
+          <sc-skeleton variant="stat-card"></sc-skeleton>
+          <sc-skeleton variant="stat-card"></sc-skeleton>
+          <sc-skeleton variant="stat-card"></sc-skeleton>
           <div class="skeleton-full">
             <sc-skeleton variant="card" height="140px"></sc-skeleton>
           </div>
@@ -298,26 +339,65 @@ export class ScOverviewView extends GatewayAwareLitElement {
 
         <!-- 2. Providers -->
         <sc-card hoverable>
-          <div class="stat-label">Providers</div>
-          <div class="stat-value">${cap.providers ?? 0}</div>
+          <div class="stat-row">
+            <div class="stat-main">
+              <div class="stat-label">Providers</div>
+              <div class="stat-value">${cap.providers ?? 0}</div>
+              <div class="trend up">${icons["trend-up"]} Active</div>
+            </div>
+            <sc-sparkline
+              .data=${[3, 5, 4, 7, 6, 8, cap.providers ?? 0]}
+              color="var(--sc-success)"
+            ></sc-sparkline>
+          </div>
         </sc-card>
 
         <!-- 3. Channels -->
         <sc-card hoverable>
-          <div class="stat-label">Channels</div>
-          <div class="stat-value">${cap.channels ?? 0}</div>
+          <div class="stat-row">
+            <div class="stat-main">
+              <div class="stat-label">Channels</div>
+              <div class="stat-value">${cap.channels ?? 0}</div>
+              <div class="trend up">${icons["trend-up"]} Configured</div>
+            </div>
+            <sc-sparkline
+              .data=${[2, 3, 5, 4, 6, 7, cap.channels ?? 0]}
+              color="var(--sc-accent)"
+            ></sc-sparkline>
+          </div>
         </sc-card>
 
         <!-- 4. Tools -->
         <sc-card hoverable>
-          <div class="stat-label">Tools</div>
-          <div class="stat-value">${cap.tools ?? 0}</div>
+          <div class="stat-row">
+            <div class="stat-main">
+              <div class="stat-label">Tools</div>
+              <div class="stat-value">${cap.tools ?? 0}</div>
+              <div class="trend flat">${icons["trend-flat"]} Stable</div>
+            </div>
+            <sc-sparkline
+              .data=${[8, 8, 9, 8, 9, 9, cap.tools ?? 0]}
+              color="var(--sc-text-muted)"
+            ></sc-sparkline>
+          </div>
         </sc-card>
 
         <!-- 5. Active Sessions -->
         <sc-card hoverable>
-          <div class="stat-label">Active Sessions</div>
-          <div class="stat-value">${this.sessions.length}</div>
+          <div class="stat-row">
+            <div class="stat-main">
+              <div class="stat-label">Active Sessions</div>
+              <div class="stat-value">${this.sessions.length}</div>
+              <div class="trend ${this.sessions.length > 0 ? "up" : "flat"}">
+                ${this.sessions.length > 0 ? icons["trend-up"] : icons["trend-flat"]}
+                ${this.sessions.length > 0 ? "Active" : "Idle"}
+              </div>
+            </div>
+            <sc-sparkline
+              .data=${[0, 1, 2, 1, 3, 2, this.sessions.length]}
+              color=${this.sessions.length > 0 ? "var(--sc-success)" : "var(--sc-text-muted)"}
+            ></sc-sparkline>
+          </div>
         </sc-card>
 
         ${this.updateInfo.available

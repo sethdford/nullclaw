@@ -28,7 +28,6 @@ const NAV_ICON_MAP: Record<string, TemplateResult> = {
   usage: icons["bar-chart"],
   logs: icons["file-text"],
 };
-const ACTION_ICON = icons.settings;
 
 const NAV_ITEMS: { id: string; label: string }[] = [
   { id: "overview", label: "Overview" },

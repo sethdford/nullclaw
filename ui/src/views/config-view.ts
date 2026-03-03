@@ -1,6 +1,7 @@
 import { html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { GatewayAwareLitElement } from "../gateway-aware.js";
+import "../components/sc-input.js";
 
 type SaveStatus = "saved" | "error" | "unsaved" | "idle";
 
@@ -483,25 +484,24 @@ export class ScConfigView extends GatewayAwareLitElement {
                       <div class="field">
                         <label for="${key}">${key.replace(/_/g, " ")}</label>
                         ${desc ? html`<div class="description">${desc}</div>` : nothing}
-                        <input
-                          id="${key}"
+                        <sc-input
                           type="${inputType}"
-                          min=${inputType === "number" ? 0 : undefined}
-                          max=${key === "temperature" ? 2 : undefined}
-                          step=${key === "temperature"
+                          .min=${inputType === "number" ? 0 : undefined}
+                          .max=${key === "temperature" ? 2 : undefined}
+                          .step=${key === "temperature"
                             ? 0.1
                             : inputType === "number"
                               ? 1
                               : undefined}
                           .value=${String(val ?? "")}
-                          @input=${(e: Event) => {
-                            const t = e.target as HTMLInputElement;
+                          @sc-input=${(e: CustomEvent<{ value: string }>) => {
+                            const raw = e.detail.value;
                             const v =
                               inputType === "number"
                                 ? key === "temperature"
-                                  ? parseFloat(t.value)
-                                  : parseInt(t.value, 10)
-                                : t.value;
+                                  ? parseFloat(raw)
+                                  : parseInt(raw, 10)
+                                : raw;
                             const parsed =
                               inputType === "number"
                                 ? isNaN(v as number)
@@ -518,7 +518,7 @@ export class ScConfigView extends GatewayAwareLitElement {
                             };
                             if (this.saveStatus === "saved") this.saveStatus = "idle";
                           }}
-                        />
+                        ></sc-input>
                       </div>
                     `;
                   })}

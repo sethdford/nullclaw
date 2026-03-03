@@ -423,7 +423,7 @@ describe("sc-slider", () => {
     const el = new ScSlider();
     document.body.appendChild(el);
     await el.updateComplete;
-    let detail: { value: number } | null = null;
+    let detail: { value: number } | undefined;
     el.addEventListener("sc-change", ((e: CustomEvent) => {
       detail = e.detail;
     }) as EventListener);
@@ -431,7 +431,7 @@ describe("sc-slider", () => {
     input.value = "75";
     input.dispatchEvent(new Event("input", { bubbles: true }));
     await el.updateComplete;
-    expect(detail?.value).toBe(75);
+    expect(detail!.value).toBe(75);
     document.body.removeChild(el);
   });
 });

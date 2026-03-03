@@ -1,7 +1,7 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
-type SkeletonVariant = "line" | "card" | "circle";
+type SkeletonVariant = "line" | "card" | "circle" | "stat-card" | "channel-card" | "session-card";
 type SkeletonAnimation = "shimmer" | "pulse";
 
 @customElement("sc-skeleton")
@@ -44,16 +44,24 @@ export class ScSkeleton extends LitElement {
 
     .skeleton {
       background: linear-gradient(
-        90deg,
+        105deg,
         var(--sc-bg-elevated) 25%,
-        var(--sc-bg-overlay) 50%,
-        var(--sc-bg-elevated) 75%
+        var(--sc-bg-overlay) 37%,
+        var(--sc-bg-elevated) 63%
       );
-      background-size: 200% 100%;
+      background-size: 400% 100%;
     }
 
     .skeleton.animation-shimmer {
-      animation: sc-shimmer var(--sc-duration-slower) infinite;
+      animation: sc-skel-shimmer 1.6s ease-in-out infinite;
+    }
+    @keyframes sc-skel-shimmer {
+      0% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
     }
 
     .skeleton.animation-pulse {
@@ -74,18 +82,93 @@ export class ScSkeleton extends LitElement {
     .skeleton.line {
       border-radius: var(--sc-radius-sm);
     }
-
     .skeleton.card {
       border-radius: var(--sc-radius-lg);
     }
-
     .skeleton.circle {
       border-radius: 50%;
+    }
+
+    /* Content-aware stat card skeleton */
+    .skeleton.stat-card {
+      border-radius: var(--sc-radius-lg);
+      position: relative;
+    }
+    .stat-inner {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sc-space-sm);
+      padding: var(--sc-space-lg);
+    }
+    .stat-inner .skel-label {
+      height: 10px;
+      width: 60%;
+      background: var(--sc-bg-overlay);
+      border-radius: var(--sc-radius-sm);
+    }
+    .stat-inner .skel-value {
+      height: 28px;
+      width: 40%;
+      background: var(--sc-bg-overlay);
+      border-radius: var(--sc-radius-sm);
+    }
+    .stat-inner .skel-spark {
+      height: 24px;
+      width: 80px;
+      background: var(--sc-bg-overlay);
+      border-radius: var(--sc-radius-sm);
+      align-self: flex-end;
+      margin-top: auto;
+    }
+
+    /* Content-aware channel card skeleton */
+    .skeleton.channel-card {
+      border-radius: var(--sc-radius-lg);
+    }
+    .channel-inner {
+      display: flex;
+      align-items: center;
+      gap: var(--sc-space-sm);
+      padding: var(--sc-space-lg);
+    }
+    .channel-inner .skel-name {
+      flex: 1;
+      height: 16px;
+      background: var(--sc-bg-overlay);
+      border-radius: var(--sc-radius-sm);
+    }
+    .channel-inner .skel-badge {
+      height: 22px;
+      width: 56px;
+      background: var(--sc-bg-overlay);
+      border-radius: var(--sc-radius-full);
+    }
+
+    /* Content-aware session card skeleton */
+    .skeleton.session-card {
+      border-radius: var(--sc-radius-lg);
+    }
+    .session-inner {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sc-space-xs);
+      padding: var(--sc-space-md) var(--sc-space-lg);
+    }
+    .session-inner .skel-title {
+      height: 14px;
+      width: 70%;
+      background: var(--sc-bg-overlay);
+      border-radius: var(--sc-radius-sm);
+    }
+    .session-inner .skel-meta {
+      height: 10px;
+      width: 50%;
+      background: var(--sc-bg-overlay);
+      border-radius: var(--sc-radius-sm);
     }
   `;
 
   @property({ type: String }) variant: SkeletonVariant = "line";
-
   @property({ type: String }) animation: SkeletonAnimation = "shimmer";
   @property({ type: String }) width = "100%";
   @property({ type: String }) height = "";
@@ -99,12 +182,56 @@ export class ScSkeleton extends LitElement {
         return "120px";
       case "circle":
         return "40px";
+      case "stat-card":
+        return "auto";
+      case "channel-card":
+        return "auto";
+      case "session-card":
+        return "auto";
       default:
         return "var(--sc-text-base)";
     }
   }
 
   override render() {
+    if (this.variant === "stat-card") {
+      return html`
+        <div class="skeleton stat-card animation-${this.animation}" style="width: ${this.width};">
+          <div class="stat-inner">
+            <div class="skel-label"></div>
+            <div class="skel-value"></div>
+            <div class="skel-spark"></div>
+          </div>
+        </div>
+      `;
+    }
+    if (this.variant === "channel-card") {
+      return html`
+        <div
+          class="skeleton channel-card animation-${this.animation}"
+          style="width: ${this.width};"
+        >
+          <div class="channel-inner">
+            <div class="skel-name"></div>
+            <div class="skel-badge"></div>
+          </div>
+        </div>
+      `;
+    }
+    if (this.variant === "session-card") {
+      return html`
+        <div
+          class="skeleton session-card animation-${this.animation}"
+          style="width: ${this.width};"
+        >
+          <div class="session-inner">
+            <div class="skel-title"></div>
+            <div class="skel-meta"></div>
+          </div>
+        </div>
+      `;
+    }
+
     const style =
       this.variant === "circle"
         ? `width: ${this.effectiveHeight}; height: ${this.effectiveHeight};`

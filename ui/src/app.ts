@@ -103,6 +103,25 @@ export class ScApp extends LitElement {
       contain-intrinsic-size: auto 100vh;
     }
 
+    .view-enter {
+      animation: sc-view-enter var(--sc-duration-moderate) var(--sc-spring-out) both;
+    }
+    @keyframes sc-view-enter {
+      from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.995);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .view-enter {
+        animation: none;
+      }
+    }
+
     .mobile-nav {
       display: none;
     }

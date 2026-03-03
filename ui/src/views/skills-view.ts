@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { GatewayAwareLitElement } from "../gateway-aware.js";
 import { icons } from "../icons.js";
 import "../components/sc-card.js";
+import "../components/sc-input.js";
 import "../components/sc-skeleton.js";
 import "../components/sc-empty-state.js";
 import "../components/sc-button.js";
@@ -192,13 +193,13 @@ export class ScSkillsView extends GatewayAwareLitElement {
       <div class="header">
         <h2>Skills</h2>
         <div class="install-row">
-          <input
+          <sc-input
             type="url"
             placeholder="https://..."
             aria-label="Skill URL to install"
             .value=${this.installUrl}
-            @input=${(e: Event) => (this.installUrl = (e.target as HTMLInputElement).value)}
-          />
+            @sc-input=${(e: CustomEvent<{ value: string }>) => (this.installUrl = e.detail.value)}
+          ></sc-input>
           <sc-button variant="primary" @click=${this.installSkill}>Install</sc-button>
         </div>
       </div>

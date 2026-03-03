@@ -43,7 +43,7 @@ export class ScSegmentedControl extends LitElement {
       left: 2px;
       background: var(--sc-accent);
       border-radius: calc(var(--sc-radius-lg) - 2px);
-      transition: transform var(--sc-duration-normal) var(--sc-ease-out);
+      transition: transform var(--sc-duration-normal) var(--sc-spring-bounce);
       pointer-events: none;
       z-index: 0;
     }
@@ -115,7 +115,6 @@ export class ScSegmentedControl extends LitElement {
     const idx = this._activeIndex;
     const count = this.options.length;
     const width = 100 / count;
-    const left = (idx / count) * 100;
     return `width: ${width}%; transform: translateX(${idx * 100}%);`;
   }
 

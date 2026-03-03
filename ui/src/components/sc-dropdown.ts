@@ -37,7 +37,10 @@ export class ScDropdown extends LitElement {
       top: 100%;
       margin-top: var(--sc-space-xs);
       min-width: var(--sc-dropdown-min-width);
-      background: var(--sc-bg-overlay);
+      background: color-mix(in srgb, var(--sc-bg-overlay) 88%, transparent);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: var(--sc-radius-lg);
       box-shadow: var(--sc-shadow-lg);
       padding: var(--sc-dropdown-padding);
@@ -48,7 +51,7 @@ export class ScDropdown extends LitElement {
       transition:
         opacity var(--sc-duration-fast) var(--sc-ease-out),
         visibility var(--sc-duration-fast),
-        transform var(--sc-duration-fast) var(--sc-ease-out);
+        transform var(--sc-duration-normal) var(--sc-spring-out);
     }
 
     .menu.open {

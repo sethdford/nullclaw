@@ -13,6 +13,9 @@ export class ScInput extends LitElement {
   @property({ type: Boolean }) disabled = false;
   @property({ type: String }) error = "";
   @property({ type: String }) size: InputSize = "md";
+  @property({ type: Number }) min?: number;
+  @property({ type: Number }) max?: number;
+  @property({ type: Number }) step?: number;
 
   @state() private _inputId = `sc-input-${Math.random().toString(36).slice(2, 11)}`;
 
@@ -138,6 +141,9 @@ export class ScInput extends LitElement {
             .value=${this.value}
             placeholder=${this.placeholder}
             ?disabled=${this.disabled}
+            min=${this.min ?? undefined}
+            max=${this.max ?? undefined}
+            step=${this.step ?? undefined}
             aria-invalid=${this.error ? "true" : "false"}
             aria-describedby=${errorId ?? undefined}
             aria-label=${this.label ? undefined : this.ariaLabel || undefined}

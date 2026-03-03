@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { GatewayAwareLitElement } from "../gateway-aware.js";
 import { icons } from "../icons.js";
 import "../components/sc-card.js";
+import "../components/sc-input.js";
 import "../components/sc-skeleton.js";
 import "../components/sc-empty-state.js";
 
@@ -141,7 +142,7 @@ export class ScToolsView extends GatewayAwareLitElement {
     if (this.loading) {
       return html`
         <div class="search">
-          <input type="text" placeholder="Search tools..." disabled style="opacity: 0.6" />
+          <sc-input type="text" placeholder="Search tools..." disabled></sc-input>
         </div>
         <div class="grid sc-stagger">
           <sc-skeleton variant="card" height="80px"></sc-skeleton>
@@ -161,14 +162,14 @@ export class ScToolsView extends GatewayAwareLitElement {
           ></sc-empty-state>`
         : nothing}
       <div class="search">
-        <input
+        <sc-input
           type="text"
           placeholder="Search tools..."
           .value=${this.filter}
-          @input=${(e: Event) => {
-            this.filter = (e.target as HTMLInputElement).value;
+          @sc-input=${(e: CustomEvent<{ value: string }>) => {
+            this.filter = e.detail.value;
           }}
-        />
+        ></sc-input>
       </div>
       <div class="grid sc-stagger">
         ${filtered.length === 0

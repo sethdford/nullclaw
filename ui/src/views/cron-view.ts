@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { GatewayAwareLitElement } from "../gateway-aware.js";
 import { icons } from "../icons.js";
 import "../components/sc-card.js";
+import "../components/sc-input.js";
 import "../components/sc-skeleton.js";
 import "../components/sc-empty-state.js";
 import "../components/sc-button.js";
@@ -323,34 +324,31 @@ export class ScCronView extends GatewayAwareLitElement {
               <div class="form-card" @click=${(e: Event) => e.stopPropagation()}>
                 <h3 class="form-title">Add Cron Job</h3>
                 <div class="form-group">
-                  <label>Expression (e.g. 0 * * * *)</label>
-                  <input
-                    type="text"
+                  <sc-input
+                    label="Expression (e.g. 0 * * * *)"
                     placeholder="0 * * * *"
                     .value=${this.formExpression}
-                    @input=${(e: Event) =>
-                      (this.formExpression = (e.target as HTMLInputElement).value)}
-                  />
+                    @sc-input=${(e: CustomEvent<{ value: string }>) =>
+                      (this.formExpression = e.detail.value)}
+                  ></sc-input>
                 </div>
                 <div class="form-group">
-                  <label>Command (shell command to run)</label>
-                  <input
-                    type="text"
+                  <sc-input
+                    label="Command (shell command to run)"
                     placeholder="echo 'hello world'"
                     .value=${this.formCommand}
-                    @input=${(e: Event) =>
-                      (this.formCommand = (e.target as HTMLInputElement).value)}
-                  />
+                    @sc-input=${(e: CustomEvent<{ value: string }>) =>
+                      (this.formCommand = e.detail.value)}
+                  ></sc-input>
                 </div>
                 <div class="form-group">
-                  <label>Description (optional)</label>
-                  <input
-                    type="text"
+                  <sc-input
+                    label="Description (optional)"
                     placeholder="Optional"
                     .value=${this.formDescription}
-                    @input=${(e: Event) =>
-                      (this.formDescription = (e.target as HTMLInputElement).value)}
-                  />
+                    @sc-input=${(e: CustomEvent<{ value: string }>) =>
+                      (this.formDescription = e.detail.value)}
+                  ></sc-input>
                 </div>
                 <div class="form-actions">
                   <sc-button variant="secondary" @click=${this.closeForm}>Cancel</sc-button>
