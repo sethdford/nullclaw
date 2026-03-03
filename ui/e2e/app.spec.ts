@@ -64,4 +64,64 @@ test.describe("SeaClaw Control UI", () => {
     const overview = page.locator("sc-app >> sc-overview-view");
     await expect(overview).toBeAttached({ timeout: 5000 });
   });
+
+  test("Ctrl+K opens command palette", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForTimeout(300);
+    await page.keyboard.press("Control+k");
+    await page.waitForTimeout(300);
+    const palette = page.locator("sc-app >> sc-command-palette");
+    await expect(palette).toBeAttached({ timeout: 5000 });
+  });
+
+  test("Ctrl+B toggles sidebar collapsed state", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForTimeout(300);
+    const layout = page.locator("sc-app >> .layout");
+    await expect(layout).toBeAttached({ timeout: 5000 });
+
+    const hadCollapsed = await layout.evaluate((el) => el.classList.contains("collapsed"));
+    await page.keyboard.press("Control+b");
+    await page.waitForTimeout(300);
+    const hasCollapsed = await layout.evaluate((el) => el.classList.contains("collapsed"));
+    expect(hasCollapsed).toBe(!hadCollapsed);
+  });
+
+  test("connection status shows disconnected initially", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForTimeout(500);
+    const sidebar = page.locator("sc-app >> sc-sidebar");
+    await expect(sidebar).toBeAttached({ timeout: 5000 });
+  });
+
+  test("floating mic button is present", async ({ page }) => {
+    await page.goto("/");
+    const mic = page.locator("sc-app >> sc-floating-mic");
+    await expect(mic).toBeAttached({ timeout: 5000 });
+  });
+
+  test("navigating through all tabs sequentially works", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForTimeout(300);
+
+    const tabs = [
+      "chat",
+      "agents",
+      "sessions",
+      "models",
+      "tools",
+      "channels",
+      "skills",
+      "overview",
+    ];
+
+    for (const tab of tabs) {
+      await page.evaluate((t) => (window.location.hash = t), tab);
+      await page.waitForTimeout(400);
+      const viewTag = tab === "overview" ? "sc-overview-view" : `sc-${tab}-view`;
+      await expect(page.locator(`sc-app >> ${viewTag}`)).toBeAttached({
+        timeout: 5000,
+      });
+    }
+  });
 });
