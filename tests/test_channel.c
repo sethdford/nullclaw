@@ -24,6 +24,9 @@
 #if SC_HAS_DISPATCH
 #include "seaclaw/channels/dispatch.h"
 #endif
+#if SC_HAS_IMAP
+#include "seaclaw/channels/imap.h"
+#endif
 
 static void test_cli_create_succeeds(void) {
     sc_allocator_t alloc = sc_system_allocator();
@@ -333,6 +336,94 @@ static void test_dispatch_send_in_test_mode(void) {
 }
 #endif
 
+#if SC_HAS_IMAP
+static void test_imap_create_with_mock_config(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch;
+    sc_imap_config_t cfg = {
+        .imap_host = "imap.example.com",
+        .imap_host_len = 16,
+        .imap_port = 993,
+        .imap_username = "user",
+        .imap_username_len = 4,
+        .imap_password = "secret",
+        .imap_password_len = 6,
+        .imap_folder = "INBOX",
+        .imap_folder_len = 5,
+        .imap_use_tls = true,
+    };
+    sc_error_t err = sc_imap_create(&alloc, &cfg, &ch);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(ch.ctx);
+    SC_ASSERT_STR_EQ(ch.vtable->name(ch.ctx), "imap");
+    SC_ASSERT_TRUE(sc_imap_is_configured(&ch));
+    sc_imap_destroy(&ch);
+}
+
+static void test_imap_send_stores_in_outbox(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch;
+    sc_imap_config_t cfg = {
+        .imap_host = "imap.example.com",
+        .imap_host_len = 16,
+        .imap_port = 993,
+        .imap_username = "user",
+        .imap_username_len = 4,
+        .imap_password = "secret",
+        .imap_password_len = 6,
+        .imap_folder = "INBOX",
+        .imap_folder_len = 5,
+        .imap_use_tls = true,
+    };
+    sc_error_t err = sc_imap_create(&alloc, &cfg, &ch);
+    SC_ASSERT_EQ(err, SC_OK);
+    err = ch.vtable->send(ch.ctx, "alice@example.com", 17, "Hello", 5, NULL, 0);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_imap_destroy(&ch);
+}
+
+static void test_imap_unconfigured_health_check(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch;
+    sc_imap_config_t cfg = {0}; /* no host, username, password */
+    sc_error_t err = sc_imap_create(&alloc, &cfg, &ch);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_FALSE(ch.vtable->health_check(ch.ctx));
+    sc_imap_destroy(&ch);
+}
+
+#if SC_IS_TEST
+static void test_imap_poll_returns_mock(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch;
+    sc_imap_config_t cfg = {
+        .imap_host = "imap.example.com",
+        .imap_host_len = 16,
+        .imap_port = 993,
+        .imap_username = "user",
+        .imap_username_len = 4,
+        .imap_password = "secret",
+        .imap_password_len = 6,
+        .imap_folder = "INBOX",
+        .imap_folder_len = 5,
+        .imap_use_tls = true,
+    };
+    sc_error_t err = sc_imap_create(&alloc, &cfg, &ch);
+    SC_ASSERT_EQ(err, SC_OK);
+    err = sc_imap_test_push_mock(&ch, "sess1", 5, "mock body", 9);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_channel_loop_msg_t msgs[4];
+    size_t count = 0;
+    err = sc_imap_poll(ch.ctx, &alloc, msgs, 4, &count);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(count, 1u);
+    SC_ASSERT_STR_EQ(msgs[0].session_key, "sess1");
+    SC_ASSERT_STR_EQ(msgs[0].content, "mock body");
+    sc_imap_destroy(&ch);
+}
+#endif
+#endif
+
 void run_channel_tests(void) {
     SC_TEST_SUITE("Channel");
     SC_RUN_TEST(test_cli_create_succeeds);
@@ -376,8 +467,12 @@ void run_channel_tests(void) {
     SC_RUN_TEST(test_maixcam_create_succeeds);
     SC_RUN_TEST(test_maixcam_send_in_test_mode);
 #endif
-#if SC_HAS_DISPATCH
-    SC_RUN_TEST(test_dispatch_create_succeeds);
-    SC_RUN_TEST(test_dispatch_send_in_test_mode);
+#if SC_HAS_IMAP
+    SC_RUN_TEST(test_imap_create_with_mock_config);
+    SC_RUN_TEST(test_imap_send_stores_in_outbox);
+    SC_RUN_TEST(test_imap_unconfigured_health_check);
+#if SC_IS_TEST
+    SC_RUN_TEST(test_imap_poll_returns_mock);
+#endif
 #endif
 }

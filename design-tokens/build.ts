@@ -24,6 +24,7 @@ const TOKEN_FILES = [
   "opacity.tokens.json",
   "elevation.tokens.json",
   "breakpoints.tokens.json",
+  "glass.tokens.json",
 ];
 
 type TokenValue = string | number;
@@ -383,6 +384,38 @@ function generateCSS(tokens: TokenMap): string {
       const suffix = k.replace("elevation.", "");
       if (suffix && !suffix.includes("."))
         lines.push(`  --sc-elevation-${suffix}: ${v};`);
+    }
+  }
+
+  // Glass tiers
+  lines.push("  /* Glass tiers (Liquid Motion) */");
+  const glassTiers = ["subtle", "standard", "prominent"];
+  for (const tier of glassTiers) {
+    const blur = tokens[`glass.${tier}.blur`];
+    const saturate = tokens[`glass.${tier}.saturate`];
+    const bgOp = tokens[`glass.${tier}.bg-opacity`];
+    const borderOp = tokens[`glass.${tier}.border-opacity`];
+    const insetOp = tokens[`glass.${tier}.inset-opacity`];
+    if (blur != null) lines.push(`  --sc-glass-${tier}-blur: ${blur};`);
+    if (saturate != null)
+      lines.push(`  --sc-glass-${tier}-saturate: ${saturate};`);
+    if (bgOp != null) lines.push(`  --sc-glass-${tier}-bg-opacity: ${bgOp};`);
+    if (borderOp != null)
+      lines.push(`  --sc-glass-${tier}-border-opacity: ${borderOp};`);
+    if (insetOp != null)
+      lines.push(`  --sc-glass-${tier}-inset-opacity: ${insetOp};`);
+  }
+
+  // Micro-physics presets
+  lines.push("  /* Pixar micro-physics */");
+  const microPhysicsKeys = Object.keys(tokens).filter((k) =>
+    k.startsWith("micro-physics."),
+  );
+  for (const k of microPhysicsKeys.sort()) {
+    const v = tokens[k];
+    if (v != null) {
+      const name = k.replace("micro-physics.", "").replace(/\./g, "-");
+      lines.push(`  --sc-physics-${name}: ${v};`);
     }
   }
 

@@ -41,6 +41,14 @@ typedef struct sc_owned_message {
 
 typedef struct sc_agent sc_agent_t;
 
+/* Optional context pressure config. Pass to sc_agent_from_config; NULL = use defaults. */
+typedef struct sc_agent_context_config {
+    uint64_t token_limit;       /* 0 = resolve from model at runtime */
+    float pressure_warn;        /* warn at this ratio (default 0.85) */
+    float pressure_compact;     /* auto-compact at this ratio (default 0.95) */
+    float compact_target;      /* compact until below this ratio (default 0.70) */
+} sc_agent_context_config_t;
+
 /* Called when a tool needs user approval before execution.
  * tool_name/args describe the pending action.
  * Return true to approve, false to deny. */
@@ -79,6 +87,14 @@ struct sc_agent {
     size_t history_cap;
     uint64_t total_tokens;
 
+    /* Context pressure: token_limit from config (0 = resolve from model) */
+    uint64_t token_limit;
+    float context_pressure_warn;
+    float context_pressure_compact;
+    float context_compact_target;
+    bool context_pressure_warning_85_emitted;
+    bool context_pressure_warning_95_emitted;
+
     /* Cached static portion of system prompt (rebuilt only when config changes) */
     char *cached_static_prompt;
     size_t cached_static_prompt_len;
@@ -100,7 +116,8 @@ struct sc_agent {
     sc_policy_engine_t *policy_engine;
 };
 
-/* Create agent from minimal config (no full config loader yet). */
+/* Create agent from minimal config (no full config loader yet).
+ * ctx_cfg: optional context pressure config; NULL = use defaults. */
 sc_error_t sc_agent_from_config(sc_agent_t *out, sc_allocator_t *alloc, sc_provider_t provider,
                                 const sc_tool_t *tools, size_t tools_count, sc_memory_t *memory,
                                 sc_session_store_t *session_store, sc_observer_t *observer,
@@ -110,7 +127,8 @@ sc_error_t sc_agent_from_config(sc_agent_t *out, sc_allocator_t *alloc, sc_provi
                                 const char *workspace_dir, size_t workspace_dir_len,
                                 uint32_t max_tool_iterations, uint32_t max_history_messages,
                                 bool auto_save, uint8_t autonomy_level,
-                                const char *custom_instructions, size_t custom_instructions_len);
+                                const char *custom_instructions, size_t custom_instructions_len,
+                                const sc_agent_context_config_t *ctx_cfg);
 
 void sc_agent_deinit(sc_agent_t *agent);
 

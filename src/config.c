@@ -85,6 +85,11 @@ static void set_defaults(sc_config_t *cfg, sc_allocator_t *a) {
     cfg->reliability.scheduler_retries = 2;
     cfg->reliability.fallback_providers = NULL;
     cfg->reliability.fallback_providers_len = 0;
+    cfg->router.fast = NULL;
+    cfg->router.standard = NULL;
+    cfg->router.powerful = NULL;
+    cfg->router.complexity_low = 50;
+    cfg->router.complexity_high = 500;
     cfg->runtime.kind = sc_strdup(a, "native");
     cfg->runtime.docker_image = NULL;
     cfg->memory.profile = sc_strdup(a, "markdown_only");
@@ -633,6 +638,41 @@ static void parse_email_channel(sc_allocator_t *a, sc_config_t *cfg, const sc_js
         e->imap_port = (uint16_t)port;
 }
 
+static void parse_imap_channel(sc_allocator_t *a, sc_config_t *cfg, const sc_json_value_t *obj) {
+    if (!obj || obj->type != SC_JSON_OBJECT)
+        return;
+    sc_imap_channel_config_t *im = &cfg->channels.imap;
+    const char *val;
+    val = sc_json_get_string(obj, "imap_host");
+    if (val) {
+        if (im->imap_host)
+            a->free(a->ctx, im->imap_host, strlen(im->imap_host) + 1);
+        im->imap_host = sc_strdup(a, val);
+    }
+    double port = sc_json_get_number(obj, "imap_port", im->imap_port);
+    if (port >= 1 && port <= 65535)
+        im->imap_port = (uint16_t)port;
+    val = sc_json_get_string(obj, "imap_username");
+    if (val) {
+        if (im->imap_username)
+            a->free(a->ctx, im->imap_username, strlen(im->imap_username) + 1);
+        im->imap_username = sc_strdup(a, val);
+    }
+    val = sc_json_get_string(obj, "imap_password");
+    if (val) {
+        if (im->imap_password)
+            a->free(a->ctx, im->imap_password, strlen(im->imap_password) + 1);
+        im->imap_password = sc_strdup(a, val);
+    }
+    val = sc_json_get_string(obj, "imap_folder");
+    if (val) {
+        if (im->imap_folder)
+            a->free(a->ctx, im->imap_folder, strlen(im->imap_folder) + 1);
+        im->imap_folder = sc_strdup(a, val);
+    }
+    im->imap_use_tls = sc_json_get_bool(obj, "imap_use_tls", true);
+}
+
 static void parse_imessage_channel(sc_allocator_t *a, sc_config_t *cfg,
                                    const sc_json_value_t *obj) {
     if (!obj || obj->type != SC_JSON_OBJECT)
@@ -806,6 +846,10 @@ static sc_error_t parse_channels(sc_allocator_t *a, sc_config_t *cfg, const sc_j
     if (email_obj)
         parse_email_channel(a, cfg, email_obj);
 
+    sc_json_value_t *imap_obj = sc_json_object_get(obj, "imap");
+    if (imap_obj)
+        parse_imap_channel(a, cfg, imap_obj);
+
     sc_json_value_t *imsg_obj = sc_json_object_get(obj, "imessage");
     if (imsg_obj)
         parse_imessage_channel(a, cfg, imsg_obj);
@@ -941,6 +985,17 @@ static sc_error_t parse_agent(sc_allocator_t *a, sc_config_t *cfg, const sc_json
             a->free(a->ctx, cfg->agent.default_profile, strlen(cfg->agent.default_profile) + 1);
         cfg->agent.default_profile = sc_strdup(a, dp);
     }
+    double cpw = sc_json_get_number(obj, "context_pressure_warn", cfg->agent.context_pressure_warn);
+    if (cpw > 0.0 && cpw <= 1.0)
+        cfg->agent.context_pressure_warn = (float)cpw;
+    double cpc =
+        sc_json_get_number(obj, "context_pressure_compact", cfg->agent.context_pressure_compact);
+    if (cpc > 0.0 && cpc <= 1.0)
+        cfg->agent.context_pressure_compact = (float)cpc;
+    double cct =
+        sc_json_get_number(obj, "context_compact_target", cfg->agent.context_compact_target);
+    if (cct > 0.0 && cct <= 1.0)
+        cfg->agent.context_compact_target = (float)cct;
     return SC_OK;
 }
 static sc_error_t parse_policy_cfg(sc_allocator_t *a, sc_config_t *cfg,
@@ -1051,6 +1106,36 @@ static sc_error_t parse_reliability(sc_allocator_t *a, sc_config_t *cfg,
         parse_string_array(a, &cfg->reliability.fallback_providers,
                            &cfg->reliability.fallback_providers_len, fp);
     }
+    return SC_OK;
+}
+
+static sc_error_t parse_router(sc_allocator_t *a, sc_config_t *cfg, const sc_json_value_t *obj) {
+    if (!obj || obj->type != SC_JSON_OBJECT)
+        return SC_OK;
+    const char *fast = sc_json_get_string(obj, "fast");
+    if (fast) {
+        if (cfg->router.fast)
+            a->free(a->ctx, cfg->router.fast, strlen(cfg->router.fast) + 1);
+        cfg->router.fast = sc_strdup(a, fast);
+    }
+    const char *standard = sc_json_get_string(obj, "standard");
+    if (standard) {
+        if (cfg->router.standard)
+            a->free(a->ctx, cfg->router.standard, strlen(cfg->router.standard) + 1);
+        cfg->router.standard = sc_strdup(a, standard);
+    }
+    const char *powerful = sc_json_get_string(obj, "powerful");
+    if (powerful) {
+        if (cfg->router.powerful)
+            a->free(a->ctx, cfg->router.powerful, strlen(cfg->router.powerful) + 1);
+        cfg->router.powerful = sc_strdup(a, powerful);
+    }
+    double cl = sc_json_get_number(obj, "complexity_low", (double)cfg->router.complexity_low);
+    if (cl >= 0 && cl <= 10000)
+        cfg->router.complexity_low = (int)cl;
+    double ch = sc_json_get_number(obj, "complexity_high", (double)cfg->router.complexity_high);
+    if (ch >= 0 && ch <= 100000)
+        cfg->router.complexity_high = (int)ch;
     return SC_OK;
 }
 
@@ -1390,8 +1475,19 @@ sc_error_t sc_config_parse_json(sc_config_t *cfg, const char *content, size_t le
         cfg->max_tokens = (uint32_t)mt;
 
     sc_json_value_t *prov_arr = sc_json_object_get(root, "providers");
-    if (prov_arr)
-        parse_providers(a, cfg, prov_arr);
+    if (prov_arr) {
+        if (prov_arr->type == SC_JSON_ARRAY)
+            parse_providers(a, cfg, prov_arr);
+        else if (prov_arr->type == SC_JSON_OBJECT) {
+            sc_json_value_t *router_obj = sc_json_object_get(prov_arr, "router");
+            if (router_obj)
+                parse_router(a, cfg, router_obj);
+        }
+    }
+
+    sc_json_value_t *router_obj = sc_json_object_get(root, "router");
+    if (router_obj)
+        parse_router(a, cfg, router_obj);
 
     sc_json_value_t *aut = sc_json_object_get(root, "autonomy");
     if (aut)

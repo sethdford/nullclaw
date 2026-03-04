@@ -17,6 +17,7 @@ void run_tunnel_tests(void);
 void run_gateway_tests(void);
 void run_auth_tests(void);
 void run_security_tests(void);
+void run_vault_tests(void);
 void run_provider_tests(void);
 void run_channel_tests(void);
 void run_tool_tests(void);
@@ -98,6 +99,7 @@ int main(void) {
     run_gateway_tests();
     run_auth_tests();
     run_security_tests();
+    run_vault_tests();
     run_provider_tests();
     run_channel_tests();
     run_tool_tests();

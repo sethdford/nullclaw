@@ -1,4 +1,5 @@
 #include "seaclaw/gateway.h"
+#include "seaclaw/gateway/openai_compat.h"
 #include "seaclaw/config.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
@@ -191,14 +192,20 @@ static void send_all(int fd, const char *buf, size_t len) {
 static void send_response(int fd, int status, const char *content_type, const char *body,
                           size_t body_len, int retry_after_secs) {
     const char *status_str = "200 OK";
-    if (status == 404)
-        status_str = "404 Not Found";
-    else if (status == 429)
-        status_str = "429 Too Many Requests";
-    else if (status == 413)
-        status_str = "413 Payload Too Large";
+    if (status == 400)
+        status_str = "400 Bad Request";
     else if (status == 401)
         status_str = "401 Unauthorized";
+    else if (status == 404)
+        status_str = "404 Not Found";
+    else if (status == 413)
+        status_str = "413 Payload Too Large";
+    else if (status == 429)
+        status_str = "429 Too Many Requests";
+    else if (status == 502)
+        status_str = "502 Bad Gateway";
+    else if (status == 503)
+        status_str = "503 Service Unavailable";
     else if (status == 304)
         status_str = "304 Not Modified";
 
@@ -353,6 +360,34 @@ static void handle_http_request(sc_gateway_state_t *gw, int fd, const char *meth
 
     if (path_is(path, "/health") || path_is(path, "/healthz")) {
         send_json(fd, 200, "{\"status\":\"ok\"}");
+        return;
+    }
+
+    /* OpenAI-compatible API */
+    if (path_is(path, "/v1/chat/completions") && method && strcmp(method, "POST") == 0) {
+        int status = 500;
+        char *resp_body = NULL;
+        size_t resp_len = 0;
+        sc_openai_compat_handle_chat_completions(body, body_len, gw->alloc,
+                                                  gw->config.app_ctx, &status, &resp_body,
+                                                  &resp_len);
+        send_response(fd, status, "application/json", resp_body ? resp_body : "{}",
+                     resp_body ? resp_len : 2, 0);
+        if (resp_body && gw->alloc)
+            gw->alloc->free(gw->alloc->ctx, resp_body, resp_len + 1);
+        return;
+    }
+    if (path_is(path, "/v1/models") && method && strcmp(method, "GET") == 0) {
+        int status = 500;
+        char *resp_body = NULL;
+        size_t resp_len = 0;
+        sc_openai_compat_handle_models(gw->alloc, gw->config.app_ctx, &status, &resp_body,
+                                       &resp_len);
+        send_response(fd, status, "application/json",
+                     resp_body ? resp_body : "{\"object\":\"list\",\"data\":[]}",
+                     resp_body ? resp_len : 24, 0);
+        if (resp_body && gw->alloc)
+            gw->alloc->free(gw->alloc->ctx, resp_body, resp_len + 1);
         return;
     }
 

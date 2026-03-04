@@ -1,5 +1,6 @@
 #include "seaclaw/providers/router.h"
 #include "seaclaw/core/string.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -208,5 +209,76 @@ sc_error_t sc_router_create(sc_allocator_t *alloc, const char *const *provider_n
 
     out->ctx = r;
     out->vtable = &router_vtable;
+    return SC_OK;
+}
+
+/* Multi-model router: delegates to fast/standard/powerful based on complexity. */
+typedef struct sc_multi_model_ctx {
+    sc_allocator_t *alloc;
+    sc_multi_model_router_config_t config;
+} sc_multi_model_ctx_t;
+
+static const char *multi_model_get_name(void *ctx) {
+    (void)ctx;
+    return "router";
+}
+
+static sc_provider_t *multi_model_select(sc_multi_model_ctx_t *m, int approx_tokens) {
+    if (approx_tokens < m->config.complexity_threshold_low && m->config.fast.ctx &&
+        m->config.fast.vtable)
+        return &m->config.fast;
+    if (approx_tokens > m->config.complexity_threshold_high && m->config.powerful.ctx &&
+        m->config.powerful.vtable)
+        return &m->config.powerful;
+    return m->config.standard.ctx ? &m->config.standard : NULL;
+}
+
+static sc_error_t multi_model_chat(void *ctx, sc_allocator_t *alloc,
+                                   const sc_chat_request_t *request, const char *model,
+                                   size_t model_len, double temperature, sc_chat_response_t *out) {
+    sc_multi_model_ctx_t *m = (sc_multi_model_ctx_t *)ctx;
+    int approx = 0;
+    for (size_t i = 0; i < request->messages_count; i++)
+        approx += (int)(request->messages[i].content_len / 4);
+    sc_provider_t *p = multi_model_select(m, approx);
+    if (!p || !p->vtable || !p->vtable->chat)
+        return SC_ERR_PROVIDER_RESPONSE;
+    return p->vtable->chat(p->ctx, alloc, request, model, model_len, temperature, out);
+}
+
+static void multi_model_deinit(void *ctx, sc_allocator_t *alloc) {
+    sc_multi_model_ctx_t *m = (sc_multi_model_ctx_t *)ctx;
+    if (m->config.fast.vtable && m->config.fast.vtable->deinit)
+        m->config.fast.vtable->deinit(m->config.fast.ctx, alloc);
+    if (m->config.standard.vtable && m->config.standard.vtable->deinit)
+        m->config.standard.vtable->deinit(m->config.standard.ctx, alloc);
+    if (m->config.powerful.vtable && m->config.powerful.vtable->deinit)
+        m->config.powerful.vtable->deinit(m->config.powerful.ctx, alloc);
+    alloc->free(alloc->ctx, m, sizeof(*m));
+}
+
+static const sc_provider_vtable_t multi_model_vtable = {
+    .chat = multi_model_chat,
+    .get_name = multi_model_get_name,
+    .deinit = multi_model_deinit,
+};
+
+sc_error_t sc_multi_model_router_create(sc_allocator_t *alloc,
+                                        const sc_multi_model_router_config_t *config,
+                                        sc_provider_t *out) {
+    if (!alloc || !config || !out)
+        return SC_ERR_INVALID_ARGUMENT;
+    if (!config->standard.ctx || !config->standard.vtable)
+        return SC_ERR_INVALID_ARGUMENT;
+
+    sc_multi_model_ctx_t *m = (sc_multi_model_ctx_t *)alloc->alloc(alloc->ctx, sizeof(*m));
+    if (!m)
+        return SC_ERR_OUT_OF_MEMORY;
+    memset(m, 0, sizeof(*m));
+    m->alloc = alloc;
+    m->config = *config;
+
+    out->ctx = m;
+    out->vtable = &multi_model_vtable;
     return SC_OK;
 }

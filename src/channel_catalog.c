@@ -39,6 +39,9 @@ static const sc_channel_meta_t catalog[] = {
 #ifdef SC_HAS_EMAIL
     {SC_CHANNEL_EMAIL, "email", "Email", "", SC_LISTENER_POLLING},
 #endif
+#ifdef SC_HAS_IMAP
+    {SC_CHANNEL_IMAP, "imap", "IMAP", "", SC_LISTENER_POLLING},
+#endif
 #ifdef SC_HAS_IMESSAGE
     {SC_CHANNEL_IMESSAGE, "imessage", "iMessage", "", SC_LISTENER_POLLING},
 #endif
@@ -128,6 +131,10 @@ bool sc_channel_catalog_is_build_enabled(sc_channel_id_t id) {
 #endif
 #ifdef SC_HAS_EMAIL
     case SC_CHANNEL_EMAIL:
+        return true;
+#endif
+#ifdef SC_HAS_IMAP
+    case SC_CHANNEL_IMAP:
         return true;
 #endif
 #ifdef SC_HAS_IMESSAGE
@@ -260,6 +267,7 @@ bool sc_channel_catalog_requires_runtime(sc_channel_id_t id) {
     case SC_CHANNEL_NOSTR:
     case SC_CHANNEL_QQ:
     case SC_CHANNEL_EMAIL:
+    case SC_CHANNEL_IMAP:
     case SC_CHANNEL_IMESSAGE:
     case SC_CHANNEL_TEAMS:
     case SC_CHANNEL_TWILIO:

@@ -5,6 +5,7 @@
 #include "seaclaw/gateway/ws_server.h"
 #include "seaclaw/gateway/control_protocol.h"
 #include "seaclaw/gateway/event_bridge.h"
+#include "seaclaw/gateway/openai_compat.h"
 #include "seaclaw/bus.h"
 #include "seaclaw/health.h"
 #include "seaclaw/config.h"
@@ -856,6 +857,120 @@ static void test_event_bridge_payload_propagation(void) {
     sc_ws_server_deinit(&ws);
 }
 
+static void test_openai_compat_chat_valid_returns_mock(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_config_t cfg = {0};
+    cfg.default_provider = "openai";
+    cfg.default_model = "gpt-4o";
+    sc_app_context_t app = {.config = &cfg};
+
+    const char *body =
+        "{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"Hi\"}],"
+        "\"max_tokens\":1024,\"temperature\":0.7,\"stream\":false}";
+    int status = 500;
+    char *resp = NULL;
+    size_t resp_len = 0;
+    sc_openai_compat_handle_chat_completions(body, strlen(body), &alloc, &app, &status, &resp,
+                                             &resp_len);
+    SC_ASSERT_EQ(status, 200);
+    SC_ASSERT_NOT_NULL(resp);
+    SC_ASSERT_TRUE(strstr(resp, "\"object\":\"chat.completion\"") != NULL);
+    SC_ASSERT_TRUE(strstr(resp, "\"choices\"") != NULL);
+    SC_ASSERT_TRUE(strstr(resp, "\"usage\"") != NULL);
+    SC_ASSERT_TRUE(strstr(resp, "chatcmpl-") != NULL);
+    if (resp)
+        alloc.free(alloc.ctx, resp, resp_len + 1);
+}
+
+static void test_openai_compat_chat_invalid_json_400(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_config_t cfg = {0};
+    cfg.default_provider = "openai";
+    cfg.default_model = "gpt-4o";
+    sc_app_context_t app = {.config = &cfg};
+
+    const char *body = "{invalid json";
+    int status = 200;
+    char *resp = NULL;
+    size_t resp_len = 0;
+    sc_openai_compat_handle_chat_completions(body, strlen(body), &alloc, &app, &status, &resp,
+                                             &resp_len);
+    SC_ASSERT_EQ(status, 400);
+    if (resp)
+        alloc.free(alloc.ctx, resp, resp_len + 1);
+}
+
+static void test_openai_compat_chat_streaming_400(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_config_t cfg = {0};
+    cfg.default_provider = "openai";
+    cfg.default_model = "gpt-4o";
+    sc_app_context_t app = {.config = &cfg};
+
+    const char *body =
+        "{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"Hi\"}],"
+        "\"stream\":true}";
+    int status = 200;
+    char *resp = NULL;
+    size_t resp_len = 0;
+    sc_openai_compat_handle_chat_completions(body, strlen(body), &alloc, &app, &status, &resp,
+                                             &resp_len);
+    SC_ASSERT_EQ(status, 400);
+    if (resp)
+        alloc.free(alloc.ctx, resp, resp_len + 1);
+}
+
+static void test_openai_compat_chat_empty_messages_400(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_config_t cfg = {0};
+    cfg.default_provider = "openai";
+    cfg.default_model = "gpt-4o";
+    sc_app_context_t app = {.config = &cfg};
+
+    const char *body = "{\"model\":\"gpt-4o\",\"messages\":[]}";
+    int status = 200;
+    char *resp = NULL;
+    size_t resp_len = 0;
+    sc_openai_compat_handle_chat_completions(body, strlen(body), &alloc, &app, &status, &resp,
+                                             &resp_len);
+    SC_ASSERT_EQ(status, 400);
+    if (resp)
+        alloc.free(alloc.ctx, resp, resp_len + 1);
+}
+
+static void test_openai_compat_models_returns_list(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_config_t cfg = {0};
+    cfg.default_provider = "openai";
+    cfg.default_model = "gpt-4o";
+    sc_app_context_t app = {.config = &cfg};
+
+    int status = 500;
+    char *resp = NULL;
+    size_t resp_len = 0;
+    sc_openai_compat_handle_models(&alloc, &app, &status, &resp, &resp_len);
+    SC_ASSERT_EQ(status, 200);
+    SC_ASSERT_NOT_NULL(resp);
+    SC_ASSERT_TRUE(strstr(resp, "\"object\":\"list\"") != NULL);
+    SC_ASSERT_TRUE(strstr(resp, "\"data\"") != NULL);
+    SC_ASSERT_TRUE(strstr(resp, "openai") != NULL);
+    if (resp)
+        alloc.free(alloc.ctx, resp, resp_len + 1);
+}
+
+static void test_openai_compat_models_null_config_503(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_app_context_t app = {.config = NULL};
+
+    int status = 200;
+    char *resp = NULL;
+    size_t resp_len = 0;
+    sc_openai_compat_handle_models(&alloc, &app, &status, &resp, &resp_len);
+    SC_ASSERT_EQ(status, 503);
+    if (resp)
+        alloc.free(alloc.ctx, resp, resp_len + 1);
+}
+
 void run_gateway_extended_tests(void) {
     SC_TEST_SUITE("Gateway Extended");
     SC_RUN_TEST(test_gateway_webhook_paths);
@@ -948,4 +1063,12 @@ void run_gateway_extended_tests(void) {
     SC_RUN_TEST(test_ws_server_send_inactive_conn);
     SC_RUN_TEST(test_ws_server_broadcast_null_data);
     SC_RUN_TEST(test_ws_server_conn_pool_full);
+
+    SC_TEST_SUITE("OpenAI Compat");
+    SC_RUN_TEST(test_openai_compat_chat_valid_returns_mock);
+    SC_RUN_TEST(test_openai_compat_chat_invalid_json_400);
+    SC_RUN_TEST(test_openai_compat_chat_streaming_400);
+    SC_RUN_TEST(test_openai_compat_chat_empty_messages_400);
+    SC_RUN_TEST(test_openai_compat_models_returns_list);
+    SC_RUN_TEST(test_openai_compat_models_null_config_503);
 }

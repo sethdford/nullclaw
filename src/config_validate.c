@@ -13,7 +13,8 @@ static const char *const sc_config_top_keys[] = {
     "workspace",     "default_provider", "default_model", "default_temperature", "max_tokens",
     "api_key",       "providers",        "autonomy",      "gateway",             "memory",
     "tools",         "cron",             "scheduler",     "runtime",             "tunnel",
-    "channels",      "agent",            "heartbeat",     "reliability",         "diagnostics",
+    "channels",      "agent",            "heartbeat",     "reliability",         "router",
+    "diagnostics",
     "session",       "peripherals",      "hardware",     "browser",             "cost",
     "mcp_servers",   "nodes",            "policy",       "plugins",             "security",
     "secrets",       "identity",
@@ -45,6 +46,7 @@ static const size_t sc_security_keys_len =
 static const char *const sc_known_providers[] = {
     "openai", "anthropic", "gemini", "google", "google-gemini", "ollama",
     "openrouter", "compatible", "claude_cli", "codex_cli", "openai-codex",
+    "router", "reliable",
 };
 static const size_t sc_known_providers_len =
     sizeof(sc_known_providers) / sizeof(sc_known_providers[0]);

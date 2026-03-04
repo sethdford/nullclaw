@@ -58,6 +58,14 @@ typedef struct sc_reliability_config {
     size_t fallback_providers_len;
 } sc_reliability_config_t;
 
+typedef struct sc_router_config {
+    char *fast;    /* provider name for simple tasks */
+    char *standard; /* provider name for default */
+    char *powerful; /* provider name for complex tasks */
+    int complexity_low;  /* below this -> fast (default 50) */
+    int complexity_high; /* above this -> powerful (default 500) */
+} sc_router_config_t;
+
 typedef struct sc_agent_config {
     bool compact_context;
     uint32_t max_tool_iterations;
@@ -72,6 +80,9 @@ typedef struct sc_agent_config {
     uint64_t message_timeout_secs;
     uint32_t pool_max_concurrent;
     char *default_profile;
+    float context_pressure_warn;    /* warn at this ratio (default 0.85) */
+    float context_pressure_compact; /* auto-compact at this ratio (default 0.95) */
+    float context_compact_target;   /* compact until below this ratio (default 0.70) */
 } sc_agent_config_t;
 
 typedef struct sc_policy_config {
@@ -102,6 +113,15 @@ typedef struct sc_email_channel_config {
     char *imap_host;
     uint16_t imap_port;
 } sc_email_channel_config_t;
+
+typedef struct sc_imap_channel_config {
+    char *imap_host;
+    uint16_t imap_port;
+    char *imap_username;
+    char *imap_password;
+    char *imap_folder;
+    bool imap_use_tls;
+} sc_imap_channel_config_t;
 
 typedef struct sc_imessage_channel_config {
     char *default_target;
@@ -161,6 +181,7 @@ typedef struct sc_channels_config {
     size_t channel_config_counts[SC_CHANNEL_CONFIG_MAX];
     size_t channel_config_len;
     sc_email_channel_config_t email;
+    sc_imap_channel_config_t imap;
     sc_imessage_channel_config_t imessage;
     sc_discord_channel_config_t discord;
     sc_telegram_channel_config_t telegram;
@@ -283,6 +304,7 @@ typedef struct sc_config {
     sc_autonomy_config_t autonomy;
     sc_runtime_config_t runtime;
     sc_reliability_config_t reliability;
+    sc_router_config_t router;
     sc_agent_config_t agent;
     sc_heartbeat_config_t heartbeat;
     sc_channels_config_t channels;

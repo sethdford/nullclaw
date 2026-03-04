@@ -1,8 +1,9 @@
-#include "seaclaw/agent.h"
+#include "seaclaw/context.h"
 #include "seaclaw/core/json.h"
 #include "seaclaw/core/string.h"
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #define SC_CONTEXT_DEFAULT_SYSTEM "You are a helpful AI assistant."
@@ -64,4 +65,37 @@ uint32_t sc_context_estimate_tokens(const sc_chat_message_t *messages, size_t me
         total += 4; /* overhead per message */
     }
     return total;
+}
+
+/* Estimate tokens for a single text string (rough: ~4 chars per token for English). */
+size_t sc_estimate_tokens_text(const char *text, size_t len) {
+    if (!text)
+        return 0;
+    return (len + 3) / 4;
+}
+
+bool sc_context_check_pressure(sc_context_pressure_t *p, float pressure_warn,
+                               float pressure_compact) {
+    if (!p || p->max_tokens == 0)
+        return false;
+    p->pressure = (float)((double)p->current_tokens / (double)p->max_tokens);
+    if (p->pressure > 1.0f)
+        p->pressure = 1.0f;
+
+    if (p->pressure >= pressure_warn && !p->warning_85_emitted) {
+        p->warning_85_emitted = true;
+#ifndef SC_IS_TEST
+        fprintf(stderr, "[agent] Context pressure at %.0f%% — consider compacting\n",
+                p->pressure * 100.0f);
+#endif
+    }
+    if (p->pressure >= pressure_compact && !p->warning_95_emitted) {
+        p->warning_95_emitted = true;
+#ifndef SC_IS_TEST
+        fprintf(stderr, "[agent] Context pressure at %.0f%% — auto-compacting oldest messages\n",
+                p->pressure * 100.0f);
+#endif
+        return true;
+    }
+    return false;
 }

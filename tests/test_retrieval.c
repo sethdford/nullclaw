@@ -1,8 +1,10 @@
 #include "test_framework.h"
 #include "seaclaw/memory.h"
 #include "seaclaw/memory/retrieval.h"
+#include "seaclaw/memory/rerank.h"
 #include "seaclaw/memory/vector.h"
 #include "seaclaw/core/allocator.h"
+#include "seaclaw/core/string.h"
 #include <math.h>
 #include <string.h>
 
@@ -350,6 +352,105 @@ static void test_semantic_retrieve_with_local_embedder(void) {
 #endif
 }
 
+static void test_rerank_rrf_overlapping_merges_correctly(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_search_result_t kw[3] = {
+        {.content = sc_strdup(&alloc, "doc A"), .score = 0.9f, .rerank_score = 0.0f, .original_rank = 0},
+        {.content = sc_strdup(&alloc, "doc B"), .score = 0.8f, .rerank_score = 0.0f, .original_rank = 1},
+        {.content = sc_strdup(&alloc, "doc C"), .score = 0.7f, .rerank_score = 0.0f, .original_rank = 2},
+    };
+    sc_search_result_t vec[3] = {
+        {.content = sc_strdup(&alloc, "doc B"), .score = 0.95f, .rerank_score = 0.0f, .original_rank = 0},
+        {.content = sc_strdup(&alloc, "doc A"), .score = 0.85f, .rerank_score = 0.0f, .original_rank = 1},
+        {.content = sc_strdup(&alloc, "doc D"), .score = 0.75f, .rerank_score = 0.0f, .original_rank = 2},
+    };
+    sc_search_result_t merged[8];
+    size_t count = 0;
+    sc_error_t err = sc_rerank_rrf(kw, 3, vec, 3, merged, 8, &count, 60.0f);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(count, 4u); /* A, B, C, D */
+    /* doc B appears in both lists — should have highest RRF score */
+    SC_ASSERT_TRUE(merged[0].rerank_score >= merged[1].rerank_score);
+    sc_rerank_free_results(merged, count);
+    sc_rerank_free_results(kw, 3);
+    sc_rerank_free_results(vec, 3);
+}
+
+static void test_rerank_rrf_disjoint_combines_both(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_search_result_t kw[2] = {
+        {.content = sc_strdup(&alloc, "keyword only"), .score = 0.9f, .rerank_score = 0.0f, .original_rank = 0},
+        {.content = sc_strdup(&alloc, "another kw"), .score = 0.8f, .rerank_score = 0.0f, .original_rank = 1},
+    };
+    sc_search_result_t vec[2] = {
+        {.content = sc_strdup(&alloc, "vector only"), .score = 0.95f, .rerank_score = 0.0f, .original_rank = 0},
+        {.content = sc_strdup(&alloc, "another vec"), .score = 0.85f, .rerank_score = 0.0f, .original_rank = 1},
+    };
+    sc_search_result_t merged[8];
+    size_t count = 0;
+    sc_error_t err = sc_rerank_rrf(kw, 2, vec, 2, merged, 8, &count, 60.0f);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(count, 4u);
+    sc_rerank_free_results(merged, count);
+    sc_rerank_free_results(kw, 2);
+    sc_rerank_free_results(vec, 2);
+}
+
+static void test_rerank_cross_encoder_scores_term_overlap(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_search_result_t results[3] = {
+        {.content = sc_strdup(&alloc, "apple banana"), .score = 0.5f, .rerank_score = 0.0f, .original_rank = 0},
+        {.content = sc_strdup(&alloc, "apple cherry"), .score = 0.4f, .rerank_score = 0.0f, .original_rank = 1},
+        {.content = sc_strdup(&alloc, "orange grape"), .score = 0.6f, .rerank_score = 0.0f, .original_rank = 2},
+    };
+    sc_error_t err = sc_rerank_cross_encoder("apple banana", results, 3);
+    SC_ASSERT_EQ(err, SC_OK);
+    /* First doc has both words — rerank_score should be 1.0 */
+    SC_ASSERT_TRUE(results[0].rerank_score > 0.9f);
+    /* Third doc has neither — should be last */
+    SC_ASSERT_TRUE(results[2].rerank_score < 0.1f);
+    sc_rerank_free_results(results, 3);
+}
+
+static void test_rerank_empty_results_handled_gracefully(void) {
+    sc_search_result_t merged[4];
+    size_t count = 99;
+    sc_error_t err = sc_rerank_rrf(NULL, 0, NULL, 0, merged, 4, &count, 60.0f);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(count, 0u);
+
+    sc_allocator_t a = sc_system_allocator();
+    sc_search_result_t results[1] = {{.content = sc_strdup(&a, "x"), .score = 0.5f, .rerank_score = 0.0f, .original_rank = 0}};
+    err = sc_rerank_cross_encoder("query", results, 0);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_rerank_free_results(results, 1);
+}
+
+static void test_rerank_k_parameter_affects_ranking(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_search_result_t kw[2] = {
+        {.content = sc_strdup(&alloc, "first"), .score = 0.9f, .rerank_score = 0.0f, .original_rank = 0},
+        {.content = sc_strdup(&alloc, "second"), .score = 0.8f, .rerank_score = 0.0f, .original_rank = 1},
+    };
+    sc_search_result_t vec[2] = {
+        {.content = sc_strdup(&alloc, "second"), .score = 0.95f, .rerank_score = 0.0f, .original_rank = 0},
+        {.content = sc_strdup(&alloc, "first"), .score = 0.85f, .rerank_score = 0.0f, .original_rank = 1},
+    };
+    sc_search_result_t merged_k10[8], merged_k100[8];
+    size_t c10 = 0, c100 = 0;
+    sc_rerank_rrf(kw, 2, vec, 2, merged_k10, 8, &c10, 10.0f);
+    sc_rerank_rrf(kw, 2, vec, 2, merged_k100, 8, &c100, 100.0f);
+    SC_ASSERT_EQ(c10, 2u);
+    SC_ASSERT_EQ(c100, 2u);
+    /* With smaller k, rank differences matter more */
+    SC_ASSERT_TRUE(merged_k10[0].rerank_score != merged_k100[0].rerank_score ||
+                   merged_k10[0].content == merged_k100[0].content);
+    sc_rerank_free_results(merged_k10, c10);
+    sc_rerank_free_results(merged_k100, c100);
+    sc_rerank_free_results(kw, 2);
+    sc_rerank_free_results(vec, 2);
+}
+
 static void test_hybrid_retrieve_with_vector(void) {
 #ifdef SC_ENABLE_SQLITE
     sc_allocator_t alloc = sc_system_allocator();
@@ -394,4 +495,9 @@ void run_retrieval_tests(void) {
     SC_RUN_TEST(test_retrieval_engine_with_none_backend);
     SC_RUN_TEST(test_retrieval_engine_deinit);
     SC_RUN_TEST(test_retrieval_engine_with_sqlite_backend);
+    SC_RUN_TEST(test_rerank_rrf_overlapping_merges_correctly);
+    SC_RUN_TEST(test_rerank_rrf_disjoint_combines_both);
+    SC_RUN_TEST(test_rerank_cross_encoder_scores_term_overlap);
+    SC_RUN_TEST(test_rerank_empty_results_handled_gracefully);
+    SC_RUN_TEST(test_rerank_k_parameter_affects_ranking);
 }

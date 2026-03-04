@@ -461,6 +461,17 @@ static void test_config_parse_agent_parallel_tools(void) {
     free_config(cfg);
 }
 
+static void test_config_parse_agent_context_pressure(void) {
+    sc_config_t *cfg = make_config_with_arena();
+    const char *j =
+        "{\"agent\":{\"context_pressure_warn\":0.9,\"context_pressure_compact\":0.98,\"context_compact_target\":0.65}}";
+    sc_config_parse_json(cfg, j, strlen(j));
+    SC_ASSERT_TRUE(cfg->agent.context_pressure_warn > 0.89f && cfg->agent.context_pressure_warn < 0.91f);
+    SC_ASSERT_TRUE(cfg->agent.context_pressure_compact > 0.97f && cfg->agent.context_pressure_compact < 0.99f);
+    SC_ASSERT_TRUE(cfg->agent.context_compact_target > 0.64f && cfg->agent.context_compact_target < 0.66f);
+    free_config(cfg);
+}
+
 static void test_config_parse_runtime_docker(void) {
     sc_config_t *cfg = make_config_with_arena();
     const char *j = "{\"runtime\":{\"kind\":\"docker\",\"docker_image\":\"my-img\"}}";
@@ -1131,6 +1142,7 @@ void run_config_extended_tests(void) {
     SC_RUN_TEST(test_config_parse_agent_max_tool_iterations);
     SC_RUN_TEST(test_config_parse_agent_compact_context);
     SC_RUN_TEST(test_config_parse_agent_parallel_tools);
+    SC_RUN_TEST(test_config_parse_agent_context_pressure);
     SC_RUN_TEST(test_config_parse_runtime_docker);
     SC_RUN_TEST(test_config_parse_tools_enabled_list);
     SC_RUN_TEST(test_config_parse_tools_disabled_list);

@@ -30,4 +30,18 @@ sc_error_t sc_router_create(sc_allocator_t *alloc, const char *const *provider_n
                             size_t route_count, const char *default_model, size_t default_model_len,
                             sc_provider_t *out);
 
+/* Multi-model router: selects fast/standard/powerful based on prompt complexity.
+ * fast/standard/powerful are provider structs; missing fast or powerful falls back to standard. */
+typedef struct sc_multi_model_router_config {
+    sc_provider_t fast;
+    sc_provider_t standard;
+    sc_provider_t powerful;
+    int complexity_threshold_low;  /* below this -> fast (default 50) */
+    int complexity_threshold_high; /* above this -> powerful (default 500) */
+} sc_multi_model_router_config_t;
+
+sc_error_t sc_multi_model_router_create(sc_allocator_t *alloc,
+                                       const sc_multi_model_router_config_t *config,
+                                       sc_provider_t *out);
+
 #endif /* SC_ROUTER_H */

@@ -19,6 +19,7 @@ typedef enum sc_channel_id {
     SC_CHANNEL_DINGTALK,
     SC_CHANNEL_SIGNAL,
     SC_CHANNEL_EMAIL,
+    SC_CHANNEL_IMAP,
     SC_CHANNEL_LINE,
     SC_CHANNEL_QQ,
     SC_CHANNEL_ONEBOT,

@@ -1,6 +1,7 @@
 #include "seaclaw/agent/compaction.h"
 #include "seaclaw/core/string.h"
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -211,6 +212,96 @@ sc_error_t sc_compact_history(sc_allocator_t *alloc, sc_owned_message_t *history
                     remaining * sizeof(sc_owned_message_t));
         }
         count -= shift;
+    }
+
+    *history_count = count;
+    return SC_OK;
+}
+
+sc_error_t sc_context_compact_for_pressure(sc_allocator_t *alloc, sc_owned_message_t *history,
+                                          size_t *history_count, size_t *history_cap,
+                                          size_t max_tokens, float target_pressure) {
+    (void)history_cap;
+    if (!alloc || !history || !history_count || max_tokens == 0)
+        return SC_ERR_INVALID_ARGUMENT;
+    size_t count = *history_count;
+    if (count == 0)
+        return SC_OK;
+
+    uint64_t current = sc_estimate_tokens(history, count);
+    float pressure = (float)((double)current / (double)max_tokens);
+    if (pressure < target_pressure)
+        return SC_OK;
+
+    bool has_system = history[0].role == SC_ROLE_SYSTEM;
+    size_t start = has_system ? 1 : 0;
+    size_t non_system = count - start;
+    if (non_system <= 1)
+        return SC_OK;
+
+    uint64_t target_tokens = (uint64_t)((double)max_tokens * (double)target_pressure);
+    size_t compact_count = 0;
+    for (size_t k = 1; k < non_system; k++) {
+        uint64_t new_tokens = 0;
+        for (size_t i = 0; i < start; i++)
+            new_tokens += (uint64_t)((history[i].content_len + 3) / 4);
+        for (size_t i = start + k; i < count; i++)
+            new_tokens += (uint64_t)((history[i].content_len + 3) / 4);
+        /* Marker + overhead */
+        new_tokens += 20; /* "[Previous context compacted: N messages summarized]" ~20 tokens */
+        if (new_tokens < target_tokens) {
+            compact_count = k;
+            break;
+        }
+        compact_count = k;
+    }
+    if (compact_count == 0)
+        return SC_OK;
+
+    size_t compact_end = start + compact_count;
+    char buf[96];
+    int n = snprintf(buf, sizeof(buf), "[Previous context compacted: %zu messages summarized]",
+                     compact_count);
+    if (n < 0 || (size_t)n >= sizeof(buf))
+        return SC_ERR_INVALID_ARGUMENT;
+    size_t marker_len = (size_t)n;
+
+    char *summary_content = (char *)alloc->alloc(alloc->ctx, marker_len + 1);
+    if (!summary_content)
+        return SC_ERR_OUT_OF_MEMORY;
+    memcpy(summary_content, buf, marker_len + 1);
+
+    /* Free compacted messages */
+    for (size_t i = start; i < compact_end; i++) {
+        if (history[i].content) {
+            alloc->free(alloc->ctx, history[i].content, history[i].content_len + 1);
+            history[i].content = NULL;
+        }
+        if (history[i].name) {
+            alloc->free(alloc->ctx, history[i].name, history[i].name_len + 1);
+            history[i].name = NULL;
+        }
+        if (history[i].tool_call_id) {
+            alloc->free(alloc->ctx, history[i].tool_call_id, history[i].tool_call_id_len + 1);
+            history[i].tool_call_id = NULL;
+        }
+    }
+
+    history[start].role = SC_ROLE_ASSISTANT;
+    history[start].content = summary_content;
+    history[start].content_len = marker_len;
+    history[start].name = NULL;
+    history[start].name_len = 0;
+    history[start].tool_call_id = NULL;
+    history[start].tool_call_id_len = 0;
+
+    if (compact_end > start + 1) {
+        size_t remaining = count - compact_end;
+        if (remaining > 0) {
+            memmove(&history[start + 1], &history[compact_end],
+                    remaining * sizeof(sc_owned_message_t));
+        }
+        count -= (compact_end - start - 1);
     }
 
     *history_count = count;

@@ -6,8 +6,10 @@
 #include "seaclaw/agent/dispatcher.h"
 #include "seaclaw/agent/compaction.h"
 #include "seaclaw/agent/planner.h"
+#include "seaclaw/context.h"
 #include "seaclaw/tools/shell.h"
 #include "seaclaw/tools/factory.h"
+#include <stdio.h>
 #include <string.h>
 
 /* ─── Dispatcher tests ──────────────────────────────────────────────────── */
@@ -277,6 +279,146 @@ static void test_estimate_tokens(void) {
     SC_ASSERT_EQ(t, (uint64_t)3); /* aggregate: (5+5+3)/4 = 3 — matches Zig formula */
 }
 
+/* ─── Context pressure tests ─────────────────────────────────────────────── */
+
+static void test_estimate_tokens_text_known_string(void) {
+    /* 8 chars -> 2 tokens (8/4) */
+    size_t t = sc_estimate_tokens_text("12345678", 8);
+    SC_ASSERT_EQ(t, (size_t)2);
+    /* 4 chars -> 1 token */
+    t = sc_estimate_tokens_text("test", 4);
+    SC_ASSERT_EQ(t, (size_t)1);
+}
+
+static void test_context_pressure_50_no_warning(void) {
+    sc_context_pressure_t p = {
+        .current_tokens = 50,
+        .max_tokens = 100,
+        .pressure = 0.0f,
+        .warning_85_emitted = false,
+        .warning_95_emitted = false,
+    };
+    bool compact = sc_context_check_pressure(&p, 0.85f, 0.95f);
+    SC_ASSERT_FALSE(compact);
+    SC_ASSERT_FALSE(p.warning_85_emitted);
+    SC_ASSERT_FALSE(p.warning_95_emitted);
+}
+
+static void test_context_pressure_86_warning_emitted(void) {
+    sc_context_pressure_t p = {
+        .current_tokens = 86,
+        .max_tokens = 100,
+        .pressure = 0.0f,
+        .warning_85_emitted = false,
+        .warning_95_emitted = false,
+    };
+    bool compact = sc_context_check_pressure(&p, 0.85f, 0.95f);
+    SC_ASSERT_FALSE(compact);
+    SC_ASSERT_TRUE(p.warning_85_emitted);
+    SC_ASSERT_FALSE(p.warning_95_emitted);
+}
+
+static void test_context_pressure_96_auto_compact_triggered(void) {
+    sc_context_pressure_t p = {
+        .current_tokens = 96,
+        .max_tokens = 100,
+        .pressure = 0.0f,
+        .warning_85_emitted = false,
+        .warning_95_emitted = false,
+    };
+    bool compact = sc_context_check_pressure(&p, 0.85f, 0.95f);
+    SC_ASSERT_TRUE(compact);
+    SC_ASSERT_TRUE(p.warning_95_emitted);
+}
+
+static void test_context_compact_preserves_system_and_recent(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    size_t cap = 32;
+    sc_owned_message_t *history = (sc_owned_message_t *)alloc.alloc(alloc.ctx,
+        cap * sizeof(sc_owned_message_t));
+    SC_ASSERT_NOT_NULL(history);
+
+    history[0].role = SC_ROLE_SYSTEM;
+    history[0].content = sc_strndup(&alloc, "You are helpful", 15);
+    history[0].content_len = 15;
+    history[0].name = NULL;
+    history[0].name_len = 0;
+    history[0].tool_call_id = NULL;
+    history[0].tool_call_id_len = 0;
+
+    for (size_t i = 1; i <= 15; i++) {
+        char buf[512];
+        memset(buf, 'x', 280);
+        snprintf(buf + 280, sizeof(buf) - 280, " message %zu", i);
+        size_t len = strlen(buf);
+        history[i].role = SC_ROLE_USER;
+        history[i].content = sc_strndup(&alloc, buf, len);
+        history[i].content_len = len;
+        history[i].name = NULL;
+        history[i].name_len = 0;
+        history[i].tool_call_id = NULL;
+        history[i].tool_call_id_len = 0;
+    }
+
+    size_t count = 16;
+    sc_error_t err = sc_context_compact_for_pressure(&alloc, history, &count, &cap, 1000, 0.70f);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(history[0].role == SC_ROLE_SYSTEM);
+    SC_ASSERT_STR_EQ(history[0].content, "You are helpful");
+    SC_ASSERT_TRUE(strstr(history[1].content, "Previous context compacted") != NULL);
+
+    for (size_t i = 0; i < count; i++) {
+        if (history[i].content)
+            alloc.free(alloc.ctx, history[i].content, history[i].content_len + 1);
+    }
+    alloc.free(alloc.ctx, history, cap * sizeof(sc_owned_message_t));
+}
+
+static void test_context_compact_reduces_below_target(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    size_t cap = 64;
+    sc_owned_message_t *history = (sc_owned_message_t *)alloc.alloc(alloc.ctx,
+        cap * sizeof(sc_owned_message_t));
+    SC_ASSERT_NOT_NULL(history);
+
+    history[0].role = SC_ROLE_SYSTEM;
+    history[0].content = sc_strndup(&alloc, "system", 6);
+    history[0].content_len = 6;
+    history[0].name = NULL;
+    history[0].name_len = 0;
+    history[0].tool_call_id = NULL;
+    history[0].tool_call_id_len = 0;
+
+    for (size_t i = 1; i <= 20; i++) {
+        char buf[256];
+        memset(buf, 'a', 96);
+        snprintf(buf + 96, sizeof(buf) - 96, " msg %zu", i);
+        size_t len = strlen(buf);
+        history[i].role = (i % 2) ? SC_ROLE_USER : SC_ROLE_ASSISTANT;
+        history[i].content = sc_strndup(&alloc, buf, len);
+        history[i].content_len = len;
+        history[i].name = NULL;
+        history[i].name_len = 0;
+        history[i].tool_call_id = NULL;
+        history[i].tool_call_id_len = 0;
+    }
+
+    size_t count = 21;
+    uint64_t before = sc_estimate_tokens(history, count);
+    SC_ASSERT_TRUE((float)before / 500.0f > 0.95f);
+
+    sc_error_t err = sc_context_compact_for_pressure(&alloc, history, &count, &cap, 500, 0.70f);
+    SC_ASSERT_EQ(err, SC_OK);
+    uint64_t after = sc_estimate_tokens(history, count);
+    SC_ASSERT_TRUE((float)after / 500.0f < 0.75f); /* below 75% after compaction */
+
+    for (size_t i = 0; i < count; i++) {
+        if (history[i].content)
+            alloc.free(alloc.ctx, history[i].content, history[i].content_len + 1);
+    }
+    alloc.free(alloc.ctx, history, cap * sizeof(sc_owned_message_t));
+}
+
 /* ─── Planner tests ─────────────────────────────────────────────────────── */
 
 static void test_planner_create_plan(void) {
@@ -349,6 +491,12 @@ void run_agent_subsystems_tests(void) {
     SC_RUN_TEST(test_compaction_reduces_history);
     SC_RUN_TEST(test_compaction_keep_recent_preserved);
     SC_RUN_TEST(test_estimate_tokens);
+    SC_RUN_TEST(test_estimate_tokens_text_known_string);
+    SC_RUN_TEST(test_context_pressure_50_no_warning);
+    SC_RUN_TEST(test_context_pressure_86_warning_emitted);
+    SC_RUN_TEST(test_context_pressure_96_auto_compact_triggered);
+    SC_RUN_TEST(test_context_compact_preserves_system_and_recent);
+    SC_RUN_TEST(test_context_compact_reduces_below_target);
     SC_RUN_TEST(test_planner_create_plan);
     SC_RUN_TEST(test_planner_step_progression);
     SC_RUN_TEST(test_planner_is_complete);

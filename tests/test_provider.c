@@ -4,6 +4,7 @@
 #include "seaclaw/provider.h"
 #include "seaclaw/providers/openai.h"
 #include "seaclaw/providers/anthropic.h"
+#include "seaclaw/providers/ollama.h"
 #include "seaclaw/providers/reliable.h"
 #include "seaclaw/providers/router.h"
 #include "seaclaw/providers/codex_cli.h"
@@ -221,6 +222,138 @@ static void test_router_resolves_hint(void) {
     smart_prov.vtable->deinit(smart_prov.ctx, &alloc);
 }
 
+static void test_multi_model_router_below_threshold_uses_fast(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_provider_t fast_prov, standard_prov;
+    sc_ollama_create(&alloc, NULL, 0, NULL, 0, &fast_prov);
+    sc_openai_create(&alloc, "key", 3, NULL, 0, &standard_prov);
+
+    sc_multi_model_router_config_t cfg = {
+        .fast = fast_prov,
+        .standard = standard_prov,
+        .powerful = {0},
+        .complexity_threshold_low = 50,
+        .complexity_threshold_high = 500,
+    };
+    sc_provider_t router;
+    sc_error_t err = sc_multi_model_router_create(&alloc, &cfg, &router);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_STR_EQ(router.vtable->get_name(router.ctx), "router");
+
+    /* Short message: ~1 token -> fast */
+    sc_chat_message_t msgs[1] = {{.role = SC_ROLE_USER, .content = "hi", .content_len = 2,
+        .name = NULL, .name_len = 0, .tool_call_id = NULL, .tool_call_id_len = 0,
+        .content_parts = NULL, .content_parts_count = 0}};
+    sc_chat_request_t req = {.messages = msgs, .messages_count = 1, .model = "gpt-4", .model_len = 5,
+        .temperature = 0.7, .max_tokens = 0, .tools = NULL, .tools_count = 0,
+        .timeout_secs = 0, .reasoning_effort = NULL, .reasoning_effort_len = 0};
+    sc_chat_response_t resp = {0};
+    err = router.vtable->chat(router.ctx, &alloc, &req, "gpt-4", 5, 0.7, &resp);
+    SC_ASSERT_EQ(err, SC_OK);
+    if (resp.content) alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    router.vtable->deinit(router.ctx, &alloc);
+}
+
+static void test_multi_model_router_between_thresholds_uses_standard(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_provider_t fast_prov, standard_prov;
+    sc_ollama_create(&alloc, NULL, 0, NULL, 0, &fast_prov);
+    sc_openai_create(&alloc, "key", 3, NULL, 0, &standard_prov);
+
+    sc_multi_model_router_config_t cfg = {
+        .fast = fast_prov,
+        .standard = standard_prov,
+        .powerful = {0},
+        .complexity_threshold_low = 50,
+        .complexity_threshold_high = 500,
+    };
+    sc_provider_t router;
+    sc_error_t err = sc_multi_model_router_create(&alloc, &cfg, &router);
+    SC_ASSERT_EQ(err, SC_OK);
+
+    /* ~100 tokens: between 50 and 500 -> standard */
+    char buf[420];
+    for (size_t i = 0; i < sizeof(buf) - 1; i++)
+        buf[i] = 'x';
+    buf[sizeof(buf) - 1] = '\0';
+    sc_chat_message_t msgs[1] = {{.role = SC_ROLE_USER, .content = buf, .content_len = sizeof(buf) - 1,
+        .name = NULL, .name_len = 0, .tool_call_id = NULL, .tool_call_id_len = 0,
+        .content_parts = NULL, .content_parts_count = 0}};
+    sc_chat_request_t req = {.messages = msgs, .messages_count = 1, .model = "gpt-4", .model_len = 5,
+        .temperature = 0.7, .max_tokens = 0, .tools = NULL, .tools_count = 0,
+        .timeout_secs = 0, .reasoning_effort = NULL, .reasoning_effort_len = 0};
+    sc_chat_response_t resp = {0};
+    err = router.vtable->chat(router.ctx, &alloc, &req, "gpt-4", 5, 0.7, &resp);
+    SC_ASSERT_EQ(err, SC_OK);
+    if (resp.content) alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    router.vtable->deinit(router.ctx, &alloc);
+}
+
+static void test_multi_model_router_above_threshold_uses_powerful(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_provider_t standard_prov, powerful_prov;
+    sc_openai_create(&alloc, "key", 3, NULL, 0, &standard_prov);
+    sc_anthropic_create(&alloc, "key", 3, NULL, 0, &powerful_prov);
+
+    sc_multi_model_router_config_t cfg = {
+        .fast = {0},
+        .standard = standard_prov,
+        .powerful = powerful_prov,
+        .complexity_threshold_low = 50,
+        .complexity_threshold_high = 500,
+    };
+    sc_provider_t router;
+    sc_error_t err = sc_multi_model_router_create(&alloc, &cfg, &router);
+    SC_ASSERT_EQ(err, SC_OK);
+
+    /* ~600 tokens -> powerful */
+    char buf[2500];
+    for (size_t i = 0; i < sizeof(buf) - 1; i++)
+        buf[i] = 'x';
+    buf[sizeof(buf) - 1] = '\0';
+    sc_chat_message_t msgs[1] = {{.role = SC_ROLE_USER, .content = buf, .content_len = sizeof(buf) - 1,
+        .name = NULL, .name_len = 0, .tool_call_id = NULL, .tool_call_id_len = 0,
+        .content_parts = NULL, .content_parts_count = 0}};
+    sc_chat_request_t req = {.messages = msgs, .messages_count = 1, .model = "claude", .model_len = 6,
+        .temperature = 0.7, .max_tokens = 0, .tools = NULL, .tools_count = 0,
+        .timeout_secs = 0, .reasoning_effort = NULL, .reasoning_effort_len = 0};
+    sc_chat_response_t resp = {0};
+    err = router.vtable->chat(router.ctx, &alloc, &req, "claude", 6, 0.7, &resp);
+    SC_ASSERT_EQ(err, SC_OK);
+    if (resp.content) alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    router.vtable->deinit(router.ctx, &alloc);
+}
+
+static void test_multi_model_router_missing_fast_falls_back_to_standard(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_provider_t standard_prov;
+    sc_openai_create(&alloc, "key", 3, NULL, 0, &standard_prov);
+
+    sc_multi_model_router_config_t cfg = {
+        .fast = {0},
+        .standard = standard_prov,
+        .powerful = {0},
+        .complexity_threshold_low = 50,
+        .complexity_threshold_high = 500,
+    };
+    sc_provider_t router;
+    sc_error_t err = sc_multi_model_router_create(&alloc, &cfg, &router);
+    SC_ASSERT_EQ(err, SC_OK);
+
+    /* Very short -> would use fast, but fast missing -> standard */
+    sc_chat_message_t msgs[1] = {{.role = SC_ROLE_USER, .content = "hi", .content_len = 2,
+        .name = NULL, .name_len = 0, .tool_call_id = NULL, .tool_call_id_len = 0,
+        .content_parts = NULL, .content_parts_count = 0}};
+    sc_chat_request_t req = {.messages = msgs, .messages_count = 1, .model = "gpt-4", .model_len = 5,
+        .temperature = 0.7, .max_tokens = 0, .tools = NULL, .tools_count = 0,
+        .timeout_secs = 0, .reasoning_effort = NULL, .reasoning_effort_len = 0};
+    sc_chat_response_t resp = {0};
+    err = router.vtable->chat(router.ctx, &alloc, &req, "gpt-4", 5, 0.7, &resp);
+    SC_ASSERT_EQ(err, SC_OK);
+    if (resp.content) alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    router.vtable->deinit(router.ctx, &alloc);
+}
+
 static void test_codex_cli_create_and_chat(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_provider_t prov;
@@ -333,6 +466,10 @@ void run_provider_tests(void) {
     SC_RUN_TEST(test_reliable_wraps_inner_succeeds);
     SC_RUN_TEST(test_reliable_retries_then_succeeds);
     SC_RUN_TEST(test_router_resolves_hint);
+    SC_RUN_TEST(test_multi_model_router_below_threshold_uses_fast);
+    SC_RUN_TEST(test_multi_model_router_between_thresholds_uses_standard);
+    SC_RUN_TEST(test_multi_model_router_above_threshold_uses_powerful);
+    SC_RUN_TEST(test_multi_model_router_missing_fast_falls_back_to_standard);
     SC_RUN_TEST(test_codex_cli_create_and_chat);
     SC_RUN_TEST(test_openai_codex_create_and_chat);
     SC_RUN_TEST(test_error_classify_non_retryable);

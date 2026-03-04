@@ -1,0 +1,89 @@
+{
+  "$description": "Liquid Glass tokens — three tiers of glass depth inspired by Apple visionOS Liquid Glass, adapted for web/native",
+  "glass": {
+    "subtle": {
+      "blur": {
+        "$value": "12px",
+        "$type": "dimension",
+        "$description": "Lightest frosted glass"
+      },
+      "saturate": {
+        "$value": "120%",
+        "$type": "string",
+        "$description": "Low saturation boost"
+      },
+      "bg-opacity": {
+        "$value": 0.04,
+        "$type": "number",
+        "$description": "Nearly transparent"
+      },
+      "border-opacity": {
+        "$value": 0.05,
+        "$type": "number",
+        "$description": "Barely visible border"
+      },
+      "inset-opacity": {
+        "$value": 0,
+        "$type": "number",
+        "$description": "No inset highlight"
+      },
+      "$description": "Backgrounds, nav chrome, ambient panels"
+    },
+    "standard": {
+      "blur": {
+        "$value": "24px",
+        "$type": "dimension",
+        "$description": "Standard frosted glass"
+      },
+      "saturate": {
+        "$value": "180%",
+        "$type": "string",
+        "$description": "Moderate saturation boost"
+      },
+      "bg-opacity": {
+        "$value": 0.06,
+        "$type": "number",
+        "$description": "Slightly visible"
+      },
+      "border-opacity": {
+        "$value": 0.08,
+        "$type": "number",
+        "$description": "Subtle border"
+      },
+      "inset-opacity": {
+        "$value": 0.06,
+        "$type": "number",
+        "$description": "Subtle top highlight"
+      },
+      "$description": "Cards, panels, interactive surfaces"
+    },
+    "prominent": {
+      "blur": {
+        "$value": "32px",
+        "$type": "dimension",
+        "$description": "Heavy frosted glass with refraction"
+      },
+      "saturate": {
+        "$value": "200%",
+        "$type": "string",
+        "$description": "Strong saturation boost"
+      },
+      "bg-opacity": {
+        "$value": 0.08,
+        "$type": "number",
+        "$description": "More visible"
+      },
+      "border-opacity": {
+        "$value": 0.12,
+        "$type": "number",
+        "$description": "Visible chromatic border"
+      },
+      "inset-opacity": {
+        "$value": 0.1,
+        "$type": "number",
+        "$description": "Strong top highlight"
+      },
+      "$description": "Modals, sheets, hero elements, overlays"
+    }
+  }
+}

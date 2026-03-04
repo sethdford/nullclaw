@@ -51,6 +51,33 @@
   --sc-elevation-3: 0 4px 8px 3px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.3);
   --sc-elevation-4: 0 6px 10px 4px rgba(0,0,0,0.15), 0 2px 3px rgba(0,0,0,0.3);
   --sc-elevation-5: 0 8px 12px 6px rgba(0,0,0,0.15), 0 4px 4px rgba(0,0,0,0.3);
+  /* Glass tiers (Liquid Motion) */
+  --sc-glass-subtle-blur: 12px;
+  --sc-glass-subtle-saturate: 120%;
+  --sc-glass-subtle-bg-opacity: 0.04;
+  --sc-glass-subtle-border-opacity: 0.05;
+  --sc-glass-subtle-inset-opacity: 0;
+  --sc-glass-standard-blur: 24px;
+  --sc-glass-standard-saturate: 180%;
+  --sc-glass-standard-bg-opacity: 0.06;
+  --sc-glass-standard-border-opacity: 0.08;
+  --sc-glass-standard-inset-opacity: 0.06;
+  --sc-glass-prominent-blur: 32px;
+  --sc-glass-prominent-saturate: 200%;
+  --sc-glass-prominent-bg-opacity: 0.08;
+  --sc-glass-prominent-border-opacity: 0.12;
+  --sc-glass-prominent-inset-opacity: 0.1;
+  /* Pixar micro-physics */
+  --sc-physics-button-press-scaleX: 1.01;
+  --sc-physics-button-press-scaleY: 0.97;
+  --sc-physics-button-release-scaleX: 0.99;
+  --sc-physics-button-release-scaleY: 1.02;
+  --sc-physics-card-hover-translateY: -2px;
+  --sc-physics-dropdown-anticipate-scaleY: 0.98;
+  --sc-physics-modal-anticipate-pause: 50ms;
+  --sc-physics-modal-anticipate-scale: 0.97;
+  --sc-physics-toggle-squash-scaleX: 1.15;
+  --sc-physics-toggle-squash-scaleY: 0.85;
   /* Breakpoints */
   --sc-breakpoint-2xl: 1536px;
   --sc-breakpoint-lg: 1024px;

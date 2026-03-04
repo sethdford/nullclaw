@@ -44,4 +44,11 @@ sc_error_t sc_compact_history(sc_allocator_t *alloc, sc_owned_message_t *history
                               size_t *history_count, size_t *history_cap,
                               const sc_compaction_config_t *config);
 
+/* Pressure-based compaction: remove oldest non-system messages until pressure < target.
+ * Replaces removed messages with "[Previous context compacted: N messages summarized]".
+ * Preserves system prompt and most recent messages. */
+sc_error_t sc_context_compact_for_pressure(sc_allocator_t *alloc, sc_owned_message_t *history,
+                                            size_t *history_count, size_t *history_cap,
+                                            size_t max_tokens, float target_pressure);
+
 #endif /* SC_AGENT_COMPACTION_H */

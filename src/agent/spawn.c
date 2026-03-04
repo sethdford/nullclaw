@@ -145,7 +145,7 @@ static void *spawn_thread(void *arg) {
         memset(ag, 0, sizeof(*ag));
         if (sc_agent_from_config(ag, a, prov, NULL, 0, NULL, NULL, NULL, s->policy, mdl,
                                  strlen(mdl), pn, strlen(pn), temp, ws, strlen(ws), mi, 50, false,
-                                 2, sys, strlen(sys)) != SC_OK) {
+                                 2, sys, strlen(sys), NULL) != SC_OK) {
             a->free(a->ctx, ag, sizeof(*ag));
             result = sc_strndup(a, "(agent create failed)", 21);
             goto done;
@@ -178,7 +178,7 @@ static void *spawn_thread(void *arg) {
         sc_agent_t ag = {0};
         if (sc_agent_from_config(&ag, a, prov, NULL, 0, NULL, NULL, NULL, s->policy, mdl,
                                  strlen(mdl), pn, strlen(pn), temp, ws, strlen(ws), mi, 50, false,
-                                 2, sys, strlen(sys)) != SC_OK) {
+                                 2, sys, strlen(sys), NULL) != SC_OK) {
             result = sc_strndup(a, "(agent create failed)", 21);
             goto done;
         }

@@ -214,16 +214,48 @@
     top: var(--space-4);
   }
 
-  /* ── Glass ── */
-  .glass {
-    background: var(--color-surface-elevated);
-    backdrop-filter: blur(24px) saturate(1.8);
-    -webkit-backdrop-filter: blur(24px) saturate(1.8);
-    border: 1px solid var(--color-border);
+  /* ── Liquid Glass tiers ── */
+  .glass-subtle {
+    background: rgba(255, 255, 255, var(--sc-glass-subtle-bg-opacity, 0.04));
+    backdrop-filter: blur(var(--sc-glass-subtle-blur, 12px))
+      saturate(var(--sc-glass-subtle-saturate, 120%));
+    -webkit-backdrop-filter: blur(var(--sc-glass-subtle-blur, 12px))
+      saturate(var(--sc-glass-subtle-saturate, 120%));
+    border: 1px solid
+      rgba(255, 255, 255, var(--sc-glass-subtle-border-opacity, 0.05));
+    border-radius: var(--radius-lg);
+  }
+
+  .glass,
+  .glass-standard {
+    background: rgba(255, 255, 255, var(--sc-glass-standard-bg-opacity, 0.06));
+    backdrop-filter: blur(var(--sc-glass-standard-blur, 24px))
+      saturate(var(--sc-glass-standard-saturate, 180%));
+    -webkit-backdrop-filter: blur(var(--sc-glass-standard-blur, 24px))
+      saturate(var(--sc-glass-standard-saturate, 180%));
+    border: 1px solid
+      rgba(255, 255, 255, var(--sc-glass-standard-border-opacity, 0.08));
     border-radius: var(--radius-lg);
     box-shadow:
       var(--shadow-md),
-      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      inset 0 1px 0
+        rgba(255, 255, 255, var(--sc-glass-standard-inset-opacity, 0.06));
+  }
+
+  .glass-prominent {
+    background: rgba(255, 255, 255, var(--sc-glass-prominent-bg-opacity, 0.08));
+    backdrop-filter: blur(var(--sc-glass-prominent-blur, 32px))
+      saturate(var(--sc-glass-prominent-saturate, 200%));
+    -webkit-backdrop-filter: blur(var(--sc-glass-prominent-blur, 32px))
+      saturate(var(--sc-glass-prominent-saturate, 200%));
+    border: 1px solid
+      rgba(255, 255, 255, var(--sc-glass-prominent-border-opacity, 0.12));
+    border-radius: var(--radius-lg);
+    box-shadow:
+      var(--shadow-lg),
+      inset 0 1px 0
+        rgba(255, 255, 255, var(--sc-glass-prominent-inset-opacity, 0.1)),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.03);
   }
 
   .glass-premium {
@@ -556,6 +588,62 @@
     }
   }
 
+  /* ── Pixar micro-physics ── */
+  @keyframes squash-press {
+    0% {
+      transform: scale(1, 1);
+    }
+    50% {
+      transform: scale(
+        var(--sc-physics-button-press-scaleX, 1.01),
+        var(--sc-physics-button-press-scaleY, 0.97)
+      );
+    }
+    100% {
+      transform: scale(1, 1);
+    }
+  }
+
+  @keyframes squash-release {
+    0% {
+      transform: scale(
+        var(--sc-physics-button-release-scaleX, 0.99),
+        var(--sc-physics-button-release-scaleY, 1.02)
+      );
+    }
+    100% {
+      transform: scale(1, 1);
+    }
+  }
+
+  @keyframes anticipate-in {
+    0% {
+      transform: scale(var(--sc-physics-modal-anticipate-scale, 0.97));
+      opacity: 0;
+    }
+    15% {
+      transform: scale(var(--sc-physics-modal-anticipate-scale, 0.97));
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .physics-press:active {
+    animation: squash-press 150ms var(--ease-out) forwards;
+  }
+
+  .physics-hover {
+    transition:
+      transform 200ms var(--ease-out),
+      box-shadow 200ms var(--ease-out);
+  }
+  .physics-hover:hover {
+    transform: translateY(var(--sc-physics-card-hover-translateY, -2px));
+  }
+
   /* ── Architecture node pulse ── */
   @keyframes node-pulse {
     0%,
@@ -617,13 +705,23 @@
   .cta-sub,
   .cta-buttons,
   .number-item,
-  .text-gradient {
+  .text-gradient,
+  .glass-subtle,
+  .glass-prominent,
+  .physics-press,
+  .physics-hover {
     opacity: 1 !important;
     transform: none !important;
   }
 
   .text-gradient {
     animation: none !important;
+  }
+
+  .physics-press:active,
+  .physics-hover:hover {
+    animation: none !important;
+    transform: none !important;
   }
 }
 

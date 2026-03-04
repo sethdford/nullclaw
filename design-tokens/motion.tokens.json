@@ -154,5 +154,36 @@
       "$type": "transition",
       "$description": "Standard transition using ease-out curve"
     }
+  },
+  "micro-physics": {
+    "$description": "Pixar-inspired micro-physics presets — anticipation, follow-through, squash/stretch for UI elements",
+    "button-press": {
+      "scaleX": { "$value": 1.01, "$type": "number" },
+      "scaleY": { "$value": 0.97, "$type": "number" },
+      "$description": "Squash on press — slight horizontal expand, vertical compress"
+    },
+    "button-release": {
+      "scaleX": { "$value": 0.99, "$type": "number" },
+      "scaleY": { "$value": 1.02, "$type": "number" },
+      "$description": "Stretch on release — vertical overshoot before settling"
+    },
+    "modal-anticipate": {
+      "scale": { "$value": 0.97, "$type": "number" },
+      "pause": { "$value": "50ms", "$type": "duration" },
+      "$description": "Modal shrinks slightly before expanding (anticipation)"
+    },
+    "card-hover": {
+      "translateY": { "$value": "-2px", "$type": "string" },
+      "$description": "Subtle lift on hover — perceived lightness"
+    },
+    "dropdown-anticipate": {
+      "scaleY": { "$value": 0.98, "$type": "number" },
+      "$description": "Dropdown compresses from origin before expanding"
+    },
+    "toggle-squash": {
+      "scaleX": { "$value": 1.15, "$type": "number" },
+      "scaleY": { "$value": 0.85, "$type": "number" },
+      "$description": "Toggle thumb squashes during slide"
+    }
   }
 }

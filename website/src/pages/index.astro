@@ -88,7 +88,15 @@ const tools = [
     {/* ═══ HERO ═══ */}
 
     <section class="relative min-h-screen flex flex-col items-center justify-center px-6 pt-24 overflow-hidden">
-      <div class="hero-gradient noise-overlay"></div>
+      <div class="hero-gradient noise-overlay">
+        <svg class="absolute inset-0 w-full h-full pointer-events-none opacity-30 mix-blend-overlay" aria-hidden="true">
+          <filter id="refract">
+            <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="3" seed="2" />
+            <feDisplacementMap in="SourceGraphic" scale="6" />
+          </filter>
+          <rect width="100%" height="100%" filter="url(#refract)" fill="transparent" />
+        </svg>
+      </div>
       <div class="ambient-teal" style="top: 15%; left: 50%; transform: translateX(-50%);"></div>
       <div class="ambient-indigo" style="top: 30%; right: 10%;"></div>
       <div class="hero-content text-center max-w-3xl mx-auto relative z-10">
@@ -108,7 +116,7 @@ const tools = [
           One static binary. Zero dependencies. Boots in under 2&nbsp;milliseconds.
         </p>
         <div class="hero-buttons flex flex-col sm:flex-row gap-4 justify-center opacity-0">
-          <a href={`${base}getting-started/installation/`} class="btn-primary">Get Started</a>
+          <a href={`${base}getting-started/installation/`} class="btn-primary physics-press">Get Started</a>
           <a href="https://github.com/sethdford/seaclaw" target="_blank" rel="noopener noreferrer" class="btn-outline">View on GitHub</a>
         </div>
       </div>
@@ -118,7 +126,7 @@ const tools = [
 
     <section class="py-16 md:py-24 px-6">
       <div class="max-w-5xl mx-auto">
-        <div class="numbers-grid glass px-4 md:px-8 py-8 md:py-10 grid grid-cols-3 md:grid-cols-6 gap-0">
+        <div class="numbers-grid glass-prominent px-4 md:px-8 py-8 md:py-10 grid grid-cols-3 md:grid-cols-6 gap-0">
           {[
             { count: 430, suffix: " KB", label: "Binary" },
             { count: 2, prefix: "<", suffix: " ms", label: "Startup" },
@@ -150,7 +158,7 @@ const tools = [
         <div class="bloat-stack flex flex-col items-center gap-3 mb-12">
           {bloatItems.map((item, i) => (
             <div
-              class={`bloat-card opacity-0 glass px-8 py-4 text-[clamp(1rem,2vw,1.25rem)] w-full max-w-md text-center ${i === bloatItems.length - 1 ? "italic" : ""}`}
+              class={`bloat-card opacity-0 glass physics-hover px-8 py-4 text-[clamp(1rem,2vw,1.25rem)] w-full max-w-md text-center ${i === bloatItems.length - 1 ? "italic" : ""}`}
               style={`color: ${i === bloatItems.length - 1 ? "var(--color-text-tertiary)" : "var(--color-text-secondary)"}`}
             >
               {item}
@@ -178,7 +186,7 @@ const tools = [
             { icon: iconCircuitBoard, title: "Edge", desc: "Raspberry Pi, ARM SBCs. Under 5 MB RAM. Under 2 ms startup. Runs headless on boot." },
             { icon: iconCpu, title: "Embedded", desc: "Arduino, STM32, Nucleo. Serial JSON protocol. Hardware peripherals via vtable interface." },
           ].map(({ icon, title, desc }) => (
-            <div class="spectrum-card card-glow card-spotlight opacity-0 glass px-6 py-8 text-center transition-all duration-300 hover:-translate-y-1" style={`--tw-shadow: var(--shadow-md);`}>
+            <div class="spectrum-card card-glow card-spotlight opacity-0 glass physics-hover px-6 py-8 text-center transition-all duration-300 hover:-translate-y-1" style={`--tw-shadow: var(--shadow-md);`}>
               <span class="w-8 h-8 mx-auto mb-4 flex items-center justify-center [&>svg]:flex-shrink-0" style="color: var(--color-text-tertiary)" set:html={icon} />
               <h3 class="text-lg font-semibold mb-3" style="color: var(--color-text)">{title}</h3>
               <p class="text-[14px] leading-relaxed" style="color: var(--color-text-secondary)">{desc}</p>
@@ -278,7 +286,7 @@ const tools = [
           Three commands. Zero dependencies.
         </h2>
         <p class="terminal-sub text-lg mb-12 text-center opacity-0" style="color: var(--color-text-secondary)">Clone, build, run. No containers. No interpreters. No package managers.</p>
-        <div id="terminal" class="rounded-2xl overflow-hidden opacity-0" style={`background: var(--color-terminal-bg); box-shadow: var(--shadow-lg);`}>
+        <div id="terminal" class="glass-prominent rounded-2xl overflow-hidden opacity-0" style={`background: var(--color-terminal-bg); box-shadow: var(--shadow-lg);`}>
           <div class="flex items-center gap-2 px-5 py-3.5 border-b" style={`background: var(--color-terminal-chrome); border-color: rgba(255,255,255,0.06);`}>
             <span class="w-3 h-3 rounded-full bg-[#FF5F57]"></span>
             <span class="w-3 h-3 rounded-full bg-[#FEBC2E]"></span>
@@ -375,7 +383,7 @@ const tools = [
           Open source. MIT licensed. 430 KB. Runs anywhere.
         </p>
         <div class="cta-buttons flex flex-col sm:flex-row gap-4 justify-center opacity-0">
-          <a href={`${base}getting-started/installation/`} class="btn-primary">Get Started</a>
+          <a href={`${base}getting-started/installation/`} class="btn-primary physics-press">Get Started</a>
           <a href="https://github.com/sethdford/seaclaw" target="_blank" rel="noopener noreferrer" class="btn-outline">View on GitHub</a>
         </div>
       </div>
@@ -466,8 +474,8 @@ const tools = [
 
           ScrollTrigger.create({
             start: "top -80",
-            onEnter: () => document.getElementById("site-nav")?.classList.add("glass-nav"),
-            onLeaveBack: () => document.getElementById("site-nav")?.classList.remove("glass-nav"),
+            onEnter: () => { const n = document.getElementById("site-nav"); n?.classList.add("glass-nav", "glass-subtle"); },
+            onLeaveBack: () => { const n = document.getElementById("site-nav"); n?.classList.remove("glass-nav", "glass-subtle"); },
           });
 
           // ═══ HERO ═══

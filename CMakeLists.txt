@@ -42,6 +42,7 @@ option(SC_ENABLE_LINE "Build LINE channel" OFF)
 option(SC_ENABLE_LARK "Build Lark channel" OFF)
 option(SC_ENABLE_WEB "Build Web channel" OFF)
 option(SC_ENABLE_EMAIL "Build Email channel" OFF)
+option(SC_ENABLE_IMAP "Build IMAP channel" OFF)
 option(SC_ENABLE_IMESSAGE "Build iMessage channel" OFF)
 option(SC_ENABLE_MATTERMOST "Build Mattermost channel" OFF)
 option(SC_ENABLE_ONEBOT "Build OneBot channel" OFF)
@@ -100,6 +101,7 @@ if(SC_ENABLE_ALL_CHANNELS)
     set(SC_ENABLE_LARK ON)
     set(SC_ENABLE_WEB ON)
     set(SC_ENABLE_EMAIL ON)
+    set(SC_ENABLE_IMAP ON)
     set(SC_ENABLE_IMESSAGE ON)
     set(SC_ENABLE_MATTERMOST ON)
     set(SC_ENABLE_ONEBOT ON)
@@ -149,6 +151,9 @@ if(SC_ENABLE_WEB)
 endif()
 if(SC_ENABLE_EMAIL)
     list(APPEND CHANNEL_SOURCES src/channels/email.c)
+endif()
+if(SC_ENABLE_IMAP)
+    list(APPEND CHANNEL_SOURCES src/channels/imap.c)
 endif()
 if(SC_ENABLE_IMESSAGE)
     list(APPEND CHANNEL_SOURCES src/channels/imessage.c)
@@ -266,6 +271,7 @@ set(SC_CORE_SOURCES
     src/security/policy.c
     src/security/pairing.c
     src/security/secrets.c
+    src/security/vault.c
     src/security/audit.c
     src/security/noop_sandbox.c
     src/security/docker.c
@@ -278,6 +284,7 @@ set(SC_CORE_SOURCES
     src/tunnel/none.c
     src/tunnel/root.c
     src/gateway/gateway.c
+    src/gateway/openai_compat.c
     src/gateway/oauth.c
     src/gateway/rate_limit.c
     src/gateway/ws_server.c
@@ -339,6 +346,7 @@ set(SC_CORE_SOURCES
     src/memory/retrieval/hybrid.c
     src/memory/retrieval/adaptive.c
     src/memory/retrieval/rrf.c
+    src/memory/rerank.c
     src/memory/retrieval/qmd.c
     src/memory/retrieval/query_expansion.c
     src/memory/retrieval/llm_reranker.c
@@ -635,6 +643,9 @@ if(SC_ENABLE_WEB)
 endif()
 if(SC_ENABLE_EMAIL)
     target_compile_definitions(seaclaw_core PRIVATE SC_HAS_EMAIL=1)
+endif()
+if(SC_ENABLE_IMAP)
+    target_compile_definitions(seaclaw_core PRIVATE SC_HAS_IMAP=1)
 endif()
 if(SC_ENABLE_IMESSAGE)
     target_compile_definitions(seaclaw_core PRIVATE SC_HAS_IMESSAGE=1)
@@ -1009,6 +1020,9 @@ endif()
 if(SC_ENABLE_EMAIL)
     target_compile_definitions(seaclaw_core_test PRIVATE SC_HAS_EMAIL=1)
 endif()
+if(SC_ENABLE_IMAP)
+    target_compile_definitions(seaclaw_core_test PRIVATE SC_HAS_IMAP=1)
+endif()
 if(SC_ENABLE_IMESSAGE)
     target_compile_definitions(seaclaw_core_test PRIVATE SC_HAS_IMESSAGE=1)
 endif()
@@ -1118,6 +1132,7 @@ set(SC_TEST_SOURCES
     tests/test_gateway.c
     tests/test_auth.c
     tests/test_security.c
+    tests/test_vault.c
     tests/test_provider.c
     tests/test_channel.c
     tests/test_tool.c
@@ -1223,6 +1238,9 @@ if(SC_ENABLE_WEB)
 endif()
 if(SC_ENABLE_EMAIL)
     target_compile_definitions(seaclaw_tests PRIVATE SC_HAS_EMAIL=1)
+endif()
+if(SC_ENABLE_IMAP)
+    target_compile_definitions(seaclaw_tests PRIVATE SC_HAS_IMAP=1)
 endif()
 if(SC_ENABLE_IMESSAGE)
     target_compile_definitions(seaclaw_tests PRIVATE SC_HAS_IMESSAGE=1)

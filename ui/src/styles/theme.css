@@ -552,3 +552,130 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ── Liquid Glass tiers (Liquid Motion design system) ── */
+.sc-glass-subtle {
+  background: color-mix(
+    in srgb,
+    var(--sc-surface) var(--sc-glass-subtle-bg-opacity, 4%),
+    transparent
+  );
+  backdrop-filter: blur(var(--sc-glass-subtle-blur, 12px))
+    saturate(var(--sc-glass-subtle-saturate, 120%));
+  -webkit-backdrop-filter: blur(var(--sc-glass-subtle-blur, 12px))
+    saturate(var(--sc-glass-subtle-saturate, 120%));
+  border: 1px solid
+    color-mix(in srgb, var(--sc-border) var(--sc-glass-subtle-border-opacity, 5%), transparent);
+  border-radius: var(--sc-radius-lg);
+}
+
+.sc-glass,
+.sc-glass-standard {
+  background: color-mix(
+    in srgb,
+    var(--sc-surface) var(--sc-glass-standard-bg-opacity, 6%),
+    transparent
+  );
+  backdrop-filter: blur(var(--sc-glass-standard-blur, 24px))
+    saturate(var(--sc-glass-standard-saturate, 180%));
+  -webkit-backdrop-filter: blur(var(--sc-glass-standard-blur, 24px))
+    saturate(var(--sc-glass-standard-saturate, 180%));
+  border: 1px solid
+    color-mix(in srgb, var(--sc-border) var(--sc-glass-standard-border-opacity, 8%), transparent);
+  border-radius: var(--sc-radius-lg);
+  box-shadow:
+    var(--sc-elevation-1),
+    inset 0 1px 0 color-mix(in srgb, white var(--sc-glass-standard-inset-opacity, 6%), transparent);
+}
+
+.sc-glass-prominent {
+  background: color-mix(
+    in srgb,
+    var(--sc-surface) var(--sc-glass-prominent-bg-opacity, 8%),
+    transparent
+  );
+  backdrop-filter: blur(var(--sc-glass-prominent-blur, 32px))
+    saturate(var(--sc-glass-prominent-saturate, 200%));
+  -webkit-backdrop-filter: blur(var(--sc-glass-prominent-blur, 32px))
+    saturate(var(--sc-glass-prominent-saturate, 200%));
+  border: 1px solid
+    color-mix(in srgb, var(--sc-border) var(--sc-glass-prominent-border-opacity, 12%), transparent);
+  border-radius: var(--sc-radius-lg);
+  box-shadow:
+    var(--sc-elevation-3),
+    inset 0 1px 0
+      color-mix(in srgb, white var(--sc-glass-prominent-inset-opacity, 10%), transparent),
+    inset 0 -1px 0 color-mix(in srgb, white 3%, transparent);
+}
+
+/* ── Pixar micro-physics (Liquid Motion design system) ── */
+@keyframes sc-squash-press {
+  0% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(
+      var(--sc-physics-button-press-scaleX, 1.01),
+      var(--sc-physics-button-press-scaleY, 0.97)
+    );
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+@keyframes sc-squash-release {
+  0% {
+    transform: scale(
+      var(--sc-physics-button-release-scaleX, 0.99),
+      var(--sc-physics-button-release-scaleY, 1.02)
+    );
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+@keyframes sc-anticipate-in {
+  0% {
+    transform: scale(var(--sc-physics-modal-anticipate-scale, 0.97));
+    opacity: 0;
+  }
+  15% {
+    transform: scale(var(--sc-physics-modal-anticipate-scale, 0.97));
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.sc-physics-press:active {
+  animation: sc-squash-press 150ms var(--sc-ease-out, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
+}
+
+.sc-physics-hover {
+  transition:
+    transform var(--sc-duration-normal, 200ms) var(--sc-ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
+    box-shadow var(--sc-duration-normal, 200ms) var(--sc-ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.sc-physics-hover:hover {
+  transform: translateY(var(--sc-physics-card-hover-translateY, -2px));
+}
+
+/* ── Pixar anticipation for modals/sheets ── */
+.sc-anticipate-enter {
+  animation: sc-anticipate-in var(--sc-duration-slow, 350ms)
+    var(--sc-spring-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-physics-press:active,
+  .sc-physics-hover:hover,
+  .sc-anticipate-enter {
+    animation: none !important;
+    transform: none !important;
+  }
+}

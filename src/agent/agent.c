@@ -5,6 +5,7 @@
 #include "seaclaw/agent/planner.h"
 #include "seaclaw/agent/prompt.h"
 #include "seaclaw/context.h"
+#include "seaclaw/context_tokens.h"
 #include "seaclaw/core/json.h"
 #include "seaclaw/core/string.h"
 #include "seaclaw/observer.h"
@@ -113,7 +114,8 @@ sc_error_t sc_agent_from_config(sc_agent_t *out, sc_allocator_t *alloc, sc_provi
                                 const char *workspace_dir, size_t workspace_dir_len,
                                 uint32_t max_tool_iterations, uint32_t max_history_messages,
                                 bool auto_save, uint8_t autonomy_level,
-                                const char *custom_instructions, size_t custom_instructions_len) {
+                                const char *custom_instructions, size_t custom_instructions_len,
+                                const sc_agent_context_config_t *ctx_cfg) {
     if (!out || !alloc || !provider.vtable || !model_name) {
         return SC_ERR_INVALID_ARGUMENT;
     }
@@ -166,6 +168,22 @@ sc_error_t sc_agent_from_config(sc_agent_t *out, sc_allocator_t *alloc, sc_provi
         return SC_ERR_OUT_OF_MEMORY;
     }
     out->workspace_dir_len = workspace_dir_len ? workspace_dir_len : 1;
+
+    out->token_limit = 0;
+    out->context_pressure_warn = 0.85f;
+    out->context_pressure_compact = 0.95f;
+    out->context_compact_target = 0.70f;
+    out->context_pressure_warning_85_emitted = false;
+    out->context_pressure_warning_95_emitted = false;
+    if (ctx_cfg) {
+        out->token_limit = ctx_cfg->token_limit;
+        if (ctx_cfg->pressure_warn > 0.0f)
+            out->context_pressure_warn = ctx_cfg->pressure_warn;
+        if (ctx_cfg->pressure_compact > 0.0f)
+            out->context_pressure_compact = ctx_cfg->pressure_compact;
+        if (ctx_cfg->compact_target > 0.0f)
+            out->context_compact_target = ctx_cfg->compact_target;
+    }
 
     out->tools_count = tools_count;
     if (tools_count > 0) {
@@ -825,10 +843,17 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
     req.reasoning_effort_len = 0;
 
     uint32_t iter = 0;
+    uint64_t max_tokens = agent->token_limit
+                              ? agent->token_limit
+                              : sc_context_tokens_resolve(0, agent->model_name,
+                                                          agent->model_name_len);
+    if (max_tokens == 0)
+        max_tokens = 128000u;
+
     sc_compaction_config_t compact_cfg;
     sc_compaction_config_default(&compact_cfg);
     compact_cfg.max_history_messages = agent->max_history_messages;
-    compact_cfg.token_limit = 32000;
+    compact_cfg.token_limit = max_tokens;
 
     clock_t turn_start = clock();
     uint64_t turn_tokens = 0;
@@ -864,6 +889,32 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
         if (sc_should_compact(agent->history, agent->history_count, &compact_cfg)) {
             sc_compact_history(agent->alloc, agent->history, &agent->history_count,
                                &agent->history_cap, &compact_cfg);
+        }
+
+        /* Context pressure: estimate tokens, check thresholds, auto-compact if needed */
+        {
+            uint64_t current =
+                sc_estimate_tokens(agent->history, agent->history_count) +
+                (uint64_t)((system_prompt_len + 3) / 4);
+            sc_context_pressure_t pr = {
+                .current_tokens = (size_t)current,
+                .max_tokens = (size_t)max_tokens,
+                .pressure = 0.0f,
+                .warning_85_emitted = agent->context_pressure_warning_85_emitted,
+                .warning_95_emitted = agent->context_pressure_warning_95_emitted,
+            };
+            if (sc_context_check_pressure(&pr, agent->context_pressure_warn,
+                                          agent->context_pressure_compact)) {
+                sc_context_compact_for_pressure(agent->alloc, agent->history,
+                                                 &agent->history_count, &agent->history_cap,
+                                                 (size_t)max_tokens,
+                                                 agent->context_compact_target);
+                agent->context_pressure_warning_85_emitted = false;
+                agent->context_pressure_warning_95_emitted = false;
+            } else {
+                agent->context_pressure_warning_85_emitted = pr.warning_85_emitted;
+                agent->context_pressure_warning_95_emitted = pr.warning_95_emitted;
+            }
         }
 
         /* Format messages for this iteration using arena allocator */

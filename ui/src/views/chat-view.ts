@@ -714,8 +714,10 @@ export class ScChatView extends GatewayAwareLitElement {
       const state = payload.state as string;
       const content = (payload.message as string) ?? "";
       if (state === "received" && content) {
-        const last = this.messages[this.messages.length - 1];
-        if (!last || last.role !== "user" || last.content !== content) {
+        const recentUser = this.messages
+          .slice(-6)
+          .some((m) => m.role === "user" && m.content === content);
+        if (!recentUser) {
           this.messages = [
             ...this.messages,
             {

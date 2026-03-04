@@ -54,6 +54,9 @@
 #if SC_HAS_IMESSAGE
 #include "seaclaw/channels/imessage.h"
 #endif
+#if SC_HAS_IMAP
+#include "seaclaw/channels/imap.h"
+#endif
 #if SC_HAS_TELEGRAM
 #include "seaclaw/channels/telegram.h"
 #endif
@@ -554,12 +557,18 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
     }
 
     /* ── Create agent ─────────────────────────────────────────────────── */
+    sc_agent_context_config_t ctx_cfg = {
+        .token_limit = cfg.agent.token_limit,
+        .pressure_warn = cfg.agent.context_pressure_warn,
+        .pressure_compact = cfg.agent.context_pressure_compact,
+        .compact_target = cfg.agent.context_compact_target,
+    };
     sc_agent_t agent;
     err = sc_agent_from_config(
         &agent, alloc, provider, tools, tools_count, memory.vtable ? &memory : NULL,
         session_store.vtable ? &session_store : NULL, observer.vtable ? &observer : NULL, &policy,
         model, strlen(model), prov_name, prov_name_len, temp, ws, strlen(ws), max_iters, max_hist,
-        cfg.memory.auto_save, 2, NULL, 0);
+        cfg.memory.auto_save, 2, NULL, 0, &ctx_cfg);
     if (err != SC_OK) {
         fprintf(stderr, "[%s] Agent init failed: %s\n", SC_CODENAME, sc_error_string(err));
         if (observer.vtable && observer.vtable->deinit)
@@ -642,6 +651,38 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
             ch_count++;
             fprintf(stderr, "[%s] imessage channel configured (%s)\n", SC_CODENAME,
                     cfg.channels.imessage.default_target);
+        }
+    }
+#endif
+
+#if SC_HAS_IMAP
+    sc_channel_t imap_ch = {0};
+    if (cfg.channels.imap.imap_host && cfg.channels.imap.imap_username &&
+        cfg.channels.imap.imap_password) {
+        sc_imap_config_t imap_cfg = {
+            .imap_host = cfg.channels.imap.imap_host,
+            .imap_host_len = strlen(cfg.channels.imap.imap_host),
+            .imap_port = cfg.channels.imap.imap_port ? cfg.channels.imap.imap_port : 993,
+            .imap_username = cfg.channels.imap.imap_username,
+            .imap_username_len = strlen(cfg.channels.imap.imap_username),
+            .imap_password = cfg.channels.imap.imap_password,
+            .imap_password_len = strlen(cfg.channels.imap.imap_password),
+            .imap_folder = cfg.channels.imap.imap_folder ? cfg.channels.imap.imap_folder : "INBOX",
+            .imap_folder_len = cfg.channels.imap.imap_folder
+                ? strlen(cfg.channels.imap.imap_folder)
+                : 6,
+            .imap_use_tls = cfg.channels.imap.imap_use_tls,
+        };
+        err = sc_imap_create(alloc, &imap_cfg, &imap_ch);
+        if (err == SC_OK) {
+            channels[ch_count].channel_ctx = imap_ch.ctx;
+            channels[ch_count].channel = &imap_ch;
+            channels[ch_count].poll_fn = sc_imap_poll;
+            channels[ch_count].interval_ms = 30000;
+            channels[ch_count].last_poll_ms = 0;
+            ch_count++;
+            fprintf(stderr, "[%s] imap channel configured (%s)\n", SC_CODENAME,
+                    cfg.channels.imap.imap_host);
         }
     }
 #endif
@@ -1219,10 +1260,17 @@ static sc_error_t cmd_gateway(sc_allocator_t *alloc, int argc, char **argv) {
         gw_retrieval_engine =
             sc_retrieval_create_with_vector(alloc, &memory, &gw_embedder, &gw_vector_store);
 
+        sc_agent_context_config_t gw_ctx_cfg = {
+            .token_limit = cfg.agent.token_limit,
+            .pressure_warn = cfg.agent.context_pressure_warn,
+            .pressure_compact = cfg.agent.context_pressure_compact,
+            .compact_target = cfg.agent.context_compact_target,
+        };
         err = sc_agent_from_config(&agent, alloc, provider, tools, tools_count,
                                    memory.vtable ? &memory : NULL, NULL, NULL, &policy, model,
                                    strlen(model), prov_name, prov_name_len, temp, ws, strlen(ws),
-                                   max_iters, max_hist, cfg.memory.auto_save, 2, NULL, 0);
+                                   max_iters, max_hist, cfg.memory.auto_save, 2, NULL, 0,
+                                   &gw_ctx_cfg);
         if (err != SC_OK) {
             fprintf(stderr, "[%s] Agent init failed: %s\n", SC_CODENAME, sc_error_string(err));
             if (gw_retrieval_engine.vtable && gw_retrieval_engine.vtable->deinit)
