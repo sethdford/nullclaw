@@ -623,6 +623,34 @@ export class ScChatView extends GatewayAwareLitElement {
     this.messageList?.addEventListener("scroll", this._scrollHandler, { passive: true });
   }
 
+  private get _cacheKey(): string {
+    return `sc-chat-${this.sessionKey}`;
+  }
+
+  private _cacheMessages(): void {
+    try {
+      sessionStorage.setItem(this._cacheKey, JSON.stringify(this.messages));
+    } catch {
+      /* quota exceeded — ignore */
+    }
+  }
+
+  private _restoreFromCache(): boolean {
+    try {
+      const raw = sessionStorage.getItem(this._cacheKey);
+      if (!raw) return false;
+      const cached = JSON.parse(raw) as ChatMessage[];
+      if (Array.isArray(cached) && cached.length > 0) {
+        this.messages = cached;
+        this.scrollToBottom();
+        return true;
+      }
+    } catch {
+      /* corrupt cache — ignore */
+    }
+    return false;
+  }
+
   protected override async load(): Promise<void> {
     await this.loadHistory();
   }
@@ -638,11 +666,14 @@ export class ScChatView extends GatewayAwareLitElement {
           role: m.role as "user" | "assistant",
           content: m.content ?? "",
         }));
+        this._cacheMessages();
         this.scrollToBottom();
+        return;
       }
     } catch {
       /* history load is best-effort */
     }
+    this._restoreFromCache();
   }
 
   private async handleAbort(): Promise<void> {
@@ -732,6 +763,7 @@ export class ScChatView extends GatewayAwareLitElement {
       }
       this.requestUpdate();
       this.scrollToBottom();
+      this._cacheMessages();
     }
     if (detail.event === EVENT_NAMES.TOOL_CALL) {
       const id = (payload.id as string) ?? `tool-${Date.now()}`;
@@ -810,6 +842,7 @@ export class ScChatView extends GatewayAwareLitElement {
     this.inputValue = "";
     this.lastFailedMessage = "";
     this.isWaiting = true;
+    this._cacheMessages();
     this.resizeTextarea();
     this.scrollToBottom();
     try {

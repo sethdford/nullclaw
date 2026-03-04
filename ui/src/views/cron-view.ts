@@ -153,6 +153,7 @@ export class ScCronView extends GatewayAwareLitElement {
   @state() private formExpression = "";
   @state() private formCommand = "";
   @state() private formDescription = "";
+  @state() private formError = "";
 
   protected override async load(): Promise<void> {
     await this.loadJobs();
@@ -182,6 +183,7 @@ export class ScCronView extends GatewayAwareLitElement {
     this.formExpression = "";
     this.formCommand = "";
     this.formDescription = "";
+    this.formError = "";
     this.showForm = true;
   }
 
@@ -189,14 +191,33 @@ export class ScCronView extends GatewayAwareLitElement {
     this.showForm = false;
   }
 
+  private static isValidCron(expr: string): boolean {
+    const parts = expr.trim().split(/\s+/);
+    return parts.length >= 5 && parts.length <= 6;
+  }
+
   private async submitAdd(): Promise<void> {
     const gw = this.gateway;
-    if (!gw || !this.formExpression.trim() || !this.formCommand.trim()) return;
-    this.error = "";
+    const expr = this.formExpression.trim();
+    const cmd = this.formCommand.trim();
+    if (!gw) return;
+    if (!expr) {
+      this.formError = "Cron expression is required (e.g. */5 * * * *)";
+      return;
+    }
+    if (!ScCronView.isValidCron(expr)) {
+      this.formError = "Invalid cron expression — expected 5 or 6 space-separated fields";
+      return;
+    }
+    if (!cmd) {
+      this.formError = "Command is required";
+      return;
+    }
+    this.formError = "";
     try {
       await gw.request("cron.add", {
-        expression: this.formExpression.trim(),
-        command: this.formCommand.trim(),
+        expression: expr,
+        command: cmd,
         name: this.formDescription.trim() || undefined,
       });
       this.closeForm();
@@ -357,6 +378,13 @@ export class ScCronView extends GatewayAwareLitElement {
                       (this.formDescription = e.detail.value)}
                   ></sc-input>
                 </div>
+                ${this.formError
+                  ? html`<div
+                      style="color: var(--sc-error); font-size: var(--sc-text-sm); margin-bottom: var(--sc-space-sm);"
+                    >
+                      ${this.formError}
+                    </div>`
+                  : nothing}
                 <div class="form-actions">
                   <sc-button variant="secondary" @click=${this.closeForm}>Cancel</sc-button>
                   <sc-button variant="primary" @click=${this.submitAdd}>Add</sc-button>
