@@ -177,8 +177,9 @@ seaclaw channel start signal
 seaclaw service install
 seaclaw service status
 
-# Migrate memory from OpenClaw SQLite brain
-seaclaw migrate sqlite ~/.openclaw/brain.db
+# Migrate memory from SQLite or Markdown
+seaclaw migrate sqlite /path/to/brain.db
+seaclaw migrate markdown /path/to/memories/
 ```
 
 > **Dev fallback (no global install):** prefix commands with `build/` (example: `build/seaclaw status`).
@@ -308,7 +309,6 @@ Config: `~/.seaclaw/config.json` (created by `onboard`)
 
   "agents": {
     "defaults": {
-      "model": { "primary": "openrouter/anthropic/claude-sonnet-4" },
       "heartbeat": { "every": "30m" }
     },
     "list": [
@@ -558,8 +558,7 @@ Use `channels.web` for browser UI events (WebChannel v1):
 | `skills publish`                                  | Publish skill to registry                              |
 | `hardware scan\|flash\|monitor`                   | Hardware device management                             |
 | `models list\|info\|benchmark`                    | Model catalog                                          |
-| `migrate sqlite <path>`                           | Import memories from SQLite (e.g. OpenClaw brain.db)   |
-| `migrate markdown <path>`                         | Import memories from Markdown files                    |
+| `migrate sqlite` / `migrate markdown` [path]      | Import memories from SQLite or Markdown source         |
 
 ## Development
 

@@ -10,7 +10,7 @@
 #include <string.h>
 
 #define MCP_SERVER_NAME      "seaclaw"
-#define MCP_SERVER_VERSION   "0.1.0"
+#define MCP_SERVER_VERSION   "0.3.0"
 #define MCP_PROTOCOL_VERSION "2024-11-05"
 #define MCP_LINE_BUF_INIT    4096
 
@@ -313,7 +313,7 @@ static sc_error_t handle_resources_read(sc_mcp_host_t *srv, const char *id_raw,
         const char *result =
             "{\"contents\":[{\"uri\":\"seaclaw://config\","
             "\"mimeType\":\"application/json\","
-            "\"text\":\"{\\\"version\\\":\\\"0.1.0\\\",\\\"status\\\":\\\"running\\\"}\"}]}";
+            "\"text\":\"{\\\"version\\\":\\\"0.3.0\\\",\\\"status\\\":\\\"running\\\"}\"}]}";
         return write_response(alloc, id_raw, result);
     }
 

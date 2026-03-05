@@ -13,10 +13,14 @@ typedef struct sc_net_proxy sc_net_proxy_t;
 /* ── Autonomy level ─────────────────────────────────────────────── */
 
 typedef enum sc_autonomy_level {
-    SC_AUTONOMY_READ_ONLY,
-    SC_AUTONOMY_SUPERVISED,
-    SC_AUTONOMY_FULL
+    SC_AUTONOMY_LOCKED = 0,     /* No tool calls at all */
+    SC_AUTONOMY_SUPERVISED = 1, /* Every tool needs approval */
+    SC_AUTONOMY_ASSISTED = 2,   /* Low-risk auto, medium/high need approval */
+    SC_AUTONOMY_AUTONOMOUS = 3, /* Policy engine decides */
 } sc_autonomy_level_t;
+/* Backward compat aliases */
+#define SC_AUTONOMY_READ_ONLY SC_AUTONOMY_LOCKED
+#define SC_AUTONOMY_FULL     SC_AUTONOMY_AUTONOMOUS
 
 /* ── Command risk level ─────────────────────────────────────────── */
 
@@ -64,6 +68,9 @@ bool sc_security_shell_allowed(const sc_security_policy_t *policy);
 
 sc_command_risk_level_t sc_policy_command_risk_level(const sc_security_policy_t *policy,
                                                      const char *command);
+
+/** Tool-level risk classification (by tool name). Used for graduated autonomy. */
+sc_command_risk_level_t sc_tool_risk_level(const char *tool_name);
 
 /** Validate command execution. Returns risk level on success. */
 sc_error_t sc_policy_validate_command(const sc_security_policy_t *policy, const char *command,

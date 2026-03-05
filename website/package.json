@@ -1,7 +1,7 @@
 {
   "name": "website",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "scripts": {
     "check": "astro check",
     "dev": "astro dev",
@@ -11,6 +11,7 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/sitemap": "^3.7.0",
     "@astrojs/starlight": "^0.37.6",
     "@fontsource-variable/geist-mono": "^5.2.7",
     "@tailwindcss/vite": "^4.2.1",

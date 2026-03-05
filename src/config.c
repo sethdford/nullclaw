@@ -107,6 +107,7 @@ static void set_defaults(sc_config_t *cfg, sc_allocator_t *a) {
     cfg->gateway.port = 3000;
     cfg->gateway.host = sc_strdup(a, "127.0.0.1");
     cfg->gateway.require_pairing = true;
+    cfg->gateway.auth_token = NULL;
     cfg->gateway.allow_public_bind = false;
     cfg->gateway.pair_rate_limit_per_minute = 10;
     cfg->gateway.rate_limit_requests = 0;
@@ -404,6 +405,12 @@ static sc_error_t parse_gateway(sc_allocator_t *a, sc_config_t *cfg, const sc_js
     }
     cfg->gateway.require_pairing =
         sc_json_get_bool(obj, "require_pairing", cfg->gateway.require_pairing);
+    const char *at = sc_json_get_string(obj, "auth_token");
+    if (at) {
+        if (cfg->gateway.auth_token)
+            a->free(a->ctx, cfg->gateway.auth_token, strlen(cfg->gateway.auth_token) + 1);
+        cfg->gateway.auth_token = sc_strdup(a, at);
+    }
     cfg->gateway.allow_public_bind =
         sc_json_get_bool(obj, "allow_public_bind", cfg->gateway.allow_public_bind);
     double prl = sc_json_get_number(obj, "pair_rate_limit_per_minute",
@@ -1271,21 +1278,27 @@ static sc_error_t parse_diagnostics(sc_allocator_t *a, sc_config_t *cfg,
 static void sync_autonomy_level_from_string(sc_config_t *cfg) {
     if (!cfg->autonomy.level)
         return;
-    if (strcmp(cfg->autonomy.level, "readonly") == 0 ||
-        strcmp(cfg->autonomy.level, "read_only") == 0)
+    if (strcmp(cfg->autonomy.level, "locked") == 0 ||
+        strcmp(cfg->autonomy.level, "read_only") == 0 ||
+        strcmp(cfg->autonomy.level, "readonly") == 0)
         cfg->security.autonomy_level = 0;
     else if (strcmp(cfg->autonomy.level, "supervised") == 0)
         cfg->security.autonomy_level = 1;
-    else if (strcmp(cfg->autonomy.level, "full") == 0)
+    else if (strcmp(cfg->autonomy.level, "assisted") == 0)
         cfg->security.autonomy_level = 2;
+    else if (strcmp(cfg->autonomy.level, "autonomous") == 0 ||
+             strcmp(cfg->autonomy.level, "full") == 0)
+        cfg->security.autonomy_level = 3;
 }
 
 static void sync_autonomy_string_from_level(sc_config_t *cfg, sc_allocator_t *a) {
     const char *level = "supervised";
     if (cfg->security.autonomy_level == 0)
-        level = "readonly";
-    else if (cfg->security.autonomy_level >= 2)
-        level = "full";
+        level = "locked";
+    else if (cfg->security.autonomy_level == 2)
+        level = "assisted";
+    else if (cfg->security.autonomy_level >= 3)
+        level = "autonomous";
     if (cfg->autonomy.level)
         a->free(a->ctx, cfg->autonomy.level, strlen(cfg->autonomy.level) + 1);
     cfg->autonomy.level = sc_strdup(a, level);

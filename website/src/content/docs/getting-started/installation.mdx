@@ -3,7 +3,11 @@ title: Installation
 description: Build SeaClaw from source on macOS and Linux.
 ---
 
-SeaClaw is built from source. There are no pre-built binaries; you compile it with CMake.
+SeaClaw can be installed via pre-built binaries or built from source with CMake.
+
+:::tip Pre-built binaries
+Pre-built binaries are available via **Homebrew** (`brew install --HEAD ./Formula/seaclaw.rb`), **Docker** (`docker pull ghcr.io/sethdford/seaclaw:latest`), **Nix** (`nix run github:sethdford/seaclaw`), and **Debian** (`.deb` from [Releases](https://github.com/sethdford/seaclaw/releases)). See the main [README](https://github.com/sethdford/seaclaw#installation) for details.
+:::
 
 ## Prerequisites
 
@@ -59,7 +63,7 @@ cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel -DSC_ENABLE_LTO=ON -DSC_ENABLE_ALL_CHANNE
 cmake --build .
 ```
 
-This produces a small binary (~366 KB with LTO) and enables all messaging channels (Telegram, Discord, Slack, etc.).
+This produces a small binary (~430 KB with LTO) and enables all messaging channels (Telegram, Discord, Slack, etc.).
 
 ### Basic development build
 
@@ -83,7 +87,7 @@ cmake --build build
 
 | Option                   | Default | Description                                          |
 | ------------------------ | ------- | ---------------------------------------------------- |
-| `SC_ENABLE_ALL_CHANNELS` | OFF     | Build all 20 channels (CLI, Telegram, Discord, etc.) |
+| `SC_ENABLE_ALL_CHANNELS` | OFF     | Build all 27 channels (CLI, Telegram, Discord, etc.) |
 | `SC_ENABLE_LTO`          | OFF     | Link-time optimization for smaller binaries          |
 | `SC_ENABLE_ASAN`         | OFF     | AddressSanitizer for memory debugging                |
 | `SC_ENABLE_SQLITE`       | ON      | SQLite memory backend                                |
@@ -135,4 +139,4 @@ If config is missing, run the onboard wizard first (see [Quick Start](/getting-s
 ./build/seaclaw_tests
 ```
 
-All 2,148+ tests must pass with zero ASan errors.
+All 2,366+ tests must pass with zero ASan errors.

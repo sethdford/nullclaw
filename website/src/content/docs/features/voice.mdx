@@ -1,0 +1,54 @@
+---
+title: Voice Channel
+description: Real-time voice interaction with SeaClaw using speech-to-text and text-to-speech
+---
+
+SeaClaw supports real-time voice interaction through the built-in voice channel, enabling hands-free conversations with your AI assistant.
+
+## Overview
+
+The voice channel provides:
+
+- **Speech-to-text (STT)** — converts spoken audio to text for processing
+- **Text-to-speech (TTS)** — reads responses aloud
+- **WebSocket streaming** — low-latency bidirectional audio
+- **VAD (Voice Activity Detection)** — automatic speech boundary detection
+
+## Configuration
+
+Enable voice in your `config.json`:
+
+```json
+{
+  "channels": {
+    "voice": {
+      "enabled": true,
+      "stt_provider": "whisper",
+      "tts_provider": "openai",
+      "vad_threshold": 0.5,
+      "sample_rate": 16000
+    }
+  }
+}
+```
+
+## Build Flag
+
+Voice support is included by default. To explicitly enable:
+
+```bash
+cmake .. -DSC_ENABLE_VOICE=ON
+```
+
+## Supported Providers
+
+| Provider       | STT | TTS | Notes           |
+| -------------- | --- | --- | --------------- |
+| OpenAI Whisper | ✓   | —   | Best accuracy   |
+| OpenAI TTS     | —   | ✓   | Multiple voices |
+| Deepgram       | ✓   | —   | Low latency     |
+| ElevenLabs     | —   | ✓   | Premium voices  |
+
+## Security
+
+Audio data is streamed directly to the configured provider and is **not** stored locally. All connections use TLS.

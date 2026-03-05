@@ -38,6 +38,7 @@
 #include "seaclaw/providers/factory.h"
 #include "seaclaw/runtime.h"
 #include "seaclaw/security.h"
+#include "seaclaw/security/audit.h"
 #include "seaclaw/security/sandbox.h"
 #include "seaclaw/security/sandbox_internal.h"
 #include "seaclaw/session.h"
@@ -70,7 +71,7 @@
 #include "seaclaw/channels/whatsapp.h"
 #endif
 
-#define SC_VERSION  "0.1.0"
+#define SC_VERSION  "0.3.0"
 #define SC_CODENAME "seaclaw"
 
 typedef struct sc_command {
@@ -443,10 +444,7 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
     }
 
     sc_security_policy_t policy = {0};
-    uint8_t al = cfg.security.autonomy_level;
-    policy.autonomy = (al >= 2)   ? SC_AUTONOMY_FULL
-                      : (al == 1) ? SC_AUTONOMY_SUPERVISED
-                                  : SC_AUTONOMY_READ_ONLY;
+    policy.autonomy = (sc_autonomy_level_t)cfg.security.autonomy_level;
     policy.workspace_dir = ws;
     policy.workspace_only = true;
     policy.allow_shell = (policy.autonomy != SC_AUTONOMY_READ_ONLY);
@@ -599,6 +597,14 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
     if (cfg.policy.enabled)
         agent.policy_engine = sc_policy_engine_create(alloc);
     sc_agent_set_retrieval_engine(&agent, &retrieval_engine);
+
+    if (cfg.security.audit.enabled) {
+        sc_audit_config_t acfg = SC_AUDIT_CONFIG_DEFAULT;
+        acfg.enabled = true;
+        acfg.log_path = cfg.security.audit.log_path ? cfg.security.audit.log_path : "audit.log";
+        acfg.max_size_mb = cfg.security.audit.max_size_mb > 0 ? cfg.security.audit.max_size_mb : 10;
+        agent.audit_logger = sc_audit_logger_create(alloc, &acfg, ws);
+    }
 
     fprintf(stderr, "[%s] agent ready (provider=%s model=%s tools=%zu)\n", SC_CODENAME, prov_name,
             model[0] ? model : "(default)", tools_count);
@@ -1038,6 +1044,21 @@ static bool gw_agent_on_message(sc_bus_event_type_t type, const sc_bus_event_t *
         memcpy(rev.message, reply, rl);
         rev.message[rl] = '\0';
         sc_bus_publish(b->bus, &rev);
+    } else if (err != SC_OK) {
+        fprintf(stderr, "[gateway] agent_turn error: %s\n", sc_error_string(err));
+        sc_bus_event_t eev;
+        memset(&eev, 0, sizeof(eev));
+        eev.type = SC_BUS_ERROR;
+        snprintf(eev.channel, SC_BUS_CHANNEL_LEN, "%s",
+                 ev->channel[0] ? ev->channel : "gateway");
+        snprintf(eev.id, SC_BUS_ID_LEN, "%s", ev->id);
+        const char *emsg = sc_error_string(err);
+        size_t el = strlen(emsg);
+        if (el >= SC_BUS_MSG_LEN)
+            el = SC_BUS_MSG_LEN - 1;
+        memcpy(eev.message, emsg, el);
+        eev.message[el] = '\0';
+        sc_bus_publish(b->bus, &eev);
     }
     if (reply)
         b->agent->alloc->free(b->agent->alloc->ctx, reply, reply_len + 1);
@@ -1111,10 +1132,7 @@ static sc_error_t cmd_gateway(sc_allocator_t *alloc, int argc, char **argv) {
 
     /* ── Tools ─────────────────────────────────────────────────────────── */
     sc_security_policy_t policy = {0};
-    uint8_t al = cfg.security.autonomy_level;
-    policy.autonomy = (al >= 2)   ? SC_AUTONOMY_FULL
-                      : (al == 1) ? SC_AUTONOMY_SUPERVISED
-                                  : SC_AUTONOMY_READ_ONLY;
+    policy.autonomy = (sc_autonomy_level_t)cfg.security.autonomy_level;
     policy.workspace_dir = ws;
     policy.workspace_only = true;
     policy.allow_shell = (policy.autonomy != SC_AUTONOMY_READ_ONLY);
@@ -1283,6 +1301,16 @@ static sc_error_t cmd_gateway(sc_allocator_t *alloc, int argc, char **argv) {
         }
         sc_agent_set_retrieval_engine(&agent, &gw_retrieval_engine);
         agent_active = true;
+
+        if (cfg.security.audit.enabled) {
+            sc_audit_config_t acfg = SC_AUDIT_CONFIG_DEFAULT;
+            acfg.enabled = true;
+            acfg.log_path =
+                cfg.security.audit.log_path ? cfg.security.audit.log_path : "audit.log";
+            acfg.max_size_mb =
+                cfg.security.audit.max_size_mb > 0 ? cfg.security.audit.max_size_mb : 10;
+            agent.audit_logger = sc_audit_logger_create(alloc, &acfg, ws);
+        }
 
         agent.agent_pool = gw_agent_pool;
         agent.policy_engine = NULL;

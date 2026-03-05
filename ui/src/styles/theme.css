@@ -79,81 +79,7 @@ body {
   outline-offset: var(--sc-focus-ring-offset, 2px);
 }
 
-/* ─── Typography System ─── 5-tier hierarchy ─────────────────────── */
-.sc-type-display {
-  font-size: var(--sc-text-hero);
-  font-weight: var(--sc-weight-black, 900);
-  letter-spacing: var(--sc-tracking-hero, -0.04em);
-  line-height: var(--sc-leading-tight);
-}
-
-.sc-type-heading {
-  font-size: var(--sc-text-2xl);
-  font-weight: var(--sc-weight-bold);
-  letter-spacing: var(--sc-tracking-2xl, -0.02em);
-  line-height: var(--sc-leading-tight);
-}
-
-.sc-type-subheading {
-  font-size: var(--sc-text-lg);
-  font-weight: var(--sc-weight-semibold);
-  letter-spacing: var(--sc-tracking-lg, 0);
-  line-height: var(--sc-leading-normal);
-}
-
-.sc-type-body {
-  font-size: var(--sc-text-base);
-  font-weight: var(--sc-weight-normal);
-  letter-spacing: var(--sc-tracking-base, 0);
-  line-height: var(--sc-leading-normal);
-}
-
-.sc-type-caption {
-  font-size: var(--sc-text-xs);
-  font-weight: var(--sc-weight-normal);
-  letter-spacing: var(--sc-tracking-xs, 0.02em);
-  line-height: var(--sc-leading-normal);
-  color: var(--sc-text-muted);
-}
-
-/* ─── Surface utilities ──────────────────────────────────────────── */
-.sc-surface-glow {
-  position: relative;
-}
-.sc-surface-glow::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--sc-surface-glow);
-  pointer-events: none;
-}
-
 /* ─── Layout Utilities ────────────────────────────────────────────── */
-.sc-container {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 0 var(--sc-space-xl);
-}
-
-.sc-container-wide {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 var(--sc-space-xl);
-}
-
-.sc-container-narrow {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 0 var(--sc-space-xl);
-}
-
-.sc-grid-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--sc-space-lg);
-}
-
 .sc-stagger > * {
   animation: sc-slide-up var(--sc-duration-normal) var(--sc-ease-out) backwards;
 }
@@ -204,53 +130,6 @@ body {
   .view-enter {
     animation: none;
   }
-}
-
-/* ─── Scroll entrance (IntersectionObserver driven) ──────────────── */
-.sc-entrance {
-  opacity: 0;
-  transform: translateY(16px);
-  transition:
-    opacity var(--sc-duration-moderate) var(--sc-ease-out),
-    transform var(--sc-duration-moderate) var(--sc-spring-out);
-}
-.sc-entrance.sc-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sc-entrance {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-}
-
-/* ─── Tabular numbers for data ────────────────────────────────────── */
-.sc-tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
-
-/* ─── Status indicators ───────────────────────────────────────────── */
-.sc-status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: var(--sc-space-xs);
-  flex-shrink: 0;
-}
-.sc-status-dot.active,
-.sc-status-dot.healthy {
-  background: var(--sc-success);
-}
-.sc-status-dot.inactive,
-.sc-status-dot.unconfigured {
-  background: var(--sc-text-faint);
-}
-.sc-status-dot.error {
-  background: var(--sc-error);
 }
 
 /* ─── Scrollbar ────────────────────────────────────────────────────── */

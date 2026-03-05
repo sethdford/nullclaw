@@ -530,7 +530,7 @@ sc_error_t cmd_update(sc_allocator_t *alloc, int argc, char **argv) {
             check_only = true;
     }
     const char *ver = sc_version_string();
-    printf("SeaClaw v%s\n", ver ? ver : "0.1.0");
+    printf("SeaClaw v%s\n", ver ? ver : "0.3.0");
 
     char latest[64];
     sc_error_t err = sc_update_check(latest, sizeof(latest));

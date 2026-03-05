@@ -217,6 +217,7 @@ typedef struct sc_config_gateway {
     uint16_t port;
     char *host;
     bool require_pairing;
+    char *auth_token; /* optional; when set, used for WebSocket auth alongside pairing */
     bool allow_public_bind;
     uint32_t pair_rate_limit_per_minute;
     int rate_limit_requests;  /* 0 = use pair_rate_limit_per_minute */

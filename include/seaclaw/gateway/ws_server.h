@@ -11,6 +11,11 @@
 #define SC_WS_SERVER_MAX_MSG   (64 * 1024)
 #define SC_WS_SERVER_RECV_BUF  (8 * 1024)
 
+typedef enum sc_rpc_auth_level {
+    SC_RPC_AUTH_NONE = 0,
+    SC_RPC_AUTH_PAIRED = 1,
+} sc_rpc_auth_level_t;
+
 typedef struct sc_ws_conn {
     int fd;
     bool active;

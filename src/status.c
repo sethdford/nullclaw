@@ -16,7 +16,7 @@ sc_error_t sc_status_run(sc_allocator_t *alloc, char *buf, size_t buf_size) {
         const char *ver = sc_version_string();
         (void)snprintf(buf, buf_size,
                        "SeaClaw Status (no config found -- run onboard first)\n\nVersion: %s\n",
-                       ver ? ver : "0.1.0");
+                       ver ? ver : "0.3.0");
         return SC_OK;
     }
 

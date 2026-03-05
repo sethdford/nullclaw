@@ -1,5 +1,6 @@
 #include "seaclaw/gateway/control_protocol.h"
 #include "seaclaw/bus.h"
+#include "seaclaw/security.h"
 #include "seaclaw/channel_catalog.h"
 #include "seaclaw/config.h"
 #include "seaclaw/core/allocator.h"
@@ -50,16 +51,17 @@ static sc_error_t build_connect_response(sc_allocator_t *alloc, const sc_app_con
     json_set_str(alloc, root, "type", "hello-ok");
 
     sc_json_value_t *server = sc_json_object_new(alloc);
-    json_set_str(alloc, server, "version", "0.1.0");
+    json_set_str(alloc, server, "version", "0.3.0");
     sc_json_object_set(alloc, root, "server", server);
     sc_json_object_set(alloc, root, "protocol", sc_json_number_new(alloc, 1));
 
     sc_json_value_t *features = sc_json_object_new(alloc);
     sc_json_value_t *methods_arr = sc_json_array_new(alloc);
 
-    static const char *const methods[] = {"connect",         "health",
-                                          "config.get",      "config.schema",
-                                          "capabilities",    "chat.send",
+    static const char *const methods[] = {"auth.token",      "connect",
+                                          "health",          "config.get",
+                                          "config.schema",   "capabilities",
+                                          "chat.send",
                                           "chat.history",    "chat.abort",
                                           "config.set",      "config.apply",
                                           "sessions.list",   "sessions.patch",
@@ -218,7 +220,7 @@ static sc_error_t handle_capabilities(sc_allocator_t *alloc, const sc_app_contex
     if (!obj)
         return SC_ERR_OUT_OF_MEMORY;
 
-    json_set_str(alloc, obj, "version", "0.1.0");
+    json_set_str(alloc, obj, "version", "0.3.0");
 
     size_t tool_count = app ? app->tools_count : 0;
     sc_json_object_set(alloc, obj, "tools", sc_json_number_new(alloc, (double)tool_count));
@@ -1153,14 +1155,68 @@ static sc_error_t handle_push_unregister(sc_allocator_t *alloc, sc_app_context_t
 
 #endif /* SC_HAS_PUSH */
 
+/* ── Auth helpers ───────────────────────────────────────────────────── */
+
+static bool is_public_method(const char *method) {
+    return strcmp(method, "health") == 0 || strcmp(method, "status") == 0 ||
+           strcmp(method, "version") == 0 || strcmp(method, "connect") == 0 ||
+           strcmp(method, "capabilities") == 0;
+}
+
+/* ── auth.token ──────────────────────────────────────────────────────── */
+
+static sc_error_t handle_auth_token(sc_allocator_t *alloc, sc_ws_conn_t *conn,
+                                    const sc_control_protocol_t *proto,
+                                    const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)alloc;
+    const char *token = NULL;
+    if (root) {
+        sc_json_value_t *params = sc_json_object_get(root, "params");
+        if (params)
+            token = sc_json_get_string(params, "token");
+    }
+    if (!token || !token[0]) {
+        sc_json_value_t *obj = sc_json_object_new(alloc);
+        if (!obj)
+            return SC_ERR_OUT_OF_MEMORY;
+        json_set_str(alloc, obj, "error", "missing token");
+        sc_error_t err = sc_json_stringify(alloc, obj, out, out_len);
+        sc_json_free(alloc, obj);
+        return err;
+    }
+    bool valid = false;
+    if (proto->pairing_guard && sc_pairing_guard_is_authenticated(proto->pairing_guard, token))
+        valid = true;
+    else if (proto->auth_token && proto->auth_token[0] &&
+             sc_pairing_guard_constant_time_eq(token, proto->auth_token))
+        valid = true;
+    if (valid) {
+        conn->authenticated = true;
+        sc_json_value_t *obj = sc_json_object_new(alloc);
+        if (!obj)
+            return SC_ERR_OUT_OF_MEMORY;
+        json_set_str(alloc, obj, "result", "authenticated");
+        sc_error_t err = sc_json_stringify(alloc, obj, out, out_len);
+        sc_json_free(alloc, obj);
+        return err;
+    }
+    (void)alloc;
+    (void)out;
+    (void)out_len;
+    return SC_ERR_GATEWAY_AUTH;
+}
+
 /* ── Method dispatcher ───────────────────────────────────────────────── */
 
 static sc_error_t build_method_response(sc_allocator_t *alloc, const char *method,
                                         const sc_json_value_t *root, sc_app_context_t *app,
+                                        sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
                                         char **payload_out, size_t *payload_len_out) {
     *payload_out = NULL;
     *payload_len_out = 0;
 
+    if (strcmp(method, "auth.token") == 0)
+        return handle_auth_token(alloc, conn, proto, root, payload_out, payload_len_out);
     if (strcmp(method, "connect") == 0)
         return build_connect_response(alloc, app, payload_out, payload_len_out);
     if (strcmp(method, "health") == 0)
@@ -1247,6 +1303,9 @@ void sc_control_protocol_init(sc_control_protocol_t *proto, sc_allocator_t *allo
     proto->ws = ws;
     proto->event_seq = 0;
     proto->app_ctx = NULL;
+    proto->require_pairing = false;
+    proto->pairing_guard = NULL;
+    proto->auth_token = NULL;
 }
 
 void sc_control_protocol_deinit(sc_control_protocol_t *proto) {
@@ -1256,6 +1315,15 @@ void sc_control_protocol_deinit(sc_control_protocol_t *proto) {
 void sc_control_set_app_ctx(sc_control_protocol_t *proto, sc_app_context_t *ctx) {
     if (proto)
         proto->app_ctx = ctx;
+}
+
+void sc_control_set_auth(sc_control_protocol_t *proto, bool require_pairing,
+                         sc_pairing_guard_t *pairing_guard, const char *auth_token) {
+    if (!proto)
+        return;
+    proto->require_pairing = require_pairing;
+    proto->pairing_guard = pairing_guard;
+    proto->auth_token = auth_token && auth_token[0] ? auth_token : NULL;
 }
 
 /* ── Incoming message handler ────────────────────────────────────────── */
@@ -1289,6 +1357,15 @@ void sc_control_on_message(sc_ws_conn_t *conn, const char *data, size_t data_len
         return;
     }
 
+    /* Auth check: when pairing required, only public methods and auth.token allowed unauthenticated */
+    if (proto->require_pairing && !conn->authenticated && !is_public_method(method) &&
+        strcmp(method, "auth.token") != 0) {
+        sc_control_send_response(conn, id_raw, false,
+                                  "{\"error\":\"unauthorized\",\"message\":\"Authentication required\"}");
+        sc_json_free(proto->alloc, root);
+        return;
+    }
+
     size_t id_slen = strlen(id_raw);
     char *id = (char *)proto->alloc->alloc(proto->alloc->ctx, id_slen + 1);
     if (!id) {
@@ -1299,8 +1376,8 @@ void sc_control_on_message(sc_ws_conn_t *conn, const char *data, size_t data_len
 
     char *payload = NULL;
     size_t payload_len = 0;
-    sc_error_t err =
-        build_method_response(proto->alloc, method, root, proto->app_ctx, &payload, &payload_len);
+    sc_error_t err = build_method_response(proto->alloc, method, root, proto->app_ctx, conn,
+                                            proto, &payload, &payload_len);
     sc_json_free(proto->alloc, root);
 
     bool ok = (err == SC_OK);
@@ -1322,6 +1399,8 @@ void sc_control_on_message(sc_ws_conn_t *conn, const char *data, size_t data_len
             size_t n = 0;
             if (err == SC_ERR_NOT_FOUND) {
                 n = (size_t)snprintf(payload, 64, "{\"error\":\"unknown method\"}");
+            } else if (err == SC_ERR_GATEWAY_AUTH) {
+                n = (size_t)snprintf(payload, 64, "{\"error\":\"invalid_token\"}");
             } else {
                 n = (size_t)snprintf(payload, 64, "{\"error\":\"internal\"}");
             }

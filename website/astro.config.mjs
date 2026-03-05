@@ -40,6 +40,7 @@ export default defineConfig({
             { label: "MCP Server Integration", slug: "features/mcp" },
             { label: "Migration from OpenClaw", slug: "features/migrate" },
             { label: "Tunnel Providers", slug: "features/tunnels" },
+            { label: "Voice Channel", slug: "features/voice" },
           ],
         },
         {

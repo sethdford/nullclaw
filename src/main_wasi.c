@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define SC_VERSION           "0.1.0"
+#define SC_VERSION           "0.3.0"
 #define SC_CODENAME          "SeaClaw"
 #define SC_WASI_PREOPEN_ROOT 3
 

@@ -3,9 +3,11 @@
 #include "seaclaw/config.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
+#include "seaclaw/core/json.h"
 #include "seaclaw/core/string.h"
 #include "seaclaw/crypto.h"
 #include "seaclaw/gateway/control_protocol.h"
+#include "seaclaw/security.h"
 #include "seaclaw/gateway/event_bridge.h"
 #include "seaclaw/gateway/rate_limit.h"
 #include "seaclaw/gateway/ws_server.h"
@@ -59,7 +61,8 @@ void sc_gateway_config_from_cfg(const sc_config_gateway_t *cfg_gw, sc_gateway_co
     out->control_ui_dir = cfg_gw->control_ui_dir;
     out->cors_origins = (const char *const *)cfg_gw->cors_origins;
     out->cors_origins_len = cfg_gw->cors_origins_len;
-    out->auth_token = NULL;
+    out->auth_token = cfg_gw->auth_token && cfg_gw->auth_token[0] ? cfg_gw->auth_token : NULL;
+    out->require_pairing = cfg_gw->require_pairing;
     out->control = NULL;
 }
 
@@ -80,6 +83,7 @@ typedef struct sc_gateway_state {
     size_t rate_count;
     sc_rate_limiter_t *rate_limiter;
     sc_ws_server_t ws;
+    sc_pairing_guard_t *pairing_guard;
 } sc_gateway_state_t;
 
 static void trim_crlf(char *s) {
@@ -400,6 +404,60 @@ static void handle_http_request(sc_gateway_state_t *gw, int fd, const char *meth
         return;
     }
 
+    /* API endpoint: pairing (POST with JSON {"code":"12345678"}) */
+    if (path_is(path, "/api/pair") && method && strcmp(method, "POST") == 0) {
+        if (!gw->pairing_guard) {
+            send_json(fd, 400, "{\"error\":\"pairing not required\"}");
+            return;
+        }
+        const char *code = NULL;
+        if (body_len > 0 && body_len <= gw->config.max_body_size) {
+            sc_json_value_t *root = NULL;
+            if (sc_json_parse(gw->alloc, body, body_len, &root) == SC_OK && root &&
+                root->type == SC_JSON_OBJECT) {
+                code = sc_json_get_string(root, "code");
+                sc_json_free(gw->alloc, root);
+            }
+        }
+        if (!code || !code[0]) {
+            send_json(fd, 400, "{\"error\":\"missing code\"}");
+            return;
+        }
+        char *token = NULL;
+        sc_pair_attempt_result_t result =
+            sc_pairing_guard_attempt_pair(gw->pairing_guard, code, &token);
+        if (result == SC_PAIR_PAIRED && token) {
+            size_t tok_len = strlen(token);
+            size_t cap = 32 + tok_len * 2;
+            char *resp_buf = (char *)gw->alloc->alloc(gw->alloc->ctx, cap);
+            if (resp_buf) {
+                size_t pos = 0;
+                pos += (size_t)snprintf(resp_buf, cap, "{\"token\":\"");
+                for (size_t i = 0; i < tok_len && pos + 4 < cap; i++) {
+                    char c = token[i];
+                    if (c == '"' || c == '\\')
+                        resp_buf[pos++] = '\\';
+                    resp_buf[pos++] = c;
+                }
+                pos += (size_t)snprintf(resp_buf + pos, cap - pos, "\"}");
+                send_json(fd, 200, resp_buf);
+                gw->alloc->free(gw->alloc->ctx, resp_buf, cap);
+            } else {
+                send_json(fd, 500, "{\"error\":\"internal\"}");
+            }
+            gw->alloc->free(gw->alloc->ctx, token, tok_len + 1);
+        } else if (result == SC_PAIR_INVALID_CODE) {
+            send_json(fd, 401, "{\"error\":\"invalid_code\"}");
+        } else if (result == SC_PAIR_LOCKED_OUT) {
+            send_json(fd, 429, "{\"error\":\"locked_out\"}");
+        } else if (result == SC_PAIR_ALREADY_PAIRED) {
+            send_json(fd, 400, "{\"error\":\"already_paired\"}");
+        } else {
+            send_json(fd, 400, "{\"error\":\"pairing_failed\"}");
+        }
+        return;
+    }
+
     if (is_webhook_path(path)) {
         if (gw && gw->config.hmac_secret && gw->config.hmac_secret_len > 0) {
             if (!verify_hmac(body, body_len, sig_header, gw->config.hmac_secret,
@@ -496,6 +554,16 @@ sc_error_t sc_gateway_run(sc_allocator_t *alloc, const char *host, uint16_t port
             bridge_active = true;
         }
     }
+
+    if (cfg.require_pairing) {
+        gw->pairing_guard = sc_pairing_guard_create(alloc, true, NULL, 0);
+        if (gw->pairing_guard) {
+            const char *code = sc_pairing_guard_pairing_code(gw->pairing_guard);
+            if (code)
+                fprintf(stderr, "[gateway] Pairing code: %s\n", code);
+        }
+    }
+    sc_control_set_auth(ctrl, cfg.require_pairing, gw->pairing_guard, cfg.auth_token);
 
     fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
@@ -635,6 +703,8 @@ sc_error_t sc_gateway_run(sc_allocator_t *alloc, const char *host, uint16_t port
                     send_json(client, 429, "{\"error\":\"too many connections\"}");
                     close(client);
                 } else {
+                    if (!gw->config.require_pairing)
+                        conn->authenticated = true;
                     fprintf(stderr, "[gateway] ws connected id=%llu ip=%s\n",
                             (unsigned long long)conn->id, client_ip);
                 }
@@ -722,6 +792,10 @@ sc_error_t sc_gateway_run(sc_allocator_t *alloc, const char *host, uint16_t port
 cleanup:
     if (bridge_active)
         sc_event_bridge_deinit(&event_bridge);
+    if (gw && gw->pairing_guard) {
+        sc_pairing_guard_destroy(gw->pairing_guard);
+        gw->pairing_guard = NULL;
+    }
     if (gw && gw->rate_limiter) {
         sc_rate_limiter_destroy(gw->rate_limiter);
         gw->rate_limiter = NULL;

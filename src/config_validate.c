@@ -24,8 +24,9 @@ static const size_t sc_config_top_keys_len =
 
 /* Nested keys per section */
 static const char *const sc_gateway_keys[] = {
-    "enabled", "port", "host", "require_pairing", "allow_public_bind",
-    "pair_rate_limit_per_minute", "webhook_hmac_secret", "control_ui_dir",
+    "enabled", "port", "host", "require_pairing", "auth_token", "allow_public_bind",
+    "pair_rate_limit_per_minute", "rate_limit_requests", "rate_limit_window",
+    "webhook_hmac_secret", "control_ui_dir", "cors_origins",
 };
 static const size_t sc_gateway_keys_len = sizeof(sc_gateway_keys) / sizeof(sc_gateway_keys[0]);
 

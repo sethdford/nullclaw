@@ -13,7 +13,7 @@ This guide walks you through migrating from [OpenClaw](https://github.com/opencl
 | Benefit          | OpenClaw                                                                       | SeaClaw                                         |
 | ---------------- | ------------------------------------------------------------------------------ | ----------------------------------------------- |
 | **Cost**         | $599+ setup (typical M-series Mac), $300+/mo API overhead from bloated runtime | $5 hardware—runs on ARM SBCs, Raspberry Pi Zero |
-| **Binary size**  | ~28 MB (npm dist)                                                              | **282 KB** core binary                          |
+| **Binary size**  | ~28 MB (npm dist)                                                              | **430 KB** core binary                          |
 | **Memory**       | Node.js heap (100+ MB typical)                                                 | **< 5 MB** peak RSS                             |
 | **Dependencies** | 1,200+ npm packages, Node.js ≥22                                               | **0**—libc + optional SQLite, libcurl           |
 | **Supply chain** | Large attack surface, malicious skill risk                                     | Single binary, curated skill registry           |
@@ -72,12 +72,12 @@ SeaClaw uses the **same config structure** as OpenClaw (snake_case). Most keys m
 
 ### Key mappings
 
-| OpenClaw                             | SeaClaw                         | Notes                                 |
-| ------------------------------------ | ------------------------------- | ------------------------------------- |
-| `providers` (top-level)              | `models.providers`              | Provider configs moved under `models` |
-| `default_provider` / `default_model` | `agents.defaults.model.primary` | Model selection under `agents`        |
-| `accounts` (per channel)             | `channels.<channel>.accounts`   | Same structure                        |
-| `clients`                            | `models.providers`              | Each client becomes a provider entry  |
+| OpenClaw                             | SeaClaw                              | Notes                                |
+| ------------------------------------ | ------------------------------------ | ------------------------------------ |
+| `providers` (top-level)              | `providers` (top-level array)        | Same structure                       |
+| `default_provider` / `default_model` | `default_provider` / `default_model` | Same top-level keys                  |
+| `accounts` (per channel)             | `channels.<channel>.accounts`        | Same structure                       |
+| `clients`                            | `providers`                          | Each client becomes a provider entry |
 
 ### Example: OpenClaw config → SeaClaw config
 
@@ -117,8 +117,8 @@ SeaClaw uses the **same config structure** as OpenClaw (snake_case). Most keys m
 
 ### Providers
 
-- Map each OpenClaw provider to `models.providers.<key>`.
-- SeaClaw expects object form: `{ "api_key": "...", "base_url": "..." }` (not array).
+- Map each OpenClaw provider to the top-level `providers` array.
+- SeaClaw expects array form: `[{ "name": "...", "api_key": "...", "base_url": "..." }]`.
 
 ### Channels
 
@@ -202,8 +202,8 @@ seaclaw channel status  # Channel health
 
 ### "Config error" or "Provider not found"
 
-- Ensure `models.providers` exists and each provider has `api_key` (or `base_url` for local).
-- SeaClaw does not support top-level `default_provider`/`default_model`; use `agents.defaults.model.primary`.
+- Ensure top-level `providers` array exists and each provider has `api_key` (or `base_url` for local).
+- Use top-level `default_provider` and `default_model` for model selection.
 
 ### "Migration: 0 imported"
 

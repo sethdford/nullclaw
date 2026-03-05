@@ -95,6 +95,9 @@ static sc_error_t sc_openai_http_post(sc_allocator_t *alloc, const char *url, si
             return err;
 
         if (hresp.status_code < 200 || hresp.status_code >= 300) {
+            fprintf(stderr, "[openai] HTTP %ld: %.*s\n", hresp.status_code,
+                    (int)(hresp.body_len < 500 ? hresp.body_len : 500),
+                    hresp.body ? hresp.body : "(null)");
             sc_http_response_free(alloc, &hresp);
             if (hresp.status_code == 401)
                 return SC_ERR_PROVIDER_AUTH;

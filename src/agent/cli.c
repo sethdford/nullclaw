@@ -24,6 +24,7 @@
 #include "seaclaw/providers/factory.h"
 #include "seaclaw/runtime.h"
 #include "seaclaw/security.h"
+#include "seaclaw/security/audit.h"
 #include "seaclaw/security/sandbox.h"
 #include "seaclaw/security/sandbox_internal.h"
 #include "seaclaw/tool.h"
@@ -406,6 +407,14 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
     agent.agent_pool = cli_agent_pool;
     agent.mailbox = cli_mailbox;
     agent.policy_engine = NULL;
+
+    if (cfg.security.audit.enabled) {
+        sc_audit_config_t acfg = SC_AUDIT_CONFIG_DEFAULT;
+        acfg.enabled = true;
+        acfg.log_path = cfg.security.audit.log_path ? cfg.security.audit.log_path : "audit.log";
+        acfg.max_size_mb = cfg.security.audit.max_size_mb > 0 ? cfg.security.audit.max_size_mb : 10;
+        agent.audit_logger = sc_audit_logger_create(alloc, &acfg, ws);
+    }
 
     if (cfg.policy.enabled) {
         agent.policy_engine = sc_policy_engine_create(alloc);

@@ -42,6 +42,9 @@ typedef struct sc_gateway_config {
     /* Auth token for WebSocket connections (NULL = localhost-only auto-approve) */
     const char *auth_token;
 
+    /* When true, WebSocket RPC requires auth.token before protected methods */
+    bool require_pairing;
+
     /* Control protocol handler (set by caller to wire RPC methods) */
     sc_control_protocol_t *control;
 

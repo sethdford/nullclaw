@@ -14,6 +14,7 @@
 #include "seaclaw/observer.h"
 #include "seaclaw/provider.h"
 #include "seaclaw/security.h"
+#include "seaclaw/security/audit.h"
 #include "seaclaw/security/policy_engine.h"
 #include "seaclaw/tool.h"
 #include "seaclaw/voice.h"
@@ -114,6 +115,9 @@ struct sc_agent {
     sc_agent_pool_t *agent_pool;
     sc_mailbox_t *mailbox;
     sc_policy_engine_t *policy_engine;
+
+    sc_audit_logger_t *audit_logger;
+    struct sc_undo_stack *undo_stack;
 };
 
 /* Create agent from minimal config (no full config loader yet).

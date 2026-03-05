@@ -382,4 +382,5 @@ jobs:
           done
           if [ -n "$MISSING" ]; then
             echo "Docs missing frontmatter:$MISSING"
+            exit 1
           fi

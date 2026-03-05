@@ -294,6 +294,7 @@ set(SC_CORE_SOURCES
     src/runtime/native.c
     src/runtime/docker.c
     src/runtime/factory.c
+    src/agent/action_preview.c
     src/agent/agent.c
     src/agent/context.c
     src/agent/prompt.c
@@ -304,6 +305,7 @@ set(SC_CORE_SOURCES
     src/agent/mailbox.c
     src/agent/profile.c
     src/agent/planner.c
+    src/agent/undo.c
     src/agent/cli.c
     src/agent/tui.c
     src/agent/commands.c
@@ -1178,9 +1180,12 @@ set(SC_TEST_SOURCES
     tests/test_config_validation.c
     tests/test_json_extended.c
     tests/test_security_extended.c
+    tests/test_security_pipeline.c
     tests/test_core_extended.c
     tests/test_gateway_extended.c
+    tests/test_gateway_auth.c
     tests/test_agent_extended.c
+    tests/test_agent_security.c
     tests/test_skills.c
     tests/test_ported_modules.c
     tests/test_subagent.c
@@ -1203,6 +1208,9 @@ add_executable(seaclaw_tests ${SC_TEST_SOURCES} wasm/wasm_alloc.c)
 target_link_libraries(seaclaw_tests seaclaw_core_test)
 target_include_directories(seaclaw_tests PRIVATE ${SC_ROOT}/tests)
 target_compile_definitions(seaclaw_tests PRIVATE SC_IS_TEST=1 SC_GATEWAY_TEST_MODE=1 SC_HAS_NONE_ENGINE=1 SC_HAS_CRON=1 SC_HAS_PUSH=1 SC_HAS_UPDATE=1 SC_HAS_SKILLS=1)
+if(UNIX AND NOT WIN32)
+    target_compile_definitions(seaclaw_tests PRIVATE SC_GATEWAY_POSIX=1)
+endif()
 if(SC_ENABLE_TUI)
     target_compile_definitions(seaclaw_tests PRIVATE SC_ENABLE_TUI=1)
 endif()
@@ -1438,7 +1446,7 @@ add_custom_target(benchmark
 )
 
 # Print build info
-message(STATUS "SeaClaw v0.1.0")
+message(STATUS "SeaClaw v0.3.0")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Channels: ${CHANNEL_SOURCES}")
 message(STATUS "Engines: none=${SC_ENABLE_NONE_ENGINE} markdown=${SC_ENABLE_MARKDOWN_ENGINE} sqlite=${SC_ENABLE_SQLITE} postgres=${SC_ENABLE_POSTGRES}")

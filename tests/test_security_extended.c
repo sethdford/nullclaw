@@ -671,6 +671,19 @@ static void test_security_path_allowed_empty_allowlist_denies(void) {
     SC_ASSERT_FALSE(sc_security_path_allowed(&p, "/any/path", 9));
 }
 
+static void test_tool_risk_level_returns_correct_levels(void) {
+    SC_ASSERT_EQ(sc_tool_risk_level("shell"), SC_RISK_HIGH);
+    SC_ASSERT_EQ(sc_tool_risk_level("spawn"), SC_RISK_HIGH);
+    SC_ASSERT_EQ(sc_tool_risk_level("file_write"), SC_RISK_HIGH);
+    SC_ASSERT_EQ(sc_tool_risk_level("file_edit"), SC_RISK_HIGH);
+    SC_ASSERT_EQ(sc_tool_risk_level("http_request"), SC_RISK_MEDIUM);
+    SC_ASSERT_EQ(sc_tool_risk_level("browser_open"), SC_RISK_MEDIUM);
+    SC_ASSERT_EQ(sc_tool_risk_level("file_read"), SC_RISK_LOW);
+    SC_ASSERT_EQ(sc_tool_risk_level("memory_recall"), SC_RISK_LOW);
+    SC_ASSERT_EQ(sc_tool_risk_level("unknown_tool"), SC_RISK_MEDIUM);
+    SC_ASSERT_EQ(sc_tool_risk_level(NULL), SC_RISK_HIGH);
+}
+
 void run_security_extended_tests(void) {
     SC_TEST_SUITE("Security Extended");
     SC_RUN_TEST(test_policy_wildcard_allows_all);
@@ -752,4 +765,5 @@ void run_security_extended_tests(void) {
     SC_RUN_TEST(test_audit_should_log);
     SC_RUN_TEST(test_path_traversal_percent_encoded);
     SC_RUN_TEST(test_path_traversal_mixed);
+    SC_RUN_TEST(test_tool_risk_level_returns_correct_levels);
 }

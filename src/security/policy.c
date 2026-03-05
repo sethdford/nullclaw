@@ -8,6 +8,24 @@
 
 #define SC_MAX_ANALYSIS_LEN 16384
 
+/* ── Tool risk level (for graduated autonomy) ───────────────────── */
+
+sc_command_risk_level_t sc_tool_risk_level(const char *tool_name) {
+    if (!tool_name)
+        return SC_RISK_HIGH;
+    if (strcmp(tool_name, "shell") == 0 || strcmp(tool_name, "spawn") == 0)
+        return SC_RISK_HIGH;
+    if (strcmp(tool_name, "file_write") == 0 || strcmp(tool_name, "file_edit") == 0)
+        return SC_RISK_HIGH;
+    if (strcmp(tool_name, "http_request") == 0)
+        return SC_RISK_MEDIUM;
+    if (strcmp(tool_name, "browser_open") == 0)
+        return SC_RISK_MEDIUM;
+    if (strcmp(tool_name, "file_read") == 0 || strcmp(tool_name, "memory_recall") == 0)
+        return SC_RISK_LOW;
+    return SC_RISK_MEDIUM; /* unknown tools default to medium */
+}
+
 static const char *high_risk_commands[] = {
     "rm",     "mkfs",     "dd",    "shutdown",     "reboot",  "halt",    "poweroff", "sudo",
     "su",     "chown",    "chmod", "useradd",      "userdel", "usermod", "passwd",   "mount",
