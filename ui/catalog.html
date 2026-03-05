@@ -7,36 +7,6 @@
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
       :root { --catalog-sidebar-width: 220px; }
-      [data-theme="light"] {
-        color-scheme: light;
-        --sc-bg: #fafafa; --sc-bg-inset: #f0f0f2; --sc-bg-surface: #ffffff;
-        --sc-bg-elevated: #f4f4f5; --sc-bg-overlay: #ffffff;
-        --sc-text: #18181b; --sc-text-muted: #71717a; --sc-text-faint: #a1a1aa;
-        --sc-accent: #14b8a6; --sc-accent-hover: #0f766e; --sc-accent-subtle: rgba(13,148,136,0.10);
-        --sc-accent-strong: #14b8a6; --sc-border: #e4e4e7; --sc-border-subtle: #f4f4f5;
-        --sc-success: #16a34a; --sc-success-dim: rgba(22,163,74,0.1);
-        --sc-warning: #ca8a04; --sc-warning-dim: rgba(202,138,4,0.1);
-        --sc-error: #dc2626; --sc-error-dim: rgba(220,38,38,0.1);
-        --sc-info: #2563eb; --sc-info-dim: rgba(37,99,235,0.1);
-        --sc-shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
-        --sc-shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-        --sc-shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
-      }
-      [data-theme="dark"] {
-        color-scheme: dark;
-        --sc-bg: #0c0c0c; --sc-bg-inset: #111111; --sc-bg-surface: #161616;
-        --sc-bg-elevated: #1e1e1e; --sc-bg-overlay: #252525;
-        --sc-text: #ebebeb; --sc-text-muted: #8a8a8a; --sc-text-faint: #525252;
-        --sc-accent: #14b8a6; --sc-accent-hover: #2dd4bf; --sc-accent-subtle: rgba(20,184,166,0.14);
-        --sc-accent-strong: #5eead4; --sc-border: #262626; --sc-border-subtle: #1e1e1e;
-        --sc-success: #22c55e; --sc-success-dim: rgba(34,197,94,0.15);
-        --sc-warning: #eab308; --sc-warning-dim: rgba(234,179,8,0.15);
-        --sc-error: #ef4444; --sc-error-dim: rgba(239,68,68,0.15);
-        --sc-info: #3b82f6; --sc-info-dim: rgba(59,130,246,0.15);
-        --sc-shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
-        --sc-shadow-md: 0 4px 12px rgba(0,0,0,0.5);
-        --sc-shadow-lg: 0 8px 24px rgba(0,0,0,0.6);
-      }
       body { font-family: var(--sc-font); background: var(--sc-bg); color: var(--sc-text); min-height: 100vh; display: flex; }
       .catalog-nav { position: fixed; left: 0; top: 0; bottom: 0; width: var(--catalog-sidebar-width); background: var(--sc-bg-surface); border-right: 1px solid var(--sc-border); padding: var(--sc-space-lg); overflow-y: auto; z-index: 100; }
       .catalog-nav h3 { font-size: var(--sc-text-sm); font-weight: var(--sc-weight-semibold); color: var(--sc-text-muted); text-transform: uppercase; letter-spacing: var(--sc-tracking-xs); margin-bottom: var(--sc-space-md); }
