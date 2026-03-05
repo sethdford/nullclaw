@@ -192,4 +192,18 @@ object SCTokens {
     val opacityOverlayLight = 0.08f
     val opacityOverlayMedium = 0.32f
     val opacityPressed = 0.12f
+
+    // Haptic Feedback
+    enum class HapticType {
+        LIGHT, MEDIUM, HEAVY, SUCCESS, WARNING, SELECTION;
+
+        fun toAndroidConstant(): Int = when (this) {
+            LIGHT -> android.view.HapticFeedbackConstants.KEYBOARD_TAP
+            MEDIUM -> android.view.HapticFeedbackConstants.CONTEXT_CLICK
+            HEAVY -> android.view.HapticFeedbackConstants.LONG_PRESS
+            SUCCESS -> android.view.HapticFeedbackConstants.CONFIRM
+            WARNING -> android.view.HapticFeedbackConstants.REJECT
+            SELECTION -> android.view.HapticFeedbackConstants.CLOCK_TICK
+        }
+    }
 }

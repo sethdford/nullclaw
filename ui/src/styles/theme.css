@@ -413,12 +413,14 @@ body {
 }
 
 /* ─── View Transitions ─────────────────────────────────────────────── */
-::view-transition-old(main-content) {
-  animation: var(--sc-duration-normal) var(--sc-spring-out) both sc-fade-out;
-}
+@supports (view-transition-name: none) {
+  ::view-transition-old(main-content) {
+    animation: var(--sc-duration-normal) var(--sc-spring-out) both sc-fade-out;
+  }
 
-::view-transition-new(main-content) {
-  animation: var(--sc-duration-normal) var(--sc-spring-out) both sc-slide-up;
+  ::view-transition-new(main-content) {
+    animation: var(--sc-duration-normal) var(--sc-spring-out) both sc-slide-up;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -605,22 +607,25 @@ body {
 }
 
 /* ── View Transitions API (container transforms) ── */
-::view-transition-old(root) {
-  animation-duration: var(--sc-duration-fast, 100ms);
-  animation-timing-function: var(--sc-ease-in, ease-in);
-}
+@supports (view-transition-name: none) {
+  ::view-transition-old(root) {
+    animation-duration: var(--sc-duration-fast, 100ms);
+    animation-timing-function: var(--sc-ease-in, ease-in);
+  }
 
-::view-transition-new(root) {
-  animation-duration: var(--sc-duration-moderate, 300ms);
-  animation-timing-function: var(--sc-ease-out, ease-out);
-}
+  ::view-transition-new(root) {
+    animation-duration: var(--sc-duration-moderate, 300ms);
+    animation-timing-function: var(--sc-ease-out, ease-out);
+  }
 
-::view-transition-old(main-content) {
-  animation: sc-vt-slide-out var(--sc-duration-fast, 100ms) var(--sc-ease-in, ease-in) forwards;
-}
+  ::view-transition-old(main-content) {
+    animation: sc-vt-slide-out var(--sc-duration-fast, 100ms) var(--sc-ease-in, ease-in) forwards;
+  }
 
-::view-transition-new(main-content) {
-  animation: sc-vt-slide-in var(--sc-duration-moderate, 300ms) var(--sc-ease-out, ease-out) forwards;
+  ::view-transition-new(main-content) {
+    animation: sc-vt-slide-in var(--sc-duration-moderate, 300ms) var(--sc-ease-out, ease-out)
+      forwards;
+  }
 }
 
 @keyframes sc-vt-slide-out {

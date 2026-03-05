@@ -325,6 +325,14 @@ export const tokens = {
     subtleSaturate: "120%",
     subtleTintOpacity: 0.02,
   },
+  haptic: {
+    heavy: "heavy",
+    light: "light",
+    medium: "medium",
+    selection: "selection",
+    success: "success",
+    warning: "warning",
+  },
   highContrast: {
     accent: "#2dd4bf",
     accentHover: "#5eead4",

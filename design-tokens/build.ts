@@ -1092,6 +1092,44 @@ function generateSwift(tokens: TokenMap): string {
       `    public static let spring${name.charAt(0).toUpperCase() + name.slice(1)} = Animation.spring(response: ${response}, dampingFraction: ${df})`,
     );
   }
+  lines.push("");
+
+  lines.push("    // MARK: - Haptic Feedback");
+  lines.push("    public enum Haptic {");
+  lines.push("        case light, medium, heavy, success, warning, selection");
+  lines.push("");
+  lines.push("        public func trigger() {");
+  lines.push("            #if canImport(UIKit)");
+  lines.push("            switch self {");
+  lines.push("            case .light:");
+  lines.push(
+    "                UIImpactFeedbackGenerator(style: .light).impactOccurred()",
+  );
+  lines.push("            case .medium:");
+  lines.push(
+    "                UIImpactFeedbackGenerator(style: .medium).impactOccurred()",
+  );
+  lines.push("            case .heavy:");
+  lines.push(
+    "                UIImpactFeedbackGenerator(style: .heavy).impactOccurred()",
+  );
+  lines.push("            case .success:");
+  lines.push(
+    "                UINotificationFeedbackGenerator().notificationOccurred(.success)",
+  );
+  lines.push("            case .warning:");
+  lines.push(
+    "                UINotificationFeedbackGenerator().notificationOccurred(.warning)",
+  );
+  lines.push("            case .selection:");
+  lines.push(
+    "                UISelectionFeedbackGenerator().selectionChanged()",
+  );
+  lines.push("            }");
+  lines.push("            #endif");
+  lines.push("        }");
+  lines.push("    }");
+
   lines.push("}");
   lines.push("");
   lines.push("extension Color {");
@@ -1349,6 +1387,34 @@ function generateKotlin(tokens: TokenMap): string {
       (suffix ? suffix.charAt(0).toUpperCase() + suffix.slice(1) : "");
     lines.push(`    val ${name} = ${v}f`);
   }
+  lines.push("");
+
+  lines.push("    // Haptic Feedback");
+  lines.push("    enum class HapticType {");
+  lines.push("        LIGHT, MEDIUM, HEAVY, SUCCESS, WARNING, SELECTION;");
+  lines.push("");
+  lines.push("        fun toAndroidConstant(): Int = when (this) {");
+  lines.push(
+    "            LIGHT -> android.view.HapticFeedbackConstants.KEYBOARD_TAP",
+  );
+  lines.push(
+    "            MEDIUM -> android.view.HapticFeedbackConstants.CONTEXT_CLICK",
+  );
+  lines.push(
+    "            HEAVY -> android.view.HapticFeedbackConstants.LONG_PRESS",
+  );
+  lines.push(
+    "            SUCCESS -> android.view.HapticFeedbackConstants.CONFIRM",
+  );
+  lines.push(
+    "            WARNING -> android.view.HapticFeedbackConstants.REJECT",
+  );
+  lines.push(
+    "            SELECTION -> android.view.HapticFeedbackConstants.CLOCK_TICK",
+  );
+  lines.push("        }");
+  lines.push("    }");
+
   lines.push("}");
   return lines.join("\n");
 }

@@ -60,6 +60,38 @@ if [ -f "$TMPDIR/DesignTokens.kt" ] && [ -f "$REPO_ROOT/apps/android/app/src/mai
   fi
 fi
 
+# Check Flutter/Dart output
+if [ -f "$TMPDIR/design_tokens.dart" ] && [ -f "$REPO_ROOT/apps/flutter/lib/design_tokens.dart" ]; then
+  if ! diff -q "$TMPDIR/design_tokens.dart" "$REPO_ROOT/apps/flutter/lib/design_tokens.dart" >/dev/null 2>&1; then
+    echo "DRIFT: apps/flutter/lib/design_tokens.dart differs from generated output"
+    DRIFT=1
+  fi
+fi
+
+# Check runtime JSON output
+if [ -f "$TMPDIR/tokens.json" ] && [ -f "$REPO_ROOT/docs/tokens.json" ]; then
+  if ! diff -q "$TMPDIR/tokens.json" "$REPO_ROOT/docs/tokens.json" >/dev/null 2>&1; then
+    echo "DRIFT: docs/tokens.json differs from generated output"
+    DRIFT=1
+  fi
+fi
+
+# Check TypeScript output
+if [ -f "$TMPDIR/tokens.ts" ] && [ -f "$REPO_ROOT/docs/tokens.ts" ]; then
+  if ! diff -q "$TMPDIR/tokens.ts" "$REPO_ROOT/docs/tokens.ts" >/dev/null 2>&1; then
+    echo "DRIFT: docs/tokens.ts differs from generated output"
+    DRIFT=1
+  fi
+fi
+
+# Check docs reference JSON
+if [ -f "$TMPDIR/design-tokens-reference.json" ] && [ -f "$REPO_ROOT/docs/design-tokens-reference.json" ]; then
+  if ! diff -q "$TMPDIR/design-tokens-reference.json" "$REPO_ROOT/docs/design-tokens-reference.json" >/dev/null 2>&1; then
+    echo "DRIFT: docs/design-tokens-reference.json differs from generated output"
+    DRIFT=1
+  fi
+fi
+
 if [ "$DRIFT" -eq 1 ]; then
   echo ""
   echo "Token drift detected! Run 'cd design-tokens && npm run build' to regenerate."

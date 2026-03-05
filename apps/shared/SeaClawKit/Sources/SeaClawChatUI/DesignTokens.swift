@@ -159,6 +159,30 @@ public enum SCTokens {
     public static let springStandard = Animation.spring(response: 0.444, dampingFraction: 0.707)
     public static let springExpressive = Animation.spring(response: 0.574, dampingFraction: 0.639)
     public static let springDramatic = Animation.spring(response: 0.702, dampingFraction: 0.559)
+
+    // MARK: - Haptic Feedback
+    public enum Haptic {
+        case light, medium, heavy, success, warning, selection
+
+        public func trigger() {
+            #if canImport(UIKit)
+            switch self {
+            case .light:
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            case .medium:
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            case .heavy:
+                UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+            case .success:
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            case .warning:
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            case .selection:
+                UISelectionFeedbackGenerator().selectionChanged()
+            }
+            #endif
+        }
+    }
 }
 
 extension Color {
