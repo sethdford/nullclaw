@@ -715,12 +715,24 @@ static void parse_gmail_channel(sc_allocator_t *a, sc_config_t *cfg,
     const char *cid = sc_json_get_string(obj, "client_id");
     const char *csec = sc_json_get_string(obj, "client_secret");
     const char *rtok = sc_json_get_string(obj, "refresh_token");
-    if (cid)
+    if (cid) {
+        if (cfg->channels.gmail.client_id)
+            a->free(a->ctx, cfg->channels.gmail.client_id,
+                    strlen(cfg->channels.gmail.client_id) + 1);
         cfg->channels.gmail.client_id = sc_strndup(a, cid, strlen(cid));
-    if (csec)
+    }
+    if (csec) {
+        if (cfg->channels.gmail.client_secret)
+            a->free(a->ctx, cfg->channels.gmail.client_secret,
+                    strlen(cfg->channels.gmail.client_secret) + 1);
         cfg->channels.gmail.client_secret = sc_strndup(a, csec, strlen(csec));
-    if (rtok)
+    }
+    if (rtok) {
+        if (cfg->channels.gmail.refresh_token)
+            a->free(a->ctx, cfg->channels.gmail.refresh_token,
+                    strlen(cfg->channels.gmail.refresh_token) + 1);
         cfg->channels.gmail.refresh_token = sc_strndup(a, rtok, strlen(rtok));
+    }
     cfg->channels.gmail.poll_interval_sec =
         (int)sc_json_get_number(obj, "poll_interval_sec", 30.0);
 }

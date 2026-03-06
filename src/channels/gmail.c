@@ -160,17 +160,20 @@ static sc_error_t refresh_access_token(sc_gmail_ctx_t *c) {
 
     const char *at = sc_json_get_string(root, "access_token");
     double exp_in = sc_json_get_number(root, "expires_in", 3600.0);
-    sc_json_free(c->alloc, root);
     if (!at || !at[0]) {
+        sc_json_free(c->alloc, root);
         return SC_ERR_PROVIDER_AUTH;
     }
 
     size_t at_len = strlen(at);
+    char *at_copy = sc_strndup(c->alloc, at, at_len);
+    sc_json_free(c->alloc, root);
+    if (!at_copy)
+        return SC_ERR_OUT_OF_MEMORY;
+
     if (c->access_token)
         c->alloc->free(c->alloc->ctx, c->access_token, c->access_token_len + 1);
-    c->access_token = sc_strndup(c->alloc, at, at_len);
-    if (!c->access_token)
-        return SC_ERR_OUT_OF_MEMORY;
+    c->access_token = at_copy;
     c->access_token_len = at_len;
     c->token_expires_at = (int64_t)time(NULL) + (int64_t)exp_in;
     return SC_OK;

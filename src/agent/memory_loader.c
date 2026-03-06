@@ -105,12 +105,14 @@ sc_error_t sc_memory_loader_load(sc_memory_loader_t *loader, const char *query, 
         size_t timestamp_len = e->timestamp_len ? e->timestamp_len : strlen(timestamp);
 
         /* Format: ### Memory: {key}\n{content}\n(stored: {timestamp})\n\n */
-        size_t block_len = 12 + key_len + 1 + content_len + 12 + timestamp_len + 4;
+        size_t overhead = 26 + key_len + timestamp_len;
+        size_t block_len = overhead + content_len;
         if (total_len + block_len > loader->max_context_chars) {
             size_t remain = loader->max_context_chars - total_len;
-            if (remain < 30)
-                break; /* too small for meaningful content */
-            content_len = remain - 30;
+            if (remain <= overhead)
+                break;
+            content_len = remain - overhead;
+            block_len = remain;
         }
 
         err = sc_json_buf_append_raw(&buf, "### Memory: ", 12);

@@ -357,18 +357,25 @@ sc_tone_t sc_detect_tone(const char *const *user_messages, const size_t *message
 }
 
 const char *sc_tone_hint_string(sc_tone_t tone, size_t *out_len) {
+    const char *s = NULL;
+    size_t len = 0;
     switch (tone) {
     case SC_TONE_CASUAL:
-        *out_len = 45;
-        return "The user communicates casually. Match their tone.";
+        s = "The user communicates casually. Match their tone.";
+        len = 49;
+        break;
     case SC_TONE_TECHNICAL:
-        *out_len = 56;
-        return "The user is discussing technical details. Be precise and specific.";
+        s = "The user is discussing technical details. Be precise and specific.";
+        len = 66;
+        break;
     case SC_TONE_FORMAL:
-        *out_len = 60;
-        return "The user communicates formally. Use clear, professional language.";
+        s = "The user communicates formally. Use clear, professional language.";
+        len = 65;
+        break;
     default:
-        *out_len = 0;
-        return NULL;
+        break;
     }
+    if (out_len)
+        *out_len = len;
+    return s;
 }

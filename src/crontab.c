@@ -51,21 +51,33 @@ sc_error_t sc_crontab_get_path(sc_allocator_t *alloc, char **path, size_t *path_
         if (!t)
             t = "/tmp";
         size_t tlen = strlen(t);
-        *path = (char *)alloc->alloc(alloc->ctx, tlen + strlen(SC_CRONTAB_TEST_FILE) + 2);
+        size_t cap = tlen + strlen(SC_CRONTAB_TEST_FILE) + 2;
+        *path = (char *)alloc->alloc(alloc->ctx, cap);
         if (!*path)
             return SC_ERR_OUT_OF_MEMORY;
-        int n = snprintf(*path, tlen + 50, "%s/%s", t, SC_CRONTAB_TEST_FILE);
+        int n = snprintf(*path, cap, "%s/%s", t, SC_CRONTAB_TEST_FILE);
+        if (n < 0 || (size_t)n >= cap) {
+            alloc->free(alloc->ctx, *path, cap);
+            *path = NULL;
+            return SC_ERR_INTERNAL;
+        }
         *path_len = (size_t)n;
         return SC_OK;
     }
     size_t tlen = strlen(tmp);
-    *path = (char *)alloc->alloc(alloc->ctx, tlen + strlen(SC_CRONTAB_TEST_FILE) + 2);
+    size_t cap = tlen + strlen(SC_CRONTAB_TEST_FILE) + 2;
+    *path = (char *)alloc->alloc(alloc->ctx, cap);
     if (!*path) {
         alloc->free(alloc->ctx, tmp, tlen + 1);
         return SC_ERR_OUT_OF_MEMORY;
     }
-    int n = snprintf(*path, tlen + 50, "%s/%s", tmp, SC_CRONTAB_TEST_FILE);
+    int n = snprintf(*path, cap, "%s/%s", tmp, SC_CRONTAB_TEST_FILE);
     alloc->free(alloc->ctx, tmp, tlen + 1);
+    if (n < 0 || (size_t)n >= cap) {
+        alloc->free(alloc->ctx, *path, cap);
+        *path = NULL;
+        return SC_ERR_INTERNAL;
+    }
     *path_len = (size_t)n;
     return SC_OK;
 #else

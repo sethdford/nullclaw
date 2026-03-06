@@ -30,7 +30,7 @@ static bool is_local_or_private(const char *host, size_t len) {
         return true;
     if (len == 3 && strncmp(host, "::1", 3) == 0)
         return true;
-    if (len >= 2 && strncmp(host, "10.", 3) == 0)
+    if (len >= 3 && strncmp(host, "10.", 3) == 0)
         return true;
     if (len >= 4 && strncmp(host, "127.", 4) == 0)
         return true;
