@@ -1,6 +1,7 @@
 #include "seaclaw/tools/persona.h"
 #include "seaclaw/agent.h"
 #include "seaclaw/agent/tool_context.h"
+#include "seaclaw/core/error.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
 #include "seaclaw/core/json.h"
@@ -22,7 +23,10 @@
     "\"name\":{\"type\":\"string\"},"                                                    \
     "\"source\":{\"type\":\"string\",\"enum\":[\"imessage\",\"gmail\",\"facebook\"]},"   \
     "\"channel\":{\"type\":\"string\"},"                                                 \
-    "\"patch\":{\"type\":\"object\"}"                                                    \
+    "\"patch\":{\"type\":\"object\"},"                                                  \
+    "\"original\":{\"type\":\"string\"},"                                                \
+    "\"corrected\":{\"type\":\"string\"},"                                               \
+    "\"context\":{\"type\":\"string\"}"                                                   \
     "},\"required\":[\"action\"]}"
 
 #define SC_PERSONA_PATH_MAX 512
@@ -172,6 +176,75 @@ static sc_error_t do_delete(sc_allocator_t *alloc, const char *name, sc_tool_res
     *out = sc_tool_result_ok_owned(result, result ? strlen(result) : 0);
     return SC_OK;
 #endif
+}
+
+static sc_error_t do_switch(sc_allocator_t *alloc, const char *name, sc_tool_result_t *out) {
+    sc_agent_t *agent = sc_agent_get_current_for_tools();
+    if (!agent) {
+        *out = sc_tool_result_fail("No active agent", 16);
+        return SC_OK;
+    }
+    size_t name_len = name ? strlen(name) : 0;
+    sc_error_t err = sc_agent_set_persona(agent, name, name_len);
+    if (err != SC_OK) {
+        *out = sc_tool_result_fail("Failed to switch persona", 23);
+        return SC_OK;
+    }
+    if (name && name_len > 0) {
+        char *msg = sc_sprintf(alloc, "Switched to persona: %s", name);
+        if (msg) {
+            *out = sc_tool_result_ok_owned(msg, strlen(msg));
+        } else {
+            *out = sc_tool_result_ok("Persona switched", 16);
+        }
+    } else {
+        *out = sc_tool_result_ok("Persona cleared", 15);
+    }
+    return SC_OK;
+}
+
+static sc_error_t do_feedback(sc_allocator_t *alloc, const char *persona_name,
+                              const char *original, const char *corrected, const char *context,
+                              const char *channel, sc_tool_result_t *out) {
+    const char *name = persona_name;
+    if (!name || !name[0]) {
+        sc_agent_t *agent = sc_agent_get_current_for_tools();
+        if (agent && agent->persona_name && agent->persona_name_len > 0) {
+            name = agent->persona_name;
+        }
+    }
+    if (!name || !name[0]) {
+        *out = sc_tool_result_fail("name required for feedback (or no active persona)", 45);
+        return SC_OK;
+    }
+    if (!corrected || !corrected[0]) {
+        *out = sc_tool_result_fail("corrected required for feedback", 31);
+        return SC_OK;
+    }
+    sc_persona_feedback_t fb;
+    memset(&fb, 0, sizeof(fb));
+    fb.channel = channel && channel[0] ? channel : "cli";
+    fb.channel_len = strlen(fb.channel);
+    fb.original_response = original ? original : "";
+    fb.original_response_len = original ? strlen(original) : 0;
+    fb.corrected_response = corrected;
+    fb.corrected_response_len = strlen(corrected);
+    fb.context = context ? context : "";
+    fb.context_len = context ? strlen(context) : 0;
+
+    size_t name_len = strlen(name);
+    sc_error_t err = sc_persona_feedback_record(alloc, name, name_len, &fb);
+    if (err != SC_OK) {
+        *out = sc_tool_result_fail("Failed to record feedback", 26);
+        return SC_OK;
+    }
+    char *msg = sc_sprintf(alloc, "Feedback recorded for persona: %s", persona_name);
+    if (msg) {
+        *out = sc_tool_result_ok_owned(msg, strlen(msg));
+    } else {
+        *out = sc_tool_result_ok("Feedback recorded", 16);
+    }
+    return SC_OK;
 }
 
 static sc_error_t persona_execute(void *ctx, sc_allocator_t *alloc, const sc_json_value_t *args,
