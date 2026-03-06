@@ -340,7 +340,7 @@ Required:
 
 Color accent hierarchy:
 
-- **Primary**: `--sc-accent` (teal) — brand identity, primary buttons, links, focus rings.
+- **Primary**: `--sc-accent` (Fidelity green) — brand identity, primary buttons, links, focus rings.
 - **Secondary**: `--sc-accent-secondary` (amber) — warm highlights, featured content, CTAs needing contrast.
 - **Tertiary**: `--sc-accent-tertiary` (indigo) — info states, data visualization, depth.
 - **Error only**: coral — reserved exclusively for `--sc-error` / `--sc-error-dim`. Never use coral as a general accent.

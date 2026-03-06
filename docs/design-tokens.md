@@ -34,25 +34,25 @@ Auto-generated from W3C token files in `design-tokens/`.
 | `--sc-border`                  | #233345                   | #c0d0e0                  |
 | `--sc-border-subtle`           | #162230                   | #f0f5fa                  |
 | `--sc-disabled-overlay`        | rgba(255, 255, 255, 0.04) | rgba(0, 0, 0, 0.04)      |
-| `--sc-error`                   | #f97066                   | #e11d48                  |
-| `--sc-error-dim`               | rgba(249, 112, 102, 0.12) | rgba(225, 29, 72, 0.08)  |
-| `--sc-focus-ring`              | #14b8a6                   | #0d9488                  |
+| `--sc-error`                   | #f97066                   | #CC0000                  |
+| `--sc-error-dim`               | rgba(249, 112, 102, 0.12) | rgba(204, 0, 0, 0.08)    |
+| `--sc-focus-ring`              | #7AB648                   | #5A9A30                  |
 | `--sc-hover-overlay`           | rgba(255, 255, 255, 0.06) | rgba(0, 0, 0, 0.04)      |
 | `--sc-info`                    | #3b82f6                   | #2563eb                  |
 | `--sc-info-dim`                | rgba(59, 130, 246, 0.15)  | rgba(37, 99, 235, 0.1)   |
-| `--sc-link`                    | #2dd4bf                   | #0d9488                  |
-| `--sc-link-active`             | #14b8a6                   | #14b8a6                  |
-| `--sc-link-hover`              | #5eead4                   | #0f766e                  |
-| `--sc-link-visited`            | #0d9488                   | #0f766e                  |
+| `--sc-link`                    | #8DC63F                   | #5A9A30                  |
+| `--sc-link-active`             | #7AB648                   | #7AB648                  |
+| `--sc-link-hover`              | #a3d46a                   | #47802A                  |
+| `--sc-link-visited`            | #5A9A30                   | #47802A                  |
 | `--sc-on-accent`               | #060b12                   | #ffffff                  |
 | `--sc-on-accent-secondary`     | #060b12                   | #ffffff                  |
 | `--sc-on-accent-tertiary`      | #ffffff                   | #ffffff                  |
 | `--sc-pressed-overlay`         | rgba(255, 255, 255, 0.10) | rgba(0, 0, 0, 0.08)      |
-| `--sc-success`                 | #10b981                   | #059669                  |
-| `--sc-success-dim`             | rgba(16, 185, 129, 0.15)  | rgba(5, 150, 105, 0.10)  |
-| `--sc-text`                    | #d8e4f0                   | #0b1219                  |
-| `--sc-text-faint`              | #3d5468                   | #8aa0b8                  |
-| `--sc-text-muted`              | #5e7a94                   | #3d5468                  |
+| `--sc-success`                 | #10b981                   | #008000                  |
+| `--sc-success-dim`             | rgba(16, 185, 129, 0.15)  | rgba(0, 128, 0, 0.08)    |
+| `--sc-text`                    | #d8e4f0                   | #333333                  |
+| `--sc-text-faint`              | #3d5468                   | #999999                  |
+| `--sc-text-muted`              | #5e7a94                   | #666666                  |
 | `--sc-warning`                 | #eab308                   | #ca8a04                  |
 | `--sc-warning-dim`             | rgba(234, 179, 8, 0.15)   | rgba(202, 138, 4, 0.1)   |
 

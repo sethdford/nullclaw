@@ -38,6 +38,7 @@ static sc_worktree_t *find_by_agent_id(sc_worktree_manager_t *mgr, uint64_t agen
     return NULL;
 }
 
+#if !(defined(SC_IS_TEST) && SC_IS_TEST == 1)
 static sc_error_t run_git_worktree_add(sc_allocator_t *alloc, const char *repo_root,
                                        const char *path, const char *branch) {
     if (!is_safe_path(repo_root) || !is_safe_path(path) || !is_safe_path(branch))
@@ -61,6 +62,7 @@ static sc_error_t run_git_worktree_remove(sc_allocator_t *alloc, const char *rep
     sc_run_result_free(alloc, &result);
     return ok ? SC_OK : SC_ERR_IO;
 }
+#endif /* !SC_IS_TEST */
 
 static sc_error_t grow_if_needed(sc_worktree_manager_t *mgr) {
     if (mgr->count < mgr->capacity)
