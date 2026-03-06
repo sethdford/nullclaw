@@ -342,8 +342,8 @@ sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t
             response[rlen] = '\0';
 
             sc_persona_t partial = {0};
-            sc_error_t perr = sc_persona_analyzer_parse_response(alloc, response, rlen, "unknown", 7,
-                                                                 &partial);
+            sc_error_t perr =
+                sc_persona_analyzer_parse_response(alloc, response, rlen, "unknown", 7, &partial);
             alloc->free(alloc->ctx, response, (size_t)rsz + 1);
             if (perr != SC_OK) {
                 fprintf(stderr, "Failed to parse AI response\n");
@@ -456,8 +456,8 @@ sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t
                     return SC_ERR_OUT_OF_MEMORY;
                 }
                 size_t prompt_len = 0;
-                const char **msg_ptrs = (const char **)alloc->alloc(alloc->ctx,
-                                                                   msg_count * sizeof(const char *));
+                const char **msg_ptrs =
+                    (const char **)alloc->alloc(alloc->ctx, msg_count * sizeof(const char *));
                 if (!msg_ptrs) {
                     alloc->free(alloc->ctx, prompt_buf, prompt_cap);
                     for (size_t i = 0; i < msg_count; i++)
@@ -467,9 +467,8 @@ sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t
                 }
                 for (size_t i = 0; i < msg_count; i++)
                     msg_ptrs[i] = messages[i];
-                sc_error_t berr = sc_persona_analyzer_build_prompt(msg_ptrs, msg_count, "imessage",
-                                                                   prompt_buf, prompt_cap,
-                                                                   &prompt_len);
+                sc_error_t berr = sc_persona_analyzer_build_prompt(
+                    msg_ptrs, msg_count, "imessage", prompt_buf, prompt_cap, &prompt_len);
                 alloc->free(alloc->ctx, msg_ptrs, msg_count * sizeof(const char *));
                 for (size_t i = 0; i < msg_count; i++)
                     alloc->free(alloc->ctx, messages[i], strlen(messages[i]) + 1);
@@ -480,7 +479,7 @@ sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t
                 }
                 char prompt_path[SC_PERSONA_PATH_MAX];
                 int path_n = snprintf(prompt_path, sizeof(prompt_path), "%s/%s_imessage_prompt.txt",
-                                     pending_dir, args->name);
+                                      pending_dir, args->name);
                 if (path_n <= 0 || (size_t)path_n >= sizeof(prompt_path)) {
                     alloc->free(alloc->ctx, prompt_buf, prompt_cap);
                     return SC_ERR_INVALID_ARGUMENT;
@@ -544,9 +543,9 @@ sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t
                     return SC_ERR_OUT_OF_MEMORY;
                 }
                 size_t prompt_len = 0;
-                sc_error_t berr = sc_persona_analyzer_build_prompt(
-                    (const char **)messages, msg_count, "facebook", prompt_buf, prompt_cap,
-                    &prompt_len);
+                sc_error_t berr =
+                    sc_persona_analyzer_build_prompt((const char **)messages, msg_count, "facebook",
+                                                     prompt_buf, prompt_cap, &prompt_len);
                 for (size_t i = 0; i < msg_count; i++)
                     sys.free(sys.ctx, messages[i], strlen(messages[i]) + 1);
                 sys.free(sys.ctx, messages, msg_count * sizeof(char *));
@@ -555,8 +554,8 @@ sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t
                     return berr;
                 }
                 char prompt_path[SC_PERSONA_PATH_MAX];
-                int path_n = snprintf(prompt_path, sizeof(prompt_path),
-                                      "%s/%s_facebook_prompt.txt", pending_dir, args->name);
+                int path_n = snprintf(prompt_path, sizeof(prompt_path), "%s/%s_facebook_prompt.txt",
+                                      pending_dir, args->name);
                 if (path_n <= 0 || (size_t)path_n >= sizeof(prompt_path)) {
                     alloc->free(alloc->ctx, prompt_buf, prompt_cap);
                     return SC_ERR_INVALID_ARGUMENT;
@@ -616,9 +615,9 @@ sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t
                     return SC_ERR_OUT_OF_MEMORY;
                 }
                 size_t prompt_len = 0;
-                sc_error_t berr = sc_persona_analyzer_build_prompt(
-                    (const char **)messages, msg_count, "gmail", prompt_buf, prompt_cap,
-                    &prompt_len);
+                sc_error_t berr =
+                    sc_persona_analyzer_build_prompt((const char **)messages, msg_count, "gmail",
+                                                     prompt_buf, prompt_cap, &prompt_len);
                 for (size_t i = 0; i < msg_count; i++)
                     sys.free(sys.ctx, messages[i], strlen(messages[i]) + 1);
                 sys.free(sys.ctx, messages, msg_count * sizeof(char *));

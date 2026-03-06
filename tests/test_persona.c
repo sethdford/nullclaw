@@ -11,6 +11,7 @@
 #include "seaclaw/tool.h"
 #include "seaclaw/tools/persona.h"
 #include "test_framework.h"
+#include <stdio.h>
 #include <string.h>
 #if defined(__unix__) || defined(__APPLE__)
 #include <unistd.h>
@@ -502,7 +503,8 @@ static void test_cli_parse_from_gmail(void) {
 }
 
 static void test_cli_parse_from_response(void) {
-    const char *argv[] = {"seaclaw", "persona", "create", "test", "--from-response", "/tmp/resp.json"};
+    const char *argv[] = {"seaclaw", "persona",         "create",
+                          "test",    "--from-response", "/tmp/resp.json"};
     sc_persona_cli_args_t args;
     memset(&args, 0, sizeof(args));
     sc_error_t err = sc_persona_cli_parse(6, argv, &args);
@@ -948,19 +950,19 @@ static void test_persona_prompt_respects_size_cap(void) {
     SC_ASSERT_NOT_NULL(traits_json);
     size_t pos = 0;
     pos += (size_t)snprintf(traits_json + pos, 16 * 1024 - pos,
-                             "{\"version\":1,\"name\":\"big\",\"core\":{"
-                             "\"identity\":\"Test persona with many traits for size cap\","
-                             "\"traits\":[");
+                            "{\"version\":1,\"name\":\"big\",\"core\":{"
+                            "\"identity\":\"Test persona with many traits for size cap\","
+                            "\"traits\":[");
     for (int i = 0; i < 120 && pos < 14 * 1024; i++) {
         if (i > 0)
             pos += (size_t)snprintf(traits_json + pos, 16 * 1024 - pos, ",");
-        pos += (size_t)snprintf(traits_json + pos, 16 * 1024 - pos,
-                                 "\"trait_%d_%.*s\"", i,
-                                 (int)(80 - 12), "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+        pos += (size_t)snprintf(traits_json + pos, 16 * 1024 - pos, "\"trait_%d_%.*s\"", i,
+                                (int)(80 - 12), "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     }
-    pos += (size_t)snprintf(traits_json + pos, 16 * 1024 - pos,
-                             "],\"vocabulary\":{\"preferred\":[],\"avoided\":[],\"slang\":[]},"
-                             "\"communication_rules\":[],\"values\":[],\"decision_style\":\"fast\"}}}");
+    pos +=
+        (size_t)snprintf(traits_json + pos, 16 * 1024 - pos,
+                         "],\"vocabulary\":{\"preferred\":[],\"avoided\":[],\"slang\":[]},"
+                         "\"communication_rules\":[],\"values\":[],\"decision_style\":\"fast\"}}}");
     traits_json[pos] = '\0';
 
     sc_persona_t p;
@@ -974,7 +976,7 @@ static void test_persona_prompt_respects_size_cap(void) {
     err = sc_persona_build_prompt(&alloc, &p, NULL, 0, &out, &out_len);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_NOT_NULL(out);
-    SC_ASSERT_LE(out_len, (size_t)SC_PERSONA_PROMPT_MAX_BYTES);
+    SC_ASSERT_TRUE(out_len <= (size_t)SC_PERSONA_PROMPT_MAX_BYTES);
     SC_ASSERT_NOT_NULL(strstr(out, "[persona prompt truncated]"));
 
     alloc.free(alloc.ctx, out, out_len + 1);
