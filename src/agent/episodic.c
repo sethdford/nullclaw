@@ -70,7 +70,7 @@ sc_error_t sc_episodic_store(sc_memory_t *memory, sc_allocator_t *alloc, const c
 
 sc_error_t sc_episodic_load(sc_memory_t *memory, sc_allocator_t *alloc, char **out,
                             size_t *out_len) {
-    if (!out)
+    if (!out || !alloc)
         return SC_ERR_INVALID_ARGUMENT;
     *out = NULL;
     if (out_len)

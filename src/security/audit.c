@@ -889,6 +889,8 @@ load_keys_from_base_dir(const char *base_dir,
                         size_t *out_count) {
     char key_path[SC_AUDIT_MAX_PATH];
     size_t base_len = strlen(base_dir);
+    if (base_len + 17 >= sizeof(key_path))
+        return SC_ERR_INVALID_ARGUMENT;
     if (base_len > 0 && base_dir[base_len - 1] == '/')
         snprintf(key_path, sizeof(key_path), "%s.audit_hmac_key", base_dir);
     else

@@ -306,7 +306,7 @@ static void test_estimate_tokens(void) {
         {.content = "world", .content_len = 5, .role = SC_ROLE_ASSISTANT},
     };
     uint64_t t = sc_estimate_tokens(msgs, 2);
-    SC_ASSERT_EQ(t, (uint64_t)3); /* aggregate: (5+5+3)/4 = 3 — matches Zig formula */
+    SC_ASSERT_EQ(t, (uint64_t)4); /* (5+5 + 3*2) / 4 = 4 — per-message overhead */
 }
 
 /* ─── Context pressure tests ─────────────────────────────────────────────── */

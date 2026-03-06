@@ -36,7 +36,7 @@ uint64_t sc_estimate_tokens(const sc_owned_message_t *history, size_t history_co
     for (size_t i = 0; i < history_count; i++) {
         total_chars += (uint64_t)history[i].content_len;
     }
-    return (total_chars + 3) / 4;
+    return (total_chars + 3 * (uint64_t)history_count) / 4;
 }
 
 bool sc_should_compact(const sc_owned_message_t *history, size_t history_count,

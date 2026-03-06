@@ -121,7 +121,8 @@ static sc_error_t shell_execute(void *ctx, sc_allocator_t *alloc, const sc_json_
             if (wd) {
                 memcpy(wd, s->workspace_dir, s->workspace_dir_len);
                 wd[s->workspace_dir_len] = '\0';
-                chdir(wd);
+                if (chdir(wd) != 0)
+                    _exit(127);
                 free(wd);
             }
         }

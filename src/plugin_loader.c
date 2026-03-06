@@ -119,7 +119,8 @@ sc_error_t sc_plugin_load(sc_allocator_t *alloc, const char *path, sc_plugin_hos
         return SC_ERR_NOT_FOUND;
     }
 
-    sc_plugin_init_fn init_fn = (sc_plugin_init_fn)dlsym(handle, "sc_plugin_init");
+    sc_plugin_init_fn init_fn;
+    *(void **)&init_fn = dlsym(handle, "sc_plugin_init");
     if (!init_fn) {
         dlclose(handle);
         return SC_ERR_INVALID_ARGUMENT;
@@ -139,7 +140,8 @@ sc_error_t sc_plugin_load(sc_allocator_t *alloc, const char *path, sc_plugin_hos
 
     sc_plugin_handle_t *h = (sc_plugin_handle_t *)alloc->alloc(alloc->ctx, sizeof(*h));
     if (!h) {
-        sc_plugin_deinit_fn deinit = (sc_plugin_deinit_fn)dlsym(handle, "sc_plugin_deinit");
+        sc_plugin_deinit_fn deinit;
+        *(void **)&deinit = dlsym(handle, "sc_plugin_deinit");
         if (deinit)
             deinit();
         dlclose(handle);
@@ -169,7 +171,8 @@ void sc_plugin_unload(sc_plugin_handle_t *handle) {
     }
     void *h = handle->dl_handle;
     if (h) {
-        sc_plugin_deinit_fn deinit = (sc_plugin_deinit_fn)dlsym(h, "sc_plugin_deinit");
+        sc_plugin_deinit_fn deinit;
+        *(void **)&deinit = dlsym(h, "sc_plugin_deinit");
         if (deinit)
             deinit();
         dlclose(h);
