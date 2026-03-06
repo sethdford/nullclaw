@@ -116,6 +116,8 @@ typedef struct sc_persona_cli_args {
     bool from_gmail;
     bool from_facebook;
     bool interactive;
+    const char *facebook_export_path;
+    const char *gmail_export_path;
 } sc_persona_cli_args_t;
 
 sc_error_t sc_persona_cli_parse(int argc, const char **argv, sc_persona_cli_args_t *out);

@@ -78,6 +78,11 @@ sc_error_t sc_persona_cli_parse(int argc, const char **argv, sc_persona_cli_args
         if (argc < 4)
             return SC_ERR_INVALID_ARGUMENT;
         out->name = argv[3];
+    } else if (strcmp(action, "validate") == 0) {
+        out->action = SC_PERSONA_ACTION_VALIDATE;
+        if (argc < 4)
+            return SC_ERR_INVALID_ARGUMENT;
+        out->name = argv[3];
     } else {
         return SC_ERR_INVALID_ARGUMENT;
     }
@@ -172,6 +177,74 @@ sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t
         return SC_ERR_NOT_SUPPORTED;
 #endif
     }
+    case SC_PERSONA_ACTION_VALIDATE: {
+        if (!args->name || !args->name[0]) {
+            fprintf(stderr, "Persona name required for validate\n");
+            return SC_ERR_INVALID_ARGUMENT;
+        }
+#if defined(SC_IS_TEST) && SC_IS_TEST
+        (void)alloc;
+        fprintf(stdout, "Persona '%s' is valid.\n", args->name);
+        return SC_OK;
+#else
+#if defined(__unix__) || defined(__APPLE__)
+        const char *home = getenv("HOME");
+        if (!home || !home[0]) {
+            fprintf(stderr, "HOME not set\n");
+            return SC_ERR_NOT_FOUND;
+        }
+        char path[SC_PERSONA_PATH_MAX];
+        int n = snprintf(path, sizeof(path), "%s/.seaclaw/personas/%s.json", home, args->name);
+        if (n <= 0 || (size_t)n >= sizeof(path)) {
+            fprintf(stderr, "Invalid persona name\n");
+            return SC_ERR_INVALID_ARGUMENT;
+        }
+        FILE *f = fopen(path, "rb");
+        if (!f) {
+            fprintf(stderr, "Persona not found: %s\n", args->name);
+            return SC_ERR_NOT_FOUND;
+        }
+        if (fseek(f, 0, SEEK_END) != 0) {
+            fclose(f);
+            return SC_ERR_IO;
+        }
+        long sz = ftell(f);
+        if (sz < 0 || sz > (long)(1024 * 1024)) {
+            fclose(f);
+            return sz < 0 ? SC_ERR_IO : SC_ERR_INVALID_ARGUMENT;
+        }
+        rewind(f);
+        char *buf = (char *)alloc->alloc(alloc->ctx, (size_t)sz + 1);
+        if (!buf) {
+            fclose(f);
+            return SC_ERR_OUT_OF_MEMORY;
+        }
+        size_t read_len = fread(buf, 1, (size_t)sz, f);
+        fclose(f);
+        if (read_len != (size_t)sz) {
+            alloc->free(alloc->ctx, buf, (size_t)sz + 1);
+            return SC_ERR_IO;
+        }
+        buf[read_len] = '\0';
+        char *err_msg = NULL;
+        size_t err_len = 0;
+        sc_error_t err = sc_persona_validate_json(alloc, buf, read_len, &err_msg, &err_len);
+        alloc->free(alloc->ctx, buf, (size_t)sz + 1);
+        if (err != SC_OK) {
+            fprintf(stderr, "Persona '%s' is invalid: %s\n", args->name,
+                    err_msg ? err_msg : "unknown");
+            if (err_msg)
+                alloc->free(alloc->ctx, err_msg, err_len + 1);
+            return err;
+        }
+        fprintf(stdout, "Persona '%s' is valid.\n", args->name);
+        return SC_OK;
+#else
+        fprintf(stderr, "Persona validate requires POSIX\n");
+        return SC_ERR_NOT_SUPPORTED;
+#endif
+#endif
+    }
     case SC_PERSONA_ACTION_CREATE:
     case SC_PERSONA_ACTION_UPDATE: {
         if (!args->name || !args->name[0]) {
@@ -181,6 +254,16 @@ sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t
         if (!args->from_imessage && !args->from_gmail && !args->from_facebook) {
             fprintf(stderr, "No source specified. Use --from-imessage, --from-gmail, or "
                             "--from-facebook.\n");
+            return SC_ERR_INVALID_ARGUMENT;
+        }
+        if (args->from_facebook && !args->facebook_export_path) {
+            fprintf(stderr, "Facebook export requires a file path. Use: --from-facebook "
+                            "/path/to/export.json\n");
+            return SC_ERR_INVALID_ARGUMENT;
+        }
+        if (args->from_gmail && !args->gmail_export_path) {
+            fprintf(stderr, "Gmail export requires a file path. Use: --from-gmail "
+                            "/path/to/export.json\n");
             return SC_ERR_INVALID_ARGUMENT;
         }
 #if defined(SC_IS_TEST) && SC_IS_TEST
@@ -232,11 +315,87 @@ sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t
             return SC_ERR_NOT_SUPPORTED;
 #endif
         }
-        if (args->from_gmail || args->from_facebook) {
-            fprintf(stderr, "Gmail and Facebook sources require manual export. Use --from-imessage "
-                            "for now.\n");
-            return SC_ERR_NOT_SUPPORTED;
+#if !defined(SC_IS_TEST) || SC_IS_TEST == 0
+        if (args->from_facebook && args->facebook_export_path) {
+            FILE *f = fopen(args->facebook_export_path, "rb");
+            if (!f) {
+                fprintf(stderr, "Could not open Facebook export: %s\n",
+                        args->facebook_export_path);
+                return SC_ERR_IO;
+            }
+            fseek(f, 0, SEEK_END);
+            long sz = ftell(f);
+            fseek(f, 0, SEEK_SET);
+            if (sz <= 0 || sz > (long)(10 * 1024 * 1024)) {
+                fclose(f);
+                fprintf(stderr, "Facebook export file too large or empty\n");
+                return SC_ERR_INVALID_ARGUMENT;
+            }
+            char *json = (char *)malloc((size_t)sz + 1);
+            if (!json) {
+                fclose(f);
+                return SC_ERR_OUT_OF_MEMORY;
+            }
+            size_t nr = fread(json, 1, (size_t)sz, f);
+            fclose(f);
+            json[nr] = '\0';
+
+            char **messages = NULL;
+            size_t msg_count = 0;
+            sc_error_t perr =
+                sc_persona_sampler_facebook_parse(json, nr, &messages, &msg_count);
+            free(json);
+            if (perr != SC_OK) {
+                fprintf(stderr, "Failed to parse Facebook export\n");
+                return perr;
+            }
+            fprintf(stdout, "Found %zu messages from Facebook\n", msg_count);
+            if (messages) {
+                for (size_t i = 0; i < msg_count; i++)
+                    free(messages[i]);
+                free(messages);
+            }
         }
+        if (args->from_gmail && args->gmail_export_path) {
+            FILE *f = fopen(args->gmail_export_path, "rb");
+            if (!f) {
+                fprintf(stderr, "Could not open Gmail export: %s\n", args->gmail_export_path);
+                return SC_ERR_IO;
+            }
+            fseek(f, 0, SEEK_END);
+            long sz = ftell(f);
+            fseek(f, 0, SEEK_SET);
+            if (sz <= 0 || sz > (long)(10 * 1024 * 1024)) {
+                fclose(f);
+                fprintf(stderr, "Gmail export file too large or empty\n");
+                return SC_ERR_INVALID_ARGUMENT;
+            }
+            char *json = (char *)malloc((size_t)sz + 1);
+            if (!json) {
+                fclose(f);
+                return SC_ERR_OUT_OF_MEMORY;
+            }
+            size_t nr = fread(json, 1, (size_t)sz, f);
+            fclose(f);
+            json[nr] = '\0';
+
+            char **messages = NULL;
+            size_t msg_count = 0;
+            sc_error_t perr =
+                sc_persona_sampler_gmail_parse(json, nr, &messages, &msg_count);
+            free(json);
+            if (perr != SC_OK) {
+                fprintf(stderr, "Failed to parse Gmail export\n");
+                return perr;
+            }
+            fprintf(stdout, "Found %zu messages from Gmail\n", msg_count);
+            if (messages) {
+                for (size_t i = 0; i < msg_count; i++)
+                    free(messages[i]);
+                free(messages);
+            }
+        }
+#endif
         sc_persona_t template = {0};
         template.name = sc_strdup(alloc, args->name);
         if (!template.name)

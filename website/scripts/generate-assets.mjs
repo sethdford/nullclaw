@@ -12,19 +12,19 @@ const whiteClaw = clawSvg.replace(
   /<\/svg>/,
   "<style>path{fill:#fff}</style></svg>",
 );
-const tealClaw = clawSvg.replace(
+const greenClaw = clawSvg.replace(
   /<\/svg>/,
-  "<style>path{fill:#14B8A6}</style></svg>",
+  "<style>path{fill:#7AB648}</style></svg>",
 );
 
 async function generateFavicons() {
   for (const size of [16, 32, 48]) {
-    await sharp(Buffer.from(tealClaw))
+    await sharp(Buffer.from(greenClaw))
       .resize(size, size)
       .png()
       .toFile(join(pub, `favicon-${size}.png`));
   }
-  await sharp(Buffer.from(tealClaw))
+  await sharp(Buffer.from(greenClaw))
     .resize(180, 180)
     .png()
     .toFile(join(pub, "apple-touch-icon.png"));
@@ -37,7 +37,7 @@ async function generateOgImage() {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
     <defs>
       <radialGradient id="g1" cx="30%" cy="40%" r="60%">
-        <stop offset="0%" stop-color="rgba(20,184,166,0.15)"/>
+        <stop offset="0%" stop-color="rgba(122,182,72,0.15)"/>
         <stop offset="100%" stop-color="transparent"/>
       </radialGradient>
       <radialGradient id="g2" cx="75%" cy="65%" r="50%">

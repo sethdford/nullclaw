@@ -326,6 +326,159 @@ sc_error_t sc_persona_load_json(sc_allocator_t *alloc, const char *json, size_t 
     return SC_OK;
 }
 
+/* --- Validation --- */
+
+static sc_error_t set_err_msg(sc_allocator_t *alloc, char **err_msg, size_t *err_msg_len,
+                              const char *msg) {
+    if (!alloc || !err_msg || !err_msg_len)
+        return SC_ERR_INVALID_ARGUMENT;
+    size_t len = strlen(msg);
+    char *buf = (char *)alloc->alloc(alloc->ctx, len + 1);
+    if (!buf)
+        return SC_ERR_OUT_OF_MEMORY;
+    memcpy(buf, msg, len + 1);
+    *err_msg = buf;
+    *err_msg_len = len;
+    return SC_ERR_INVALID_ARGUMENT;
+}
+
+static bool is_string_array(const sc_json_value_t *arr) {
+    if (!arr || arr->type != SC_JSON_ARRAY || !arr->data.array.items)
+        return false;
+    for (size_t i = 0; i < arr->data.array.len; i++) {
+        const sc_json_value_t *item = arr->data.array.items[i];
+        if (!item || item->type != SC_JSON_STRING)
+            return false;
+    }
+    return true;
+}
+
+sc_error_t sc_persona_validate_json(sc_allocator_t *alloc, const char *json, size_t json_len,
+                                    char **err_msg, size_t *err_msg_len) {
+    if (!alloc || !json || !err_msg || !err_msg_len)
+        return SC_ERR_INVALID_ARGUMENT;
+    *err_msg = NULL;
+    *err_msg_len = 0;
+
+    sc_json_value_t *root = NULL;
+    sc_error_t err = sc_json_parse(alloc, json, json_len, &root);
+    if (err != SC_OK || !root) {
+        return set_err_msg(alloc, err_msg, err_msg_len,
+                           err != SC_OK ? "JSON parse error" : "Invalid JSON");
+    }
+    if (root->type != SC_JSON_OBJECT) {
+        sc_json_free(alloc, root);
+        return set_err_msg(alloc, err_msg, err_msg_len, "Root must be JSON object");
+    }
+
+    /* Required: version — must be number, must be 1 */
+    sc_json_value_t *ver_val = sc_json_object_get(root, "version");
+    if (!ver_val || ver_val->type != SC_JSON_NUMBER) {
+        sc_json_free(alloc, root);
+        return set_err_msg(alloc, err_msg, err_msg_len,
+                           "Missing or invalid 'version' (must be number 1)");
+    }
+    double ver = ver_val->data.number;
+    if (ver != 1.0) {
+        sc_json_free(alloc, root);
+        return set_err_msg(alloc, err_msg, err_msg_len, "version must be 1");
+    }
+
+    /* Required: name — must be non-empty string */
+    const char *name = sc_json_get_string(root, "name");
+    if (!name || !name[0]) {
+        sc_json_free(alloc, root);
+        return set_err_msg(alloc, err_msg, err_msg_len, "Missing or empty 'name'");
+    }
+
+    /* Required: core — must be object */
+    sc_json_value_t *core = sc_json_object_get(root, "core");
+    if (!core || core->type != SC_JSON_OBJECT) {
+        sc_json_free(alloc, root);
+        return set_err_msg(alloc, err_msg, err_msg_len,
+                           "Missing or invalid 'core' (must be object)");
+    }
+
+    /* Required: core.identity — must be string */
+    const char *identity = sc_json_get_string(core, "identity");
+    if (!identity) {
+        sc_json_value_t *id_val = sc_json_object_get(core, "identity");
+        if (!id_val) {
+            sc_json_free(alloc, root);
+            return set_err_msg(alloc, err_msg, err_msg_len, "Missing 'core.identity'");
+        }
+        sc_json_free(alloc, root);
+        return set_err_msg(alloc, err_msg, err_msg_len, "core.identity must be string");
+    }
+
+    /* Required: core.traits — must be array */
+    sc_json_value_t *traits = sc_json_object_get(core, "traits");
+    if (!traits || traits->type != SC_JSON_ARRAY) {
+        sc_json_free(alloc, root);
+        return set_err_msg(alloc, err_msg, err_msg_len,
+                           "Missing or invalid 'core.traits' (must be array)");
+    }
+
+    /* Optional: core.vocabulary — object */
+    sc_json_value_t *vocab = sc_json_object_get(core, "vocabulary");
+    if (vocab && vocab->type != SC_JSON_OBJECT) {
+        sc_json_free(alloc, root);
+        return set_err_msg(alloc, err_msg, err_msg_len, "core.vocabulary must be object");
+    }
+    if (vocab && vocab->type == SC_JSON_OBJECT) {
+        sc_json_value_t *pref = sc_json_object_get(vocab, "preferred");
+        if (pref && !is_string_array(pref)) {
+            sc_json_free(alloc, root);
+            return set_err_msg(alloc, err_msg, err_msg_len,
+                               "core.vocabulary.preferred must be array of strings");
+        }
+        sc_json_value_t *avoid = sc_json_object_get(vocab, "avoided");
+        if (avoid && !is_string_array(avoid)) {
+            sc_json_free(alloc, root);
+            return set_err_msg(alloc, err_msg, err_msg_len,
+                               "core.vocabulary.avoided must be array of strings");
+        }
+        sc_json_value_t *slang = sc_json_object_get(vocab, "slang");
+        if (slang && !is_string_array(slang)) {
+            sc_json_free(alloc, root);
+            return set_err_msg(alloc, err_msg, err_msg_len,
+                               "core.vocabulary.slang must be array of strings");
+        }
+    }
+
+    /* Optional: core.communication_rules — array of strings */
+    sc_json_value_t *rules = sc_json_object_get(core, "communication_rules");
+    if (rules && !is_string_array(rules)) {
+        sc_json_free(alloc, root);
+        return set_err_msg(alloc, err_msg, err_msg_len,
+                           "core.communication_rules must be array of strings");
+    }
+
+    /* Optional: core.values — array of strings */
+    sc_json_value_t *vals = sc_json_object_get(core, "values");
+    if (vals && !is_string_array(vals)) {
+        sc_json_free(alloc, root);
+        return set_err_msg(alloc, err_msg, err_msg_len, "core.values must be array of strings");
+    }
+
+    /* Optional: core.decision_style — string */
+    sc_json_value_t *ds_val = sc_json_object_get(core, "decision_style");
+    if (ds_val && ds_val->type != SC_JSON_STRING) {
+        sc_json_free(alloc, root);
+        return set_err_msg(alloc, err_msg, err_msg_len, "core.decision_style must be string");
+    }
+
+    /* Optional: channel_overlays — object */
+    sc_json_value_t *overlays = sc_json_object_get(root, "channel_overlays");
+    if (overlays && overlays->type != SC_JSON_OBJECT) {
+        sc_json_free(alloc, root);
+        return set_err_msg(alloc, err_msg, err_msg_len, "channel_overlays must be object");
+    }
+
+    sc_json_free(alloc, root);
+    return SC_OK;
+}
+
 sc_error_t sc_persona_load(sc_allocator_t *alloc, const char *name, size_t name_len,
                            sc_persona_t *out) {
     if (!alloc || !name || !out)
