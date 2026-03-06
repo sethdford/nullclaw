@@ -68,8 +68,10 @@ static char *run_git(sc_allocator_t *alloc, const char *cwd, const char **argv, 
         dup2(fds[1], STDOUT_FILENO);
         dup2(fds[1], STDERR_FILENO);
         close(fds[1]);
-        if (cwd && cwd[0])
-            chdir(cwd);
+        if (cwd && cwd[0]) {
+            if (chdir(cwd) != 0)
+                _exit(127);
+        }
         setenv("PATH", "/usr/bin:/bin", 1);
 
         if (policy && policy->net_proxy && policy->net_proxy->enabled) {

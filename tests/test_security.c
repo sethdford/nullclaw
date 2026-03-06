@@ -1176,6 +1176,45 @@ static void test_sandbox_docker_name_and_desc(void) {
     SC_ASSERT(strlen(sc_sandbox_description(&sb)) > 0);
 }
 
+static void test_docker_sandbox_create(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    sc_docker_ctx_t ctx;
+    sc_docker_sandbox_init(&ctx, "/tmp/workspace", "alpine:latest", sys.ctx, sys.alloc, sys.free);
+    sc_sandbox_t sb = sc_docker_sandbox_get(&ctx);
+    SC_ASSERT(sb.ctx != NULL);
+    SC_ASSERT(sb.vtable != NULL);
+    SC_ASSERT_STR_EQ(sc_sandbox_name(&sb), "docker");
+}
+
+static void test_docker_sandbox_wrap_command(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    sc_docker_ctx_t ctx;
+    sc_docker_sandbox_init(&ctx, "/tmp/ws", "ubuntu:22.04", sys.ctx, sys.alloc, sys.free);
+    sc_sandbox_t sb = sc_docker_sandbox_get(&ctx);
+    const char *argv[] = {"echo", "hello"};
+    const char *out[32];
+    size_t out_count = 0;
+    sc_error_t err = sc_sandbox_wrap_command(&sb, argv, 2, out, 32, &out_count);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT(out_count >= 12);
+    SC_ASSERT_STR_EQ(out[0], "docker");
+    SC_ASSERT_STR_EQ(out[1], "run");
+    SC_ASSERT_STR_EQ(out[out_count - 2], "echo");
+    SC_ASSERT_STR_EQ(out[out_count - 1], "hello");
+}
+
+static void test_docker_sandbox_has_methods(void) {
+    sc_allocator_t sys = sc_system_allocator();
+    sc_docker_ctx_t ctx;
+    sc_docker_sandbox_init(&ctx, "/tmp", "alpine", sys.ctx, sys.alloc, sys.free);
+    sc_sandbox_t sb = sc_docker_sandbox_get(&ctx);
+    SC_ASSERT(sb.vtable->wrap_command != NULL);
+    SC_ASSERT(sb.vtable->is_available != NULL);
+    SC_ASSERT(sb.vtable->name != NULL);
+    SC_ASSERT(sb.vtable->description != NULL);
+    SC_ASSERT(sb.vtable->apply == NULL);
+}
+
 /* --- Firecracker wrap output validation (Linux) --- */
 static void test_sandbox_firecracker_wrap_on_linux(void) {
 #ifdef __linux__
@@ -1227,12 +1266,10 @@ static void test_sandbox_create_each_backend(void) {
     };
 
     sc_sandbox_backend_t backends[] = {
-        SC_SANDBOX_NONE,        SC_SANDBOX_LANDLOCK,
-        SC_SANDBOX_FIREJAIL,    SC_SANDBOX_BUBBLEWRAP,
-        SC_SANDBOX_SEATBELT,    SC_SANDBOX_SECCOMP,
-        SC_SANDBOX_WASI,        SC_SANDBOX_LANDLOCK_SECCOMP,
-        SC_SANDBOX_FIRECRACKER, SC_SANDBOX_APPCONTAINER,
-        SC_SANDBOX_AUTO,
+        SC_SANDBOX_NONE,        SC_SANDBOX_LANDLOCK,     SC_SANDBOX_FIREJAIL,
+        SC_SANDBOX_BUBBLEWRAP,  SC_SANDBOX_DOCKER,       SC_SANDBOX_SEATBELT,
+        SC_SANDBOX_SECCOMP,     SC_SANDBOX_WASI,         SC_SANDBOX_LANDLOCK_SECCOMP,
+        SC_SANDBOX_FIRECRACKER, SC_SANDBOX_APPCONTAINER, SC_SANDBOX_AUTO,
     };
     size_t n = sizeof(backends) / sizeof(backends[0]);
 
@@ -1565,4 +1602,7 @@ void run_security_tests(void) {
     SC_RUN_TEST(test_sandbox_docker_not_available_in_test);
     SC_RUN_TEST(test_sandbox_docker_wrap_format);
     SC_RUN_TEST(test_sandbox_docker_name_and_desc);
+    SC_RUN_TEST(test_docker_sandbox_create);
+    SC_RUN_TEST(test_docker_sandbox_wrap_command);
+    SC_RUN_TEST(test_docker_sandbox_has_methods);
 }

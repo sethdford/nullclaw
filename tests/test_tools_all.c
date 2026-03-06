@@ -1759,6 +1759,47 @@ static void test_facebook_tool_execute_empty(void) {
         tool.vtable->deinit(tool.ctx, &alloc);
 }
 
+static void test_facebook_tool_execute_with_args(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_t tool;
+    sc_error_t err = sc_facebook_tool_create(&alloc, &tool);
+    SC_ASSERT_EQ(err, SC_OK);
+    const char *json = "{\"operation\":\"post\",\"page_id\":\"123\",\"message\":\"Hello\"}";
+    sc_json_value_t *args = NULL;
+    err = sc_json_parse(&alloc, json, strlen(json), &args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(args);
+    sc_tool_result_t out = {0};
+    err = tool.vtable->execute(tool.ctx, &alloc, args, &out);
+    sc_json_free(&alloc, args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(out.success);
+    SC_ASSERT_NOT_NULL(out.output);
+    SC_ASSERT_TRUE(out.output_len > 0);
+    sc_tool_result_free(&alloc, &out);
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
+}
+
+static void test_facebook_tool_execute_missing_required(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_t tool;
+    sc_facebook_tool_create(&alloc, &tool);
+    const char *json = "{}";
+    sc_json_value_t *args = NULL;
+    sc_error_t err = sc_json_parse(&alloc, json, strlen(json), &args);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_tool_result_t out = {0};
+    err = tool.vtable->execute(tool.ctx, &alloc, args, &out);
+    sc_json_free(&alloc, args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_FALSE(out.success);
+    SC_ASSERT_TRUE(out.error_msg != NULL && out.error_msg_len > 0);
+    sc_tool_result_free(&alloc, &out);
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
+}
+
 /* ─── Instagram Posts tool ─────────────────────────────────────────────────── */
 static void test_instagram_tool_create(void) {
     sc_allocator_t alloc = sc_system_allocator();
@@ -1782,6 +1823,49 @@ static void test_instagram_tool_execute_empty(void) {
     SC_ASSERT_EQ(err, SC_OK);
     sc_tool_result_free(&alloc, &result);
     sc_json_free(&alloc, args);
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
+}
+
+static void test_instagram_tool_execute_with_args(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_t tool;
+    sc_error_t err = sc_instagram_tool_create(&alloc, &tool);
+    SC_ASSERT_EQ(err, SC_OK);
+    const char *json = "{\"operation\":\"publish_photo\",\"account_id\":\"456\",\"image_url\":"
+                       "\"https://example.com/"
+                       "img.jpg\",\"caption\":\"Test\"}";
+    sc_json_value_t *args = NULL;
+    err = sc_json_parse(&alloc, json, strlen(json), &args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(args);
+    sc_tool_result_t out = {0};
+    err = tool.vtable->execute(tool.ctx, &alloc, args, &out);
+    sc_json_free(&alloc, args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(out.success);
+    SC_ASSERT_NOT_NULL(out.output);
+    SC_ASSERT_TRUE(out.output_len > 0);
+    sc_tool_result_free(&alloc, &out);
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
+}
+
+static void test_instagram_tool_execute_missing_required(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_t tool;
+    sc_instagram_tool_create(&alloc, &tool);
+    const char *json = "{}";
+    sc_json_value_t *args = NULL;
+    sc_error_t err = sc_json_parse(&alloc, json, strlen(json), &args);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_tool_result_t out = {0};
+    err = tool.vtable->execute(tool.ctx, &alloc, args, &out);
+    sc_json_free(&alloc, args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_FALSE(out.success);
+    SC_ASSERT_TRUE(out.error_msg != NULL && out.error_msg_len > 0);
+    sc_tool_result_free(&alloc, &out);
     if (tool.vtable->deinit)
         tool.vtable->deinit(tool.ctx, &alloc);
 }
@@ -1813,6 +1897,47 @@ static void test_twitter_tool_execute_empty(void) {
         tool.vtable->deinit(tool.ctx, &alloc);
 }
 
+static void test_twitter_tool_execute_with_args(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_t tool;
+    sc_error_t err = sc_twitter_tool_create(&alloc, &tool);
+    SC_ASSERT_EQ(err, SC_OK);
+    const char *json = "{\"action\":\"post\",\"text\":\"Hello world\"}";
+    sc_json_value_t *args = NULL;
+    err = sc_json_parse(&alloc, json, strlen(json), &args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(args);
+    sc_tool_result_t out = {0};
+    err = tool.vtable->execute(tool.ctx, &alloc, args, &out);
+    sc_json_free(&alloc, args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(out.success);
+    SC_ASSERT_NOT_NULL(out.output);
+    SC_ASSERT_TRUE(out.output_len > 0);
+    sc_tool_result_free(&alloc, &out);
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
+}
+
+static void test_twitter_tool_execute_missing_required(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_t tool;
+    sc_twitter_tool_create(&alloc, &tool);
+    const char *json = "{}";
+    sc_json_value_t *args = NULL;
+    sc_error_t err = sc_json_parse(&alloc, json, strlen(json), &args);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_tool_result_t out = {0};
+    err = tool.vtable->execute(tool.ctx, &alloc, args, &out);
+    sc_json_free(&alloc, args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_FALSE(out.success);
+    SC_ASSERT_TRUE(out.error_msg != NULL && out.error_msg_len > 0);
+    sc_tool_result_free(&alloc, &out);
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
+}
+
 /* ─── gcloud tool ──────────────────────────────────────────────────────────── */
 static void test_gcloud_tool_create(void) {
     sc_allocator_t alloc = sc_system_allocator();
@@ -1840,6 +1965,47 @@ static void test_gcloud_tool_execute_empty(void) {
         tool.vtable->deinit(tool.ctx, &alloc);
 }
 
+static void test_gcloud_tool_execute_with_args(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_t tool;
+    sc_error_t err = sc_gcloud_create(&alloc, NULL, &tool);
+    SC_ASSERT_EQ(err, SC_OK);
+    const char *json = "{\"command\":\"compute instances list\"}";
+    sc_json_value_t *args = NULL;
+    err = sc_json_parse(&alloc, json, strlen(json), &args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(args);
+    sc_tool_result_t out = {0};
+    err = tool.vtable->execute(tool.ctx, &alloc, args, &out);
+    sc_json_free(&alloc, args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(out.success);
+    SC_ASSERT_NOT_NULL(out.output);
+    SC_ASSERT_TRUE(out.output_len > 0);
+    sc_tool_result_free(&alloc, &out);
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
+}
+
+static void test_gcloud_tool_execute_missing_required(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_t tool;
+    sc_gcloud_create(&alloc, NULL, &tool);
+    const char *json = "{}";
+    sc_json_value_t *args = NULL;
+    sc_error_t err = sc_json_parse(&alloc, json, strlen(json), &args);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_tool_result_t out = {0};
+    err = tool.vtable->execute(tool.ctx, &alloc, args, &out);
+    sc_json_free(&alloc, args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_FALSE(out.success);
+    SC_ASSERT_TRUE(out.error_msg != NULL && out.error_msg_len > 0);
+    sc_tool_result_free(&alloc, &out);
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
+}
+
 /* ─── firebase tool ────────────────────────────────────────────────────────── */
 static void test_firebase_tool_create(void) {
     sc_allocator_t alloc = sc_system_allocator();
@@ -1863,6 +2029,47 @@ static void test_firebase_tool_execute_empty(void) {
     SC_ASSERT_EQ(err, SC_OK);
     sc_tool_result_free(&alloc, &result);
     sc_json_free(&alloc, args);
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
+}
+
+static void test_firebase_tool_execute_with_args(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_t tool;
+    sc_error_t err = sc_firebase_create(&alloc, NULL, &tool);
+    SC_ASSERT_EQ(err, SC_OK);
+    const char *json = "{\"command\":\"deploy\"}";
+    sc_json_value_t *args = NULL;
+    err = sc_json_parse(&alloc, json, strlen(json), &args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(args);
+    sc_tool_result_t out = {0};
+    err = tool.vtable->execute(tool.ctx, &alloc, args, &out);
+    sc_json_free(&alloc, args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(out.success);
+    SC_ASSERT_NOT_NULL(out.output);
+    SC_ASSERT_TRUE(out.output_len > 0);
+    sc_tool_result_free(&alloc, &out);
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
+}
+
+static void test_firebase_tool_execute_missing_required(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_t tool;
+    sc_firebase_create(&alloc, NULL, &tool);
+    const char *json = "{}";
+    sc_json_value_t *args = NULL;
+    sc_error_t err = sc_json_parse(&alloc, json, strlen(json), &args);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_tool_result_t out = {0};
+    err = tool.vtable->execute(tool.ctx, &alloc, args, &out);
+    sc_json_free(&alloc, args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_FALSE(out.success);
+    SC_ASSERT_TRUE(out.error_msg != NULL && out.error_msg_len > 0);
+    sc_tool_result_free(&alloc, &out);
     if (tool.vtable->deinit)
         tool.vtable->deinit(tool.ctx, &alloc);
 }
@@ -2059,14 +2266,24 @@ void run_tools_all_tests(void) {
     SC_RUN_TEST(test_social_post);
     SC_RUN_TEST(test_facebook_tool_create);
     SC_RUN_TEST(test_facebook_tool_execute_empty);
+    SC_RUN_TEST(test_facebook_tool_execute_with_args);
+    SC_RUN_TEST(test_facebook_tool_execute_missing_required);
     SC_RUN_TEST(test_instagram_tool_create);
     SC_RUN_TEST(test_instagram_tool_execute_empty);
+    SC_RUN_TEST(test_instagram_tool_execute_with_args);
+    SC_RUN_TEST(test_instagram_tool_execute_missing_required);
     SC_RUN_TEST(test_twitter_tool_create);
     SC_RUN_TEST(test_twitter_tool_execute_empty);
+    SC_RUN_TEST(test_twitter_tool_execute_with_args);
+    SC_RUN_TEST(test_twitter_tool_execute_missing_required);
     SC_RUN_TEST(test_gcloud_tool_create);
     SC_RUN_TEST(test_gcloud_tool_execute_empty);
+    SC_RUN_TEST(test_gcloud_tool_execute_with_args);
+    SC_RUN_TEST(test_gcloud_tool_execute_missing_required);
     SC_RUN_TEST(test_firebase_tool_create);
     SC_RUN_TEST(test_firebase_tool_execute_empty);
+    SC_RUN_TEST(test_firebase_tool_execute_with_args);
+    SC_RUN_TEST(test_firebase_tool_execute_missing_required);
     SC_RUN_TEST(test_crm_create);
     SC_RUN_TEST(test_crm_contacts);
     SC_RUN_TEST(test_analytics_create);

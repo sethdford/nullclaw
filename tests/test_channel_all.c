@@ -391,6 +391,27 @@ static void test_facebook_poll_empty(void) {
     SC_ASSERT_EQ(out, 0);
     sc_facebook_destroy(&ch);
 }
+
+static void test_facebook_webhook_malformed(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch = {0};
+    sc_error_t err = sc_facebook_create(&alloc, "123", 3, "tok", 3, "sec", 3, &ch);
+    SC_ASSERT_EQ(err, SC_OK);
+    err = sc_facebook_on_webhook(ch.ctx, &alloc, "", 0);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+    err = sc_facebook_on_webhook(ch.ctx, &alloc, "}{", 2);
+    (void)err;
+    sc_facebook_destroy(&ch);
+}
+
+static void test_facebook_send_empty_message(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch;
+    sc_facebook_create(&alloc, "page1", 5, "token", 5, "secret", 6, &ch);
+    sc_error_t err = ch.vtable->send(ch.ctx, "user123", 7, "", 0, NULL, 0);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_facebook_destroy(&ch);
+}
 #endif
 
 /* ─── Instagram DMs ────────────────────────────────────────────────────────── */
@@ -444,6 +465,27 @@ static void test_instagram_poll_empty(void) {
     sc_error_t err = sc_instagram_poll(ch.ctx, &alloc, msgs, 4, &out);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_EQ(out, 0);
+    sc_instagram_destroy(&ch);
+}
+
+static void test_instagram_webhook_malformed(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch = {0};
+    sc_error_t err = sc_instagram_create(&alloc, "123", 3, "tok", 3, "sec", 3, &ch);
+    SC_ASSERT_EQ(err, SC_OK);
+    err = sc_instagram_on_webhook(ch.ctx, &alloc, "", 0);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+    err = sc_instagram_on_webhook(ch.ctx, &alloc, "}{", 2);
+    (void)err;
+    sc_instagram_destroy(&ch);
+}
+
+static void test_instagram_send_empty_message(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch;
+    sc_instagram_create(&alloc, "biz1", 4, "tok", 3, "sec", 3, &ch);
+    sc_error_t err = ch.vtable->send(ch.ctx, "user1", 5, "", 0, NULL, 0);
+    SC_ASSERT_EQ(err, SC_OK);
     sc_instagram_destroy(&ch);
 }
 #endif
@@ -501,6 +543,27 @@ static void test_twitter_poll_empty(void) {
     SC_ASSERT_EQ(out, 0);
     sc_twitter_destroy(&ch);
 }
+
+static void test_twitter_webhook_malformed(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch = {0};
+    sc_error_t err = sc_twitter_create(&alloc, "bearer", 6, &ch);
+    SC_ASSERT_EQ(err, SC_OK);
+    err = sc_twitter_on_webhook(ch.ctx, &alloc, "", 0);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+    err = sc_twitter_on_webhook(ch.ctx, &alloc, "}{", 2);
+    (void)err;
+    sc_twitter_destroy(&ch);
+}
+
+static void test_twitter_send_empty_message(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch;
+    sc_twitter_create(&alloc, "bearer-tok", 10, &ch);
+    sc_error_t err = ch.vtable->send(ch.ctx, "user1", 5, "", 0, NULL, 0);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_twitter_destroy(&ch);
+}
 #endif
 
 /* ─── Google RCS ───────────────────────────────────────────────────────────── */
@@ -554,6 +617,27 @@ static void test_google_rcs_poll_empty(void) {
     sc_error_t err = sc_google_rcs_poll(ch.ctx, &alloc, msgs, 4, &out);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_EQ(out, 0);
+    sc_google_rcs_destroy(&ch);
+}
+
+static void test_google_rcs_webhook_malformed(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch = {0};
+    sc_error_t err = sc_google_rcs_create(&alloc, "agent1", 6, "tok", 3, &ch);
+    SC_ASSERT_EQ(err, SC_OK);
+    err = sc_google_rcs_on_webhook(ch.ctx, &alloc, "", 0);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+    err = sc_google_rcs_on_webhook(ch.ctx, &alloc, "}{", 2);
+    (void)err;
+    sc_google_rcs_destroy(&ch);
+}
+
+static void test_google_rcs_send_empty_message(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch;
+    sc_google_rcs_create(&alloc, "agent1", 6, "tok", 3, &ch);
+    sc_error_t err = ch.vtable->send(ch.ctx, "+1234", 5, "", 0, NULL, 0);
+    SC_ASSERT_EQ(err, SC_OK);
     sc_google_rcs_destroy(&ch);
 }
 #endif
@@ -1777,6 +1861,8 @@ void run_channel_all_tests(void) {
     SC_RUN_TEST(test_facebook_send);
     SC_RUN_TEST(test_facebook_webhook_and_poll);
     SC_RUN_TEST(test_facebook_poll_empty);
+    SC_RUN_TEST(test_facebook_webhook_malformed);
+    SC_RUN_TEST(test_facebook_send_empty_message);
 #endif
 #if SC_HAS_INSTAGRAM
     SC_RUN_TEST(test_instagram_create);
@@ -1784,6 +1870,8 @@ void run_channel_all_tests(void) {
     SC_RUN_TEST(test_instagram_health_check);
     SC_RUN_TEST(test_instagram_webhook_and_poll);
     SC_RUN_TEST(test_instagram_poll_empty);
+    SC_RUN_TEST(test_instagram_webhook_malformed);
+    SC_RUN_TEST(test_instagram_send_empty_message);
 #endif
 #if SC_HAS_TWITTER
     SC_RUN_TEST(test_twitter_create);
@@ -1791,6 +1879,8 @@ void run_channel_all_tests(void) {
     SC_RUN_TEST(test_twitter_health_check);
     SC_RUN_TEST(test_twitter_webhook_and_poll);
     SC_RUN_TEST(test_twitter_poll_empty);
+    SC_RUN_TEST(test_twitter_webhook_malformed);
+    SC_RUN_TEST(test_twitter_send_empty_message);
 #endif
 #if SC_HAS_GOOGLE_RCS
     SC_RUN_TEST(test_google_rcs_create);
@@ -1798,6 +1888,8 @@ void run_channel_all_tests(void) {
     SC_RUN_TEST(test_google_rcs_health_check);
     SC_RUN_TEST(test_google_rcs_webhook_and_poll);
     SC_RUN_TEST(test_google_rcs_poll_empty);
+    SC_RUN_TEST(test_google_rcs_webhook_malformed);
+    SC_RUN_TEST(test_google_rcs_send_empty_message);
 #endif
 #if SC_HAS_MATRIX
     SC_RUN_TEST(test_matrix_create);
