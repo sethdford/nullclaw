@@ -105,8 +105,8 @@ static void error_response(sc_allocator_t *alloc, int status, const char *messag
 }
 
 /* Build one SSE chunk event: data: {"id":"...","object":"chat.completion.chunk",...}\n\n */
-/* Use sizeof(lit)-1 to avoid hardcoded length mismatches */
-#define SSE_APPEND_LIT(buf, lit) sc_json_buf_append_raw((buf), (lit), strlen(lit))
+/* sizeof(lit)-1 is a compile-time constant; avoids runtime strlen on string literals */
+#define SSE_APPEND_LIT(buf, lit) sc_json_buf_append_raw((buf), (lit), sizeof(lit) - 1)
 
 static sc_error_t append_sse_chunk(sc_json_buf_t *buf, sc_allocator_t *alloc,
                                    const char *id, const char *model, size_t model_len,

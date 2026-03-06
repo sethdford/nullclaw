@@ -64,10 +64,10 @@ char *sc_preferences_extract(sc_allocator_t *alloc, const char *user_msg, size_t
 
 sc_error_t sc_preferences_store(sc_memory_t *memory, sc_allocator_t *alloc, const char *preference,
                                 size_t preference_len) {
+    (void)alloc;
     if (!memory || !memory->vtable || !memory->vtable->store || !preference)
         return SC_ERR_INVALID_ARGUMENT;
 
-    /* Build key: _pref:<first 40 chars of preference> */
     char key[64];
     size_t klen = SC_PREF_KEY_PREFIX_LEN;
     memcpy(key, SC_PREF_KEY_PREFIX, klen);
@@ -76,7 +76,7 @@ sc_error_t sc_preferences_store(sc_memory_t *memory, sc_allocator_t *alloc, cons
     klen += copy;
     key[klen] = '\0';
 
-    return memory->vtable->store(memory->ctx, alloc, key, klen, preference, preference_len, "", 0);
+    return memory->vtable->store(memory->ctx, key, klen, preference, preference_len, NULL, "", 0);
 }
 
 sc_error_t sc_preferences_load(sc_memory_t *memory, sc_allocator_t *alloc, char **out,

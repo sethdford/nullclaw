@@ -4,6 +4,7 @@
 #include "seaclaw/agent.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
+#include "seaclaw/provider.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -43,6 +44,13 @@ bool sc_should_compact(const sc_owned_message_t *history, size_t history_count,
 sc_error_t sc_compact_history(sc_allocator_t *alloc, sc_owned_message_t *history,
                               size_t *history_count, size_t *history_cap,
                               const sc_compaction_config_t *config);
+
+/* LLM-enhanced compaction: sends old messages to the provider for summarization.
+ * Falls back to rule-based compaction if provider is NULL or the LLM call fails.
+ * provider/alloc/history semantics are the same as sc_compact_history. */
+sc_error_t sc_compact_history_llm(sc_allocator_t *alloc, sc_owned_message_t *history,
+                                  size_t *history_count, size_t *history_cap,
+                                  const sc_compaction_config_t *config, sc_provider_t *provider);
 
 /* Pressure-based compaction: remove oldest non-system messages until pressure < target.
  * Replaces removed messages with "[Previous context compacted: N messages summarized]".

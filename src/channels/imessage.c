@@ -17,6 +17,9 @@
 #endif
 #endif
 
+#define SC_IMESSAGE_SENT_RING_SIZE 8
+#define SC_IMESSAGE_SENT_PREFIX_LEN 128
+
 typedef struct sc_imessage_ctx {
     sc_allocator_t *alloc;
     char *default_target;
@@ -25,7 +28,34 @@ typedef struct sc_imessage_ctx {
     int64_t last_rowid;
     const char *const *allow_from;
     size_t allow_from_count;
+    char sent_ring[SC_IMESSAGE_SENT_RING_SIZE][SC_IMESSAGE_SENT_PREFIX_LEN];
+    size_t sent_ring_len[SC_IMESSAGE_SENT_RING_SIZE];
+    size_t sent_ring_idx;
 } sc_imessage_ctx_t;
+
+#if !SC_IS_TEST && defined(__APPLE__) && defined(__MACH__)
+static void imessage_record_sent(sc_imessage_ctx_t *c, const char *msg, size_t msg_len) {
+    size_t slot = c->sent_ring_idx % SC_IMESSAGE_SENT_RING_SIZE;
+    size_t copy_len = msg_len < SC_IMESSAGE_SENT_PREFIX_LEN - 1
+                          ? msg_len : SC_IMESSAGE_SENT_PREFIX_LEN - 1;
+    memcpy(c->sent_ring[slot], msg, copy_len);
+    c->sent_ring[slot][copy_len] = '\0';
+    c->sent_ring_len[slot] = copy_len;
+    c->sent_ring_idx++;
+}
+
+static bool imessage_was_sent_by_us(sc_imessage_ctx_t *c, const char *text, size_t text_len) {
+    for (size_t i = 0; i < SC_IMESSAGE_SENT_RING_SIZE; i++) {
+        size_t slen = c->sent_ring_len[i];
+        if (slen == 0)
+            continue;
+        size_t cmp_len = text_len < slen ? text_len : slen;
+        if (cmp_len > 0 && memcmp(text, c->sent_ring[i], cmp_len) == 0)
+            return true;
+    }
+    return false;
+}
+#endif
 
 static sc_error_t imessage_start(void *ctx) {
     sc_imessage_ctx_t *c = (sc_imessage_ctx_t *)ctx;
@@ -140,36 +170,7 @@ static sc_error_t imessage_send(void *ctx, const char *target, size_t target_len
     if (!ok)
         return SC_ERR_CHANNEL_SEND;
 
-    /* After sending, advance last_rowid past any echo messages that iMessage
-       creates when sending to a number on the same Apple ID. Without this,
-       the poll would pick up the outgoing message echo as new input. */
-#ifdef SC_ENABLE_SQLITE
-    {
-        const char *home_env = getenv("HOME");
-        if (home_env) {
-            char db_path_buf[512];
-            int dp = snprintf(db_path_buf, sizeof(db_path_buf), "%s/Library/Messages/chat.db", home_env);
-            if (dp > 0 && (size_t)dp < sizeof(db_path_buf)) {
-                usleep(500000); /* 500ms for Messages.app to write the echo */
-                sqlite3 *db = NULL;
-                if (sqlite3_open_v2(db_path_buf, &db, SQLITE_OPEN_READONLY, NULL) == SQLITE_OK) {
-                    sqlite3_stmt *stmt = NULL;
-                    if (sqlite3_prepare_v2(db, "SELECT MAX(ROWID) FROM message", -1, &stmt,
-                                           NULL) == SQLITE_OK) {
-                        if (sqlite3_step(stmt) == SQLITE_ROW) {
-                            int64_t max_rowid = sqlite3_column_int64(stmt, 0);
-                            if (max_rowid > c->last_rowid)
-                                c->last_rowid = max_rowid;
-                        }
-                        sqlite3_finalize(stmt);
-                    }
-                    sqlite3_close(db);
-                }
-            }
-        }
-    }
-#endif
-
+    imessage_record_sent(c, message, message_len);
     return SC_OK;
 #endif
 }
@@ -343,6 +344,12 @@ sc_error_t sc_imessage_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel
 
         if (!text || !handle)
             continue;
+
+        /* Skip messages that match content we recently sent (echo prevention) */
+        if (imessage_was_sent_by_us(c, text, strlen(text))) {
+            c->last_rowid = rowid;
+            continue;
+        }
 
         size_t handle_len = strlen(handle);
         if (c->allow_from_count > 0) {
