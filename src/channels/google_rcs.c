@@ -1,9 +1,9 @@
 /*
  * Google RCS Business Messaging channel.
  */
+#include "seaclaw/channels/google_rcs.h"
 #include "seaclaw/channel.h"
 #include "seaclaw/channel_loop.h"
-#include "seaclaw/channels/google_rcs.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
 #include "seaclaw/core/http.h"
@@ -12,11 +12,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define SC_RCS_API_BASE "https://rcsbusinessmessaging.googleapis.com/v1/phones/"
+#define SC_RCS_API_BASE         "https://rcsbusinessmessaging.googleapis.com/v1/phones/"
 #define SC_RCS_AGENT_MSG_SUFFIX "/agentMessages"
-#define SC_RCS_QUEUE_MAX       32
-#define SC_RCS_SESSION_KEY_MAX 127
-#define SC_RCS_CONTENT_MAX     4095
+#define SC_RCS_QUEUE_MAX        32
+#define SC_RCS_SESSION_KEY_MAX  127
+#define SC_RCS_CONTENT_MAX      4095
 
 typedef struct sc_google_rcs_queued_msg {
     char session_key[128];
@@ -124,7 +124,7 @@ jfail:
 }
 
 static void google_rcs_queue_push(sc_google_rcs_ctx_t *c, const char *from, size_t from_len,
-                                 const char *body, size_t body_len) {
+                                  const char *body, size_t body_len) {
     if (c->queue_count >= SC_RCS_QUEUE_MAX)
         return;
     sc_google_rcs_queued_msg_t *slot = &c->queue[c->queue_tail];
@@ -139,7 +139,7 @@ static void google_rcs_queue_push(sc_google_rcs_ctx_t *c, const char *from, size
 }
 
 sc_error_t sc_google_rcs_on_webhook(void *channel_ctx, sc_allocator_t *alloc, const char *body,
-                                   size_t body_len) {
+                                    size_t body_len) {
     sc_google_rcs_ctx_t *c = (sc_google_rcs_ctx_t *)channel_ctx;
     if (!c || !body || body_len == 0)
         return SC_ERR_INVALID_ARGUMENT;
@@ -157,12 +157,10 @@ sc_error_t sc_google_rcs_on_webhook(void *channel_ctx, sc_allocator_t *alloc, co
     sc_json_value_t *user_msg = sc_json_object_get(parsed, "userMessage");
     if (user_msg && user_msg->type == SC_JSON_OBJECT) {
         sc_json_value_t *text_obj = sc_json_object_get(user_msg, "text");
-        const char *text = text_obj && text_obj->type == SC_JSON_STRING
-                               ? text_obj->data.string.ptr
-                               : NULL;
-        size_t text_len = text_obj && text_obj->type == SC_JSON_STRING
-                             ? text_obj->data.string.len
-                             : 0;
+        const char *text =
+            text_obj && text_obj->type == SC_JSON_STRING ? text_obj->data.string.ptr : NULL;
+        size_t text_len =
+            text_obj && text_obj->type == SC_JSON_STRING ? text_obj->data.string.len : 0;
         const char *sender = sc_json_get_string(parsed, "senderPhoneNumber");
         if (sender && text && text_len > 0)
             google_rcs_queue_push(c, sender, strlen(sender), text, text_len);
@@ -213,7 +211,7 @@ static const sc_channel_vtable_t google_rcs_vtable = {
 };
 
 sc_error_t sc_google_rcs_create(sc_allocator_t *alloc, const char *agent_id, size_t agent_id_len,
-                               const char *token, size_t token_len, sc_channel_t *out) {
+                                const char *token, size_t token_len, sc_channel_t *out) {
     if (!alloc || !out)
         return SC_ERR_INVALID_ARGUMENT;
     sc_google_rcs_ctx_t *c = (sc_google_rcs_ctx_t *)calloc(1, sizeof(*c));

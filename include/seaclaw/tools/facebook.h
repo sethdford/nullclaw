@@ -6,6 +6,6 @@
 #include "seaclaw/tool.h"
 #include <stddef.h>
 
-sc_error_t sc_facebook_create(sc_allocator_t *alloc, sc_tool_t *out);
+sc_error_t sc_facebook_tool_create(sc_allocator_t *alloc, sc_tool_t *out);
 
 #endif /* SC_TOOLS_FACEBOOK_H */

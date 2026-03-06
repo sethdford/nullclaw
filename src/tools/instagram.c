@@ -230,7 +230,7 @@ static const sc_tool_vtable_t instagram_vtable = {
     .deinit = instagram_deinit,
 };
 
-sc_error_t sc_instagram_create(sc_allocator_t *alloc, sc_tool_t *out) {
+sc_error_t sc_instagram_tool_create(sc_allocator_t *alloc, sc_tool_t *out) {
     if (!alloc || !out)
         return SC_ERR_INVALID_ARGUMENT;
     sc_instagram_ctx_t *c = (sc_instagram_ctx_t *)calloc(1, sizeof(*c));

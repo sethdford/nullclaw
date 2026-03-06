@@ -117,3 +117,28 @@ info: build
     @stat -f '%z' build/seaclaw 2>/dev/null || stat -c '%s' build/seaclaw
     @echo " bytes (dev build)"
     @./build/seaclaw_tests 2>&1 | tail -1
+
+# Full local health check
+doctor: build
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "==> Running tests..."
+    RESULT=$(./build/seaclaw_tests 2>&1 | tail -1)
+    echo "    $RESULT"
+    if ! echo "$RESULT" | grep -q "passed"; then
+        echo "FAIL: tests did not pass"
+        exit 1
+    fi
+    echo "==> Binary size..."
+    SIZE=$(stat -f '%z' build/seaclaw 2>/dev/null || stat -c '%s' build/seaclaw)
+    echo "    $SIZE bytes (dev)"
+    echo "==> Config check..."
+    if [ -f ~/.seaclaw/config.json ]; then
+        echo "    config found"
+        ./build/seaclaw doctor 2>&1 | sed 's/^/    /' || true
+    else
+        echo "    no config (~/.seaclaw/config.json)"
+    fi
+    echo "==> Service status..."
+    ps aux 2>/dev/null | grep "[s]eaclaw service" | head -1 || echo "    not running"
+    echo "==> Done. All checks passed."

@@ -103,6 +103,18 @@
 #if SC_HAS_QQ
 #include "seaclaw/channels/qq.h"
 #endif
+#if SC_HAS_FACEBOOK
+#include "seaclaw/channels/facebook.h"
+#endif
+#if SC_HAS_INSTAGRAM
+#include "seaclaw/channels/instagram.h"
+#endif
+#if SC_HAS_TWITTER
+#include "seaclaw/channels/twitter.h"
+#endif
+#if SC_HAS_GOOGLE_RCS
+#include "seaclaw/channels/google_rcs.h"
+#endif
 
 #define SC_VERSION  "0.3.0"
 #define SC_CODENAME "seaclaw"
@@ -983,6 +995,91 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
     }
 #endif
 
+#if SC_HAS_FACEBOOK
+    sc_channel_t facebook_ch = {0};
+    if (cfg.channels.facebook.page_id && cfg.channels.facebook.page_access_token) {
+        err = sc_facebook_create(
+            alloc, cfg.channels.facebook.page_id, strlen(cfg.channels.facebook.page_id),
+            cfg.channels.facebook.page_access_token,
+            strlen(cfg.channels.facebook.page_access_token), cfg.channels.facebook.app_secret,
+            cfg.channels.facebook.app_secret ? strlen(cfg.channels.facebook.app_secret) : 0,
+            &facebook_ch);
+        if (err == SC_OK) {
+            channels[ch_count].channel_ctx = facebook_ch.ctx;
+            channels[ch_count].channel = &facebook_ch;
+            channels[ch_count].poll_fn = sc_facebook_poll;
+            channels[ch_count].webhook_fn = sc_facebook_on_webhook;
+            channels[ch_count].interval_ms = 1000;
+            channels[ch_count].last_poll_ms = 0;
+            ch_count++;
+            fprintf(stderr, "[%s] facebook channel configured (webhook+poll)\n", SC_CODENAME);
+        }
+    }
+#endif
+
+#if SC_HAS_INSTAGRAM
+    sc_channel_t instagram_ch = {0};
+    if (cfg.channels.instagram.business_account_id && cfg.channels.instagram.access_token) {
+        err = sc_instagram_create(
+            alloc, cfg.channels.instagram.business_account_id,
+            strlen(cfg.channels.instagram.business_account_id), cfg.channels.instagram.access_token,
+            strlen(cfg.channels.instagram.access_token), cfg.channels.instagram.app_secret,
+            cfg.channels.instagram.app_secret ? strlen(cfg.channels.instagram.app_secret) : 0,
+            &instagram_ch);
+        if (err == SC_OK) {
+            channels[ch_count].channel_ctx = instagram_ch.ctx;
+            channels[ch_count].channel = &instagram_ch;
+            channels[ch_count].poll_fn = sc_instagram_poll;
+            channels[ch_count].webhook_fn = sc_instagram_on_webhook;
+            channels[ch_count].interval_ms = 1000;
+            channels[ch_count].last_poll_ms = 0;
+            ch_count++;
+            fprintf(stderr, "[%s] instagram channel configured (webhook+poll)\n", SC_CODENAME);
+        }
+    }
+#endif
+
+#if SC_HAS_TWITTER
+    sc_channel_t twitter_ch = {0};
+    if (cfg.channels.twitter.bearer_token) {
+        err = sc_twitter_create(alloc, cfg.channels.twitter.bearer_token,
+                                strlen(cfg.channels.twitter.bearer_token), &twitter_ch);
+        if (err == SC_OK) {
+            channels[ch_count].channel_ctx = twitter_ch.ctx;
+            channels[ch_count].channel = &twitter_ch;
+            channels[ch_count].poll_fn = sc_twitter_poll;
+            channels[ch_count].webhook_fn = sc_twitter_on_webhook;
+            channels[ch_count].interval_ms = 1000;
+            channels[ch_count].last_poll_ms = 0;
+            ch_count++;
+            fprintf(stderr, "[%s] twitter channel configured (webhook+poll)\n", SC_CODENAME);
+        }
+    }
+#endif
+
+#if SC_HAS_GOOGLE_RCS
+    sc_channel_t google_rcs_ch = {0};
+    if (cfg.channels.google_rcs.agent_id) {
+        err = sc_google_rcs_create(alloc, cfg.channels.google_rcs.agent_id,
+                                   strlen(cfg.channels.google_rcs.agent_id),
+                                   cfg.channels.google_rcs.service_account_json_path,
+                                   cfg.channels.google_rcs.service_account_json_path
+                                       ? strlen(cfg.channels.google_rcs.service_account_json_path)
+                                       : 0,
+                                   &google_rcs_ch);
+        if (err == SC_OK) {
+            channels[ch_count].channel_ctx = google_rcs_ch.ctx;
+            channels[ch_count].channel = &google_rcs_ch;
+            channels[ch_count].poll_fn = sc_google_rcs_poll;
+            channels[ch_count].webhook_fn = sc_google_rcs_on_webhook;
+            channels[ch_count].interval_ms = 1000;
+            channels[ch_count].last_poll_ms = 0;
+            ch_count++;
+            fprintf(stderr, "[%s] google_rcs channel configured (webhook+poll)\n", SC_CODENAME);
+        }
+    }
+#endif
+
 #ifdef SC_HAS_CRON
     fprintf(stderr, "[%s] %zu channel(s) active, cron enabled\n", SC_CODENAME, ch_count);
 #else
@@ -1065,6 +1162,22 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
 #if SC_HAS_GOOGLE_CHAT
     if (google_chat_ch.ctx)
         sc_google_chat_destroy(&google_chat_ch);
+#endif
+#if SC_HAS_FACEBOOK
+    if (facebook_ch.ctx)
+        sc_facebook_destroy(&facebook_ch);
+#endif
+#if SC_HAS_INSTAGRAM
+    if (instagram_ch.ctx)
+        sc_instagram_destroy(&instagram_ch);
+#endif
+#if SC_HAS_TWITTER
+    if (twitter_ch.ctx)
+        sc_twitter_destroy(&twitter_ch);
+#endif
+#if SC_HAS_GOOGLE_RCS
+    if (google_rcs_ch.ctx)
+        sc_google_rcs_destroy(&google_rcs_ch);
 #endif
 
     sc_agent_deinit(&agent);

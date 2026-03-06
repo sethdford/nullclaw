@@ -6,6 +6,6 @@
 #include "seaclaw/tool.h"
 #include <stddef.h>
 
-sc_error_t sc_twitter_create(sc_allocator_t *alloc, sc_tool_t *out);
+sc_error_t sc_twitter_tool_create(sc_allocator_t *alloc, sc_tool_t *out);
 
 #endif /* SC_TOOLS_TWITTER_H */

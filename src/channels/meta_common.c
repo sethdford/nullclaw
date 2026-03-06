@@ -6,7 +6,7 @@
 #include <string.h>
 
 #define SC_META_GRAPH_BASE     "https://graph.facebook.com/v21.0/"
-#define SC_META_GRAPH_BASE_LEN 35
+#define SC_META_GRAPH_BASE_LEN (sizeof(SC_META_GRAPH_BASE) - 1)
 #define SC_META_SIG_PREFIX     "sha256="
 #define SC_META_SIG_PREFIX_LEN 7
 #define SC_META_HMAC_HEX_LEN   64

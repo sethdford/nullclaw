@@ -1,5 +1,5 @@
 #!/bin/sh
-# pre-commit: format checks on C source files + design token lint.
+# pre-commit: auto-format C files, format check, design token lint.
 # Activate: git config core.hooksPath .githooks
 
 CLANG_FMT="clang-format"
@@ -17,9 +17,13 @@ if [ -d "src" ] && [ -f "CMakeLists.txt" ]; then
                 echo "Warning: tabs found in $f (project uses spaces)"
             fi
         done
+        # Auto-format staged files, then re-stage them
+        echo "$staged_ch" | xargs "$CLANG_FMT" -i 2>/dev/null
+        echo "$staged_ch" | xargs git add
+        # Verify formatting is clean
         echo "$staged_ch" | xargs "$CLANG_FMT" --dry-run -Werror
         if [ $? -ne 0 ]; then
-            echo "clang-format failed. Run: $CLANG_FMT -i <file>"
+            echo "clang-format failed even after auto-format. Check .clang-format config."
             exit 1
         fi
     fi
@@ -38,8 +42,9 @@ if [ -d "build" ] && [ -f "build/libseaclaw_core.a" ]; then
 fi
 
 # Lint for raw hex colors in staged CSS/TS/Astro files
+# Skip token definition files (they define the colors themselves)
 if [ -x "scripts/lint-raw-colors.sh" ]; then
-    staged_style=$(git diff --cached --name-only --diff-filter=ACM -- '*.css' '*.ts' '*.tsx' '*.astro')
+    staged_style=$(git diff --cached --name-only --diff-filter=ACM -- '*.css' '*.ts' '*.tsx' '*.astro' | grep -v 'tokens\.' | grep -v 'design-tokens/')
     if [ -n "$staged_style" ]; then
         ./scripts/lint-raw-colors.sh
         if [ $? -ne 0 ]; then

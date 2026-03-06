@@ -6,6 +6,6 @@
 #include "seaclaw/tool.h"
 #include <stddef.h>
 
-sc_error_t sc_instagram_create(sc_allocator_t *alloc, sc_tool_t *out);
+sc_error_t sc_instagram_tool_create(sc_allocator_t *alloc, sc_tool_t *out);
 
 #endif /* SC_TOOLS_INSTAGRAM_H */

@@ -56,6 +56,7 @@ option(SC_ENABLE_GMAIL "Build Gmail channel (read-only OAuth2)" OFF)
 option(SC_ENABLE_TEAMS "Build Microsoft Teams channel" OFF)
 option(SC_ENABLE_TWILIO "Build Twilio SMS channel" OFF)
 option(SC_ENABLE_GOOGLE_CHAT "Build Google Chat channel" OFF)
+option(SC_ENABLE_GOOGLE_RCS "Build Google RCS channel" OFF)
 option(SC_ENABLE_FACEBOOK "Build Facebook Messenger channel" OFF)
 option(SC_ENABLE_VOICE "Build Voice channel (Sonata)" OFF)
 option(SC_ENABLE_ALL_CHANNELS "Build all channels" OFF)
@@ -186,6 +187,9 @@ endif()
 if(SC_ENABLE_GOOGLE_CHAT)
     list(APPEND CHANNEL_SOURCES src/channels/google_chat.c)
 endif()
+if(SC_ENABLE_GOOGLE_RCS)
+    list(APPEND CHANNEL_SOURCES src/channels/google_rcs.c)
+endif()
 if(SC_ENABLE_GMAIL)
     list(APPEND CHANNEL_SOURCES src/channels/gmail_base64.c src/channels/gmail.c)
 endif()
@@ -261,6 +265,8 @@ set(SC_CORE_SOURCES
     src/net_security.c
     src/config.c
     src/config_migrate.c
+    src/persona/persona.c
+    src/persona/examples.c
     src/config_serialize.c
     src/config_getters.c
     src/config_validate.c
@@ -309,6 +315,7 @@ set(SC_CORE_SOURCES
     src/gateway/tenant.c
     src/runtime/native.c
     src/runtime/docker.c
+    src/runtime/gce.c
     src/runtime/factory.c
     src/agent/action_preview.c
     src/agent/agent.c
@@ -419,12 +426,18 @@ set(SC_CORE_SOURCES
     src/tools/calendar.c
     src/tools/jira.c
     src/tools/social.c
+    src/tools/facebook.c
+    src/tools/instagram.c
+    src/tools/twitter.c
+    src/tools/gcloud.c
+    src/tools/firebase.c
     src/tools/crm.c
     src/tools/analytics.c
     src/tools/invoice.c
     src/tools/workflow.c
     src/tools/diff.c
     src/tools/factory.c
+    src/persona/persona.c
     src/mcp_server.c
     src/channels/thread_binding.c
     src/security/policy_engine.c
@@ -696,6 +709,9 @@ if(SC_ENABLE_TWILIO)
 endif()
 if(SC_ENABLE_GOOGLE_CHAT)
     target_compile_definitions(seaclaw_core PRIVATE SC_HAS_GOOGLE_CHAT=1)
+endif()
+if(SC_ENABLE_GOOGLE_RCS)
+    target_compile_definitions(seaclaw_core PRIVATE SC_HAS_GOOGLE_RCS=1)
 endif()
 if(SC_ENABLE_SIGNAL)
     target_compile_definitions(seaclaw_core PRIVATE SC_HAS_SIGNAL=1)
@@ -1100,6 +1116,9 @@ endif()
 if(SC_ENABLE_GOOGLE_CHAT)
     target_compile_definitions(seaclaw_core_test PRIVATE SC_HAS_GOOGLE_CHAT=1)
 endif()
+if(SC_ENABLE_GOOGLE_RCS)
+    target_compile_definitions(seaclaw_core_test PRIVATE SC_HAS_GOOGLE_RCS=1)
+endif()
 if(SC_ENABLE_SONATA)
     target_compile_definitions(seaclaw_core_test PRIVATE SC_HAS_SONATA=1)
 endif()
@@ -1259,6 +1278,7 @@ set(SC_TEST_SOURCES
     tests/test_agent_teams.c
     tests/test_untested_modules.c
     tests/test_modules_coverage.c
+    tests/test_persona.c
 )
 
 add_executable(seaclaw_tests ${SC_TEST_SOURCES} wasm/wasm_alloc.c)
@@ -1333,6 +1353,9 @@ if(SC_ENABLE_TWILIO)
 endif()
 if(SC_ENABLE_GOOGLE_CHAT)
     target_compile_definitions(seaclaw_tests PRIVATE SC_HAS_GOOGLE_CHAT=1)
+endif()
+if(SC_ENABLE_GOOGLE_RCS)
+    target_compile_definitions(seaclaw_tests PRIVATE SC_HAS_GOOGLE_RCS=1)
 endif()
 if(SC_ENABLE_GMAIL)
     target_compile_definitions(seaclaw_tests PRIVATE SC_HAS_GMAIL=1)

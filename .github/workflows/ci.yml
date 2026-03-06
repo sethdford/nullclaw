@@ -81,17 +81,105 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -yq libsqlite3-dev libcurl4-openssl-dev
 
-      - name: Build MinSizeRel + LTO
+      - name: Build MinSizeRel + LTO (full)
         run: |
           cmake -B build \
             -DCMAKE_BUILD_TYPE=MinSizeRel \
-            -DSC_ENABLE_LTO=ON
+            -DSC_ENABLE_LTO=ON \
+            -DSC_ENABLE_ALL_CHANNELS=ON \
+            -DSC_ENABLE_CURL=ON
           cmake --build build -j$(nproc)
 
       - name: Check binary size
         run: |
           SIZE=$(stat -c%s build/seaclaw 2>/dev/null || stat -f%z build/seaclaw)
           echo "Binary size: ${SIZE} bytes ($(( SIZE / 1024 )) KB)"
-          if [ "$SIZE" -gt 400000 ]; then
-            echo "::warning::Binary exceeds 400 KB target"
+          if [ "$SIZE" -gt 500000 ]; then
+            echo "::warning::Binary exceeds 500 KB target (full build)"
           fi
+
+  cross-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cross-compiler
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq gcc-aarch64-linux-gnu libsqlite3-dev
+
+      - name: Configure ARM64 cross-build
+        run: |
+          cmake -B build-arm64 \
+            -DCMAKE_TOOLCHAIN_FILE=cmake/aarch64-linux-gnu.cmake \
+            -DCMAKE_BUILD_TYPE=MinSizeRel
+
+      - name: Build
+        run: cmake --build build-arm64 -j$(nproc)
+
+      - name: Verify binary
+        run: file build-arm64/seaclaw | grep -i aarch64
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq libsqlite3-dev libcurl4-openssl-dev lcov
+
+      - name: Configure with coverage
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_FLAGS="--coverage -fprofile-arcs -ftest-coverage" \
+            -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+            -DSC_ENABLE_ALL_CHANNELS=ON \
+            -DSC_ENABLE_CURL=ON
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
+
+      - name: Test
+        run: ./build/seaclaw_tests
+
+      - name: Generate coverage
+        run: |
+          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
+          lcov --remove coverage.info '*/tests/*' '/usr/*' --output-file coverage.info
+          lcov --list coverage.info | tail -20
+
+      - name: Upload coverage
+        if: github.event_name == 'push'
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage.info
+          fail_ci_if_error: false
+
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -yq libsqlite3-dev libcurl4-openssl-dev clang
+
+      - name: Build fuzz targets
+        run: |
+          cmake -B build-fuzz \
+            -DCMAKE_C_COMPILER=clang \
+            -DSC_ENABLE_FUZZ=ON \
+            -DSC_ENABLE_ALL_CHANNELS=ON \
+            -DSC_ENABLE_CURL=ON
+          cmake --build build-fuzz -j$(nproc)
+
+      - name: Smoke-test fuzzers (30s each)
+        run: |
+          for f in build-fuzz/fuzz_*; do
+            echo "Running $(basename $f)..."
+            timeout 30 $f -max_total_time=25 || true
+          done

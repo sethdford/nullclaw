@@ -176,7 +176,7 @@ static const sc_tool_vtable_t facebook_vtable = {
     .deinit = facebook_deinit,
 };
 
-sc_error_t sc_facebook_create(sc_allocator_t *alloc, sc_tool_t *out) {
+sc_error_t sc_facebook_tool_create(sc_allocator_t *alloc, sc_tool_t *out) {
     if (!alloc || !out)
         return SC_ERR_INVALID_ARGUMENT;
     sc_facebook_ctx_t *c = (sc_facebook_ctx_t *)calloc(1, sizeof(*c));

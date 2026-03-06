@@ -47,8 +47,12 @@
 #include "seaclaw/tools/broadcast.h"
 #include "seaclaw/tools/calendar_tool.h"
 #include "seaclaw/tools/crm.h"
+#include "seaclaw/tools/facebook.h"
+#include "seaclaw/tools/firebase.h"
+#include "seaclaw/tools/gcloud.h"
 #include "seaclaw/tools/http_request.h"
 #include "seaclaw/tools/image.h"
+#include "seaclaw/tools/instagram.h"
 #include "seaclaw/tools/invoice.h"
 #include "seaclaw/tools/jira.h"
 #include "seaclaw/tools/memory_forget.h"
@@ -61,6 +65,7 @@
 #include "seaclaw/tools/report.h"
 #include "seaclaw/tools/social.h"
 #include "seaclaw/tools/spreadsheet.h"
+#include "seaclaw/tools/twitter.h"
 #include "seaclaw/tools/workflow.h"
 #ifdef SC_HAS_CRON
 #include "seaclaw/tools/schedule.h"
@@ -79,7 +84,8 @@
 #else
 #define SC_TOOLS_CRON_COUNT 0
 #endif
-#define SC_TOOLS_COUNT_BASE (36 + SC_TOOLS_CRON_COUNT) /* 35 base + send_message + cron */
+#define SC_TOOLS_COUNT_BASE \
+    (41 + SC_TOOLS_CRON_COUNT) /* 36 base + facebook,instagram,twitter,gcloud,firebase + cron */
 #ifdef SC_HAS_TOOLS_BROWSER
 #define SC_TOOLS_BROWSER_COUNT 3
 #else
@@ -394,6 +400,31 @@ sc_error_t sc_tools_create_default(sc_allocator_t *alloc, const char *workspace_
     idx++;
 
     err = sc_social_create(alloc, &tools[idx]);
+    if (err != SC_OK)
+        goto fail;
+    idx++;
+
+    err = sc_facebook_tool_create(alloc, &tools[idx]);
+    if (err != SC_OK)
+        goto fail;
+    idx++;
+
+    err = sc_instagram_tool_create(alloc, &tools[idx]);
+    if (err != SC_OK)
+        goto fail;
+    idx++;
+
+    err = sc_twitter_tool_create(alloc, &tools[idx]);
+    if (err != SC_OK)
+        goto fail;
+    idx++;
+
+    err = sc_gcloud_create(alloc, policy, &tools[idx]);
+    if (err != SC_OK)
+        goto fail;
+    idx++;
+
+    err = sc_firebase_create(alloc, policy, &tools[idx]);
     if (err != SC_OK)
         goto fail;
     idx++;
