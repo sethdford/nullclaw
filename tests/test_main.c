@@ -92,7 +92,8 @@ void run_imessage_extended_tests(void);
 void run_intelligence_tests(void);
 void run_untested_modules_tests(void);
 void run_modules_coverage_tests(void);
-void run_persona_tests(void);
+void run_context_tests(void);
+void run_qmd_tests(void);
 
 int main(void) {
     printf("SeaClaw Test Suite\n");
@@ -186,7 +187,8 @@ int main(void) {
     run_intelligence_tests();
     run_untested_modules_tests();
     run_modules_coverage_tests();
-    run_persona_tests();
+    run_context_tests();
+    run_qmd_tests();
 
     SC_TEST_REPORT();
     SC_TEST_EXIT();

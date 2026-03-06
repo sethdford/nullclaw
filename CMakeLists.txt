@@ -265,8 +265,6 @@ set(SC_CORE_SOURCES
     src/net_security.c
     src/config.c
     src/config_migrate.c
-    src/persona/persona.c
-    src/persona/examples.c
     src/config_serialize.c
     src/config_getters.c
     src/config_validate.c
@@ -437,7 +435,6 @@ set(SC_CORE_SOURCES
     src/tools/workflow.c
     src/tools/diff.c
     src/tools/factory.c
-    src/persona/persona.c
     src/mcp_server.c
     src/channels/thread_binding.c
     src/security/policy_engine.c
@@ -525,6 +522,12 @@ if(WIN32)
 endif()
 # WASI sandbox is cross-platform
 list(APPEND SC_CORE_SOURCES src/security/wasi_sandbox.c)
+
+# Persona system
+list(APPEND SC_CORE_SOURCES
+    src/persona/persona.c
+    src/persona/examples.c
+)
 
 # Browser automation tools
 if(SC_ENABLE_TOOLS_BROWSER)
@@ -1233,6 +1236,7 @@ set(SC_TEST_SOURCES
     tests/test_multimodal.c
     tests/test_retrieval.c
     tests/test_prompt.c
+    tests/test_persona.c
     tests/test_vector.c
     tests/test_vector_full.c
     tests/test_lifecycle.c
@@ -1278,7 +1282,8 @@ set(SC_TEST_SOURCES
     tests/test_agent_teams.c
     tests/test_untested_modules.c
     tests/test_modules_coverage.c
-    tests/test_persona.c
+    tests/test_context.c
+    tests/test_qmd.c
 )
 
 add_executable(seaclaw_tests ${SC_TEST_SOURCES} wasm/wasm_alloc.c)
@@ -1293,6 +1298,9 @@ if(SC_ENABLE_TUI)
 endif()
 if(SC_ENABLE_SQLITE)
     target_compile_definitions(seaclaw_tests PRIVATE SC_ENABLE_SQLITE=1)
+    if(SQLITE3_FOUND)
+        target_include_directories(seaclaw_tests PRIVATE ${SQLITE3_INCLUDE_DIRS})
+    endif()
 endif()
 if(SC_ENABLE_TELEGRAM)
     target_compile_definitions(seaclaw_tests PRIVATE SC_HAS_TELEGRAM=1)
