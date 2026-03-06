@@ -8,14 +8,14 @@ Last updated: 2026-03-03
 | ------------------------------ | ---------------------- |
 | Source files (src/ + include/) | **~486**               |
 | Lines of C/H/ASM code          | **~73K+**              |
-| Test files                     | 82                     |
-| Tests passing                  | **2,454/2,454 (100%)** |
+| Test files                     | 84                     |
+| Tests passing                  | **2,487/2,487 (100%)** |
 | Binary size (MinSizeRel+LTO)   | **430 KB**             |
 | Peak RSS (test suite)          | **~5.9 MB**            |
 
 ## Channels — Honest Status
 
-### Full send + receive (20 channels)
+### Full send + receive (21 channels)
 
 | Channel     | send()         | listen()                   | Config Required                       |
 | ----------- | -------------- | -------------------------- | ------------------------------------- |
@@ -39,6 +39,12 @@ Last updated: 2026-03-03
 | Teams       | HTTP API       | Webhook + poll queue       | `app_id`, `app_secret`                |
 | Twilio SMS  | HTTP API       | Webhook + poll queue       | `account_sid`, `auth_token`           |
 | Google Chat | HTTP API       | Webhook + poll queue       | `bearer_token`, `space_id`            |
+
+### Receive only (1 channel)
+
+| Channel | send()          | listen()              | Config Required                                  |
+| ------- | --------------- | --------------------- | ------------------------------------------------ |
+| Gmail   | Not supported   | Gmail API poll        | `client_id`, `client_secret`, `refresh_token`    |
 
 ### Send only (2 channels)
 
