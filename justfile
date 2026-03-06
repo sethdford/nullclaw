@@ -125,7 +125,7 @@ persona-validate name: build
     ./build/seaclaw persona validate {{name}}
 
 # Run persona-related tests
-persona-test:
+persona-test: build
     cd build && ./seaclaw_tests 2>&1 | grep -E "persona|Results"
 
 # ── Info ─────────────────────────────────────────────────────────────────

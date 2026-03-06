@@ -44,11 +44,19 @@ sc_error_t sc_persona_cli_parse(int argc, const char **argv, sc_persona_cli_args
         for (int i = 4; i < argc; i++) {
             if (strcmp(argv[i], "--from-imessage") == 0)
                 out->from_imessage = true;
-            else if (strcmp(argv[i], "--from-gmail") == 0)
+            else if (strcmp(argv[i], "--from-gmail") == 0) {
                 out->from_gmail = true;
-            else if (strcmp(argv[i], "--from-facebook") == 0)
+                if (i + 1 < argc) {
+                    out->gmail_export_path = argv[i + 1];
+                    i++;
+                }
+            } else if (strcmp(argv[i], "--from-facebook") == 0) {
                 out->from_facebook = true;
-            else if (strcmp(argv[i], "--interactive") == 0)
+                if (i + 1 < argc) {
+                    out->facebook_export_path = argv[i + 1];
+                    i++;
+                }
+            } else if (strcmp(argv[i], "--interactive") == 0)
                 out->interactive = true;
         }
     } else if (strcmp(action, "update") == 0) {
@@ -59,11 +67,19 @@ sc_error_t sc_persona_cli_parse(int argc, const char **argv, sc_persona_cli_args
         for (int i = 4; i < argc; i++) {
             if (strcmp(argv[i], "--from-imessage") == 0)
                 out->from_imessage = true;
-            else if (strcmp(argv[i], "--from-gmail") == 0)
+            else if (strcmp(argv[i], "--from-gmail") == 0) {
                 out->from_gmail = true;
-            else if (strcmp(argv[i], "--from-facebook") == 0)
+                if (i + 1 < argc) {
+                    out->gmail_export_path = argv[i + 1];
+                    i++;
+                }
+            } else if (strcmp(argv[i], "--from-facebook") == 0) {
                 out->from_facebook = true;
-            else if (strcmp(argv[i], "--interactive") == 0)
+                if (i + 1 < argc) {
+                    out->facebook_export_path = argv[i + 1];
+                    i++;
+                }
+            } else if (strcmp(argv[i], "--interactive") == 0)
                 out->interactive = true;
         }
     } else if (strcmp(action, "show") == 0) {
@@ -391,7 +407,6 @@ sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t
                 free(messages);
             }
         }
-#endif
         sc_persona_t template = {0};
         template.name = sc_strdup(alloc, args->name);
         if (!template.name)

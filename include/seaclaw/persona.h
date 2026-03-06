@@ -78,6 +78,25 @@ sc_error_t sc_persona_select_examples(const sc_persona_t *persona, const char *c
 const sc_persona_overlay_t *sc_persona_find_overlay(const sc_persona_t *persona,
                                                     const char *channel, size_t channel_len);
 
+/* Feedback — user corrections for persona learning */
+typedef struct sc_persona_feedback {
+    const char *channel;
+    size_t channel_len;
+    const char *original_response;
+    size_t original_response_len;
+    const char *corrected_response;
+    size_t corrected_response_len;
+    const char *context;
+    size_t context_len;
+} sc_persona_feedback_t;
+
+sc_error_t sc_persona_feedback_record(sc_allocator_t *alloc, const char *persona_name,
+                                      size_t persona_name_len,
+                                      const sc_persona_feedback_t *feedback);
+
+sc_error_t sc_persona_feedback_apply(sc_allocator_t *alloc, const char *persona_name,
+                                     size_t persona_name_len);
+
 /* Message sampler — builds SQL / parses exports for persona creation pipeline */
 sc_error_t sc_persona_sampler_imessage_query(char *buf, size_t cap, size_t *out_len, size_t limit);
 sc_error_t sc_persona_sampler_facebook_parse(const char *json, size_t json_len, char ***out,

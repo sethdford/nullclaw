@@ -1,3 +1,4 @@
+#include "seaclaw/agent.h"
 #include "seaclaw/agent/prompt.h"
 #include "seaclaw/agent/spawn.h"
 #include "seaclaw/config.h"
@@ -5,6 +6,8 @@
 #include "seaclaw/core/arena.h"
 #include "seaclaw/core/string.h"
 #include "seaclaw/persona.h"
+#include "seaclaw/providers/factory.h"
+#include "seaclaw/providers/factory.h"
 #include "seaclaw/tool.h"
 #include "seaclaw/tools/persona.h"
 #include "test_framework.h"
@@ -476,6 +479,7 @@ static void test_cli_parse_from_gmail(void) {
     SC_ASSERT_EQ(e, SC_OK);
     SC_ASSERT_TRUE(args.from_gmail);
     SC_ASSERT_TRUE(args.gmail_export_path != NULL);
+    SC_ASSERT_TRUE(strcmp(args.gmail_export_path, "/tmp/gmail.json") == 0);
 }
 
 static void test_sampler_imessage_query(void) {
@@ -578,6 +582,7 @@ static void test_persona_build_prompt_core(void) {
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_NOT_NULL(out);
     SC_ASSERT_TRUE(out_len > 0);
+    SC_ASSERT_NOT_NULL(strstr(out, "You are acting as"));
     SC_ASSERT_NOT_NULL(strstr(out, "testuser"));
     SC_ASSERT_NOT_NULL(strstr(out, "direct"));
     SC_ASSERT_NOT_NULL(strstr(out, "Keep it short"));
@@ -786,6 +791,65 @@ static void test_persona_build_prompt_includes_examples(void) {
 
     alloc.free(alloc.ctx, prompt, plen + 1);
     sc_persona_deinit(&alloc, &p);
+}
+
+static void test_agent_set_persona_clears(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_provider_t prov = {0};
+    SC_ASSERT_EQ(sc_provider_create(&alloc, "openai", 6, "test-key", 8, "", 0, &prov), SC_OK);
+
+    sc_agent_t agent = {0};
+    SC_ASSERT_EQ(sc_agent_from_config(&agent, &alloc, prov, NULL, 0, NULL, NULL, NULL, NULL,
+                                      "gpt-4o-mini", 10, "openai", 6, 0.7, ".", 1, 5, 20, false, 2,
+                                      NULL, 0, NULL, 0, NULL),
+                 SC_OK);
+
+    /* Clearing with NULL/empty should succeed */
+    SC_ASSERT_EQ(sc_agent_set_persona(&agent, NULL, 0), SC_OK);
+    SC_ASSERT_NULL(agent.persona);
+    SC_ASSERT_NULL(agent.persona_name);
+
+    sc_agent_deinit(&agent);
+}
+
+static void test_agent_set_persona_not_found(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_provider_t prov = {0};
+    SC_ASSERT_EQ(sc_provider_create(&alloc, "openai", 6, "test-key", 8, "", 0, &prov), SC_OK);
+
+    sc_agent_t agent = {0};
+    SC_ASSERT_EQ(sc_agent_from_config(&agent, &alloc, prov, NULL, 0, NULL, NULL, NULL, NULL,
+                                      "gpt-4o-mini", 10, "openai", 6, 0.7, ".", 1, 5, 20, false, 2,
+                                      NULL, 0, NULL, 0, NULL),
+                 SC_OK);
+
+    sc_error_t err = sc_agent_set_persona(&agent, "nonexistent-persona-xyz", 23);
+    SC_ASSERT_NEQ(err, SC_OK);
+    SC_ASSERT_NULL(agent.persona);
+
+    sc_agent_deinit(&agent);
+}
+
+static void test_persona_feedback_record_and_apply(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_persona_feedback_t fb;
+    memset(&fb, 0, sizeof(fb));
+    fb.channel = "cli";
+    fb.channel_len = 3;
+    fb.original_response = "Hey there buddy!";
+    fb.original_response_len = 16;
+    fb.corrected_response = "Hey what's up";
+    fb.corrected_response_len = 13;
+    fb.context = "greeting";
+    fb.context_len = 8;
+
+    /* In test mode, record no-ops on disk but returns SC_OK */
+    sc_error_t e = sc_persona_feedback_record(&alloc, "test", 4, &fb);
+    SC_ASSERT_EQ(e, SC_OK);
+
+    /* Apply also no-ops in test mode */
+    e = sc_persona_feedback_apply(&alloc, "test", 4);
+    SC_ASSERT_EQ(e, SC_OK);
 }
 
 static void test_persona_build_prompt_with_overlay(void) {
@@ -1097,6 +1161,9 @@ void run_persona_tests(void) {
     SC_RUN_TEST(test_persona_build_prompt_core);
     SC_RUN_TEST(test_persona_build_prompt_includes_examples);
     SC_RUN_TEST(test_persona_prompt_with_channel_overlay);
+    SC_RUN_TEST(test_agent_set_persona_clears);
+    SC_RUN_TEST(test_agent_set_persona_not_found);
+    SC_RUN_TEST(test_persona_feedback_record_and_apply);
     SC_RUN_TEST(test_persona_build_prompt_with_overlay);
     SC_RUN_TEST(test_persona_examples_load_json);
     SC_RUN_TEST(test_persona_prompt_overrides_default);
@@ -1123,6 +1190,10 @@ void run_persona_tests(void) {
     SC_RUN_TEST(test_sampler_facebook_parse_basic);
     SC_RUN_TEST(test_sampler_facebook_parse_empty);
     SC_RUN_TEST(test_sampler_facebook_parse_null);
+    SC_RUN_TEST(test_sampler_gmail_parse_basic);
+    SC_RUN_TEST(test_sampler_gmail_parse_empty);
+    SC_RUN_TEST(test_cli_parse_from_facebook_file);
+    SC_RUN_TEST(test_cli_parse_from_gmail);
     SC_RUN_TEST(test_persona_select_examples_match);
     SC_RUN_TEST(test_persona_select_examples_no_channel);
     SC_RUN_TEST(test_persona_select_examples_no_match);
