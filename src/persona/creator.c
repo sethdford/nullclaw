@@ -1,9 +1,17 @@
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
+#include "seaclaw/core/json.h"
 #include "seaclaw/core/string.h"
 #include "seaclaw/persona.h"
+#include <errno.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#if defined(__unix__) || defined(__APPLE__)
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 static bool string_in_array(const char *s, char **arr, size_t count) {
     for (size_t i = 0; i < count; i++) {
@@ -254,4 +262,77 @@ sc_error_t sc_persona_creator_synthesize(sc_allocator_t *alloc, const sc_persona
         return err;
     }
     return SC_OK;
+}
+
+#define SC_PERSONA_CREATOR_PATH_MAX 512
+
+sc_error_t sc_persona_creator_write(sc_allocator_t *alloc, const sc_persona_t *persona) {
+    if (!alloc || !persona || !persona->name)
+        return SC_ERR_INVALID_ARGUMENT;
+
+    sc_json_buf_t buf;
+    sc_error_t err = sc_json_buf_init(&buf, alloc);
+    if (err != SC_OK)
+        return err;
+
+    if (sc_json_buf_append_raw(&buf, "{\"version\":1,", 12) != SC_OK)
+        goto fail;
+    err = sc_json_append_key_value(&buf, "name", 4, persona->name, persona->name_len);
+    if (err != SC_OK)
+        goto fail;
+    {
+        static const char core[] = ",\"core\":{\"identity\":\"\",\"traits\":[],"
+                                   "\"vocabulary\":{\"preferred\":[],\"avoided\":[],\"slang\":[]},"
+                                   "\"communication_rules\":[],\"values\":[],\"decision_style\":\"\"},"
+                                   "\"channel_overlays\":{}}";
+        if (sc_json_buf_append_raw(&buf, core, sizeof(core) - 1) != SC_OK)
+            goto fail;
+    }
+
+    const char *home = getenv("HOME");
+    if (!home || !home[0]) {
+        sc_json_buf_free(&buf);
+        return SC_ERR_NOT_FOUND;
+    }
+    char dir_buf[SC_PERSONA_CREATOR_PATH_MAX];
+    int n = snprintf(dir_buf, sizeof(dir_buf), "%s/.seaclaw/personas", home);
+    if (n <= 0 || (size_t)n >= sizeof(dir_buf)) {
+        sc_json_buf_free(&buf);
+        return SC_ERR_INVALID_ARGUMENT;
+    }
+#if defined(__unix__) || defined(__APPLE__)
+    char parent[SC_PERSONA_CREATOR_PATH_MAX];
+    int pn = snprintf(parent, sizeof(parent), "%s/.seaclaw", home);
+    if (pn > 0 && (size_t)pn < sizeof(parent))
+        (void)mkdir(parent, 0755);
+    if (mkdir(dir_buf, 0755) != 0 && errno != EEXIST) {
+        sc_json_buf_free(&buf);
+        return SC_ERR_IO;
+    }
+#endif
+
+    char path[SC_PERSONA_CREATOR_PATH_MAX];
+    n = snprintf(path, sizeof(path), "%s/%.*s.json", dir_buf, (int)persona->name_len,
+                 persona->name);
+    if (n <= 0 || (size_t)n >= sizeof(path)) {
+        sc_json_buf_free(&buf);
+        return SC_ERR_INVALID_ARGUMENT;
+    }
+
+    FILE *f = fopen(path, "wb");
+    if (!f) {
+        sc_json_buf_free(&buf);
+        return SC_ERR_IO;
+    }
+    if (buf.len > 0 && fwrite(buf.ptr, 1, buf.len, f) != buf.len) {
+        fclose(f);
+        sc_json_buf_free(&buf);
+        return SC_ERR_IO;
+    }
+    fclose(f);
+    sc_json_buf_free(&buf);
+    return SC_OK;
+fail:
+    sc_json_buf_free(&buf);
+    return err != SC_OK ? err : SC_ERR_IO;
 }

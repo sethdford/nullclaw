@@ -558,6 +558,40 @@ static void test_persona_cli_run_create_no_provider(void) {
     SC_ASSERT_EQ(err, SC_OK);
 }
 
+static void test_persona_prompt_with_channel_overlay(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    const char *json =
+        "{\"version\":1,\"name\":\"ch_test\","
+        "\"core\":{\"identity\":\"Test\",\"traits\":[\"direct\"]},"
+        "\"channel_overlays\":{\"imessage\":{\"formality\":\"casual\","
+        "\"avg_length\":\"short\",\"emoji_usage\":\"minimal\","
+        "\"style_notes\":[\"no caps\"]}}}";
+    sc_persona_t p;
+    memset(&p, 0, sizeof(p));
+    sc_error_t err = sc_persona_load_json(&alloc, json, strlen(json), &p);
+    SC_ASSERT_EQ(err, SC_OK);
+
+    /* Without channel — no overlay */
+    char *prompt1 = NULL;
+    size_t len1 = 0;
+    err = sc_persona_build_prompt(&alloc, &p, NULL, 0, &prompt1, &len1);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(strstr(prompt1, "imessage") == NULL);
+
+    /* With channel — overlay applied */
+    char *prompt2 = NULL;
+    size_t len2 = 0;
+    err = sc_persona_build_prompt(&alloc, &p, "imessage", 8, &prompt2, &len2);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(strstr(prompt2, "casual") != NULL);
+    SC_ASSERT_TRUE(strstr(prompt2, "no caps") != NULL);
+    SC_ASSERT_TRUE(len2 > len1);
+
+    alloc.free(alloc.ctx, prompt1, len1 + 1);
+    alloc.free(alloc.ctx, prompt2, len2 + 1);
+    sc_persona_deinit(&alloc, &p);
+}
+
 static void test_persona_build_prompt_with_overlay(void) {
     sc_allocator_t alloc = sc_system_allocator();
     char *notes[] = {"drops punctuation"};
@@ -601,6 +635,7 @@ void run_persona_tests(void) {
     SC_RUN_TEST(test_spawn_config_has_persona);
     SC_RUN_TEST(test_config_persona_field);
     SC_RUN_TEST(test_persona_build_prompt_core);
+    SC_RUN_TEST(test_persona_prompt_with_channel_overlay);
     SC_RUN_TEST(test_persona_build_prompt_with_overlay);
     SC_RUN_TEST(test_persona_examples_load_json);
     SC_RUN_TEST(test_persona_prompt_overrides_default);

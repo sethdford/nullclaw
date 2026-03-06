@@ -92,6 +92,8 @@ sc_error_t sc_persona_analyzer_parse_response(sc_allocator_t *alloc, const char 
 sc_error_t sc_persona_creator_synthesize(sc_allocator_t *alloc, const sc_persona_t *partials,
                                          size_t count, const char *name, size_t name_len,
                                          sc_persona_t *out);
+sc_error_t sc_persona_creator_write(sc_allocator_t *alloc, const sc_persona_t *persona);
+sc_error_t sc_persona_creator_write(sc_allocator_t *alloc, const sc_persona_t *persona);
 
 /* CLI types and commands */
 typedef enum {

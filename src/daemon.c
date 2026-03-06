@@ -282,6 +282,16 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
 
                 sc_agent_clear_history(agent);
 
+                /* Set active channel for per-channel persona overlays */
+                if (ch->channel->vtable->name) {
+                    agent->active_channel = ch->channel->vtable->name(ch->channel->ctx);
+                    agent->active_channel_len =
+                        agent->active_channel ? strlen(agent->active_channel) : 0;
+                } else {
+                    agent->active_channel = NULL;
+                    agent->active_channel_len = 0;
+                }
+
                 /* Restore prior conversation for this sender */
                 if (agent->session_store && agent->session_store->vtable &&
                     agent->session_store->vtable->load_messages) {
@@ -430,10 +440,11 @@ sc_error_t sc_daemon_start(void) {
     }
 
     setsid();
-    chdir("/");
-    freopen("/dev/null", "r", stdin);
-    freopen("/dev/null", "w", stdout);
-    freopen("/dev/null", "w", stderr);
+    if (chdir("/") != 0)
+        _exit(127);
+    (void)freopen("/dev/null", "r", stdin);
+    (void)freopen("/dev/null", "w", stdout);
+    (void)freopen("/dev/null", "w", stderr);
 
     execlp("seaclaw", "seaclaw", "service-loop", (char *)NULL);
     _exit(1);
