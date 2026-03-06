@@ -44,6 +44,9 @@ jobs:
       - name: Test
         run: ./build/seaclaw_tests
 
+      - name: Persona CLI smoke test
+        run: ./build/seaclaw persona list
+
   asan:
     runs-on: ubuntu-latest
     steps:
