@@ -132,6 +132,10 @@ struct sc_agent {
     char *persona_prompt;  /* custom identity override; owned */
     size_t persona_prompt_len;
 
+    /* Set by channel before turn; used for per-channel persona overlays. Not owned. */
+    const char *active_channel;
+    size_t active_channel_len;
+
     sc_persona_t *persona; /* loaded from config; owned */
     char *persona_name;
     size_t persona_name_len;
