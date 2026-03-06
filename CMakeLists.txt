@@ -321,6 +321,10 @@ set(SC_CORE_SOURCES
     src/agent/commands.c
     src/agent/context_tokens.c
     src/agent/max_tokens.c
+    src/agent/preferences.c
+    src/agent/awareness.c
+    src/agent/episodic.c
+    src/agent/reflection.c
     src/providers/error_classify.c
     src/providers/api_key.c
     src/providers/helpers.c
@@ -1084,10 +1088,6 @@ endif()
 if(SC_ENABLE_VOICE)
     target_compile_definitions(seaclaw_core_test PRIVATE SC_HAS_SONATA=1)
 endif()
-target_compile_definitions(seaclaw_core_test PRIVATE SC_HAS_SIGNAL=1 SC_HAS_NOSTR=1 SC_HAS_QQ=1 SC_HAS_MAIXCAM=1 SC_HAS_DISPATCH=1 SC_HAS_GMAIL=1)
-if(SC_ENABLE_NONE_ENGINE)
-    target_compile_definitions(seaclaw_core_test PRIVATE SC_HAS_NONE_ENGINE=1)
-endif()
 target_compile_definitions(seaclaw_core_test PRIVATE SC_HAS_SIGNAL=1 SC_HAS_NOSTR=1 SC_HAS_QQ=1 SC_HAS_MAIXCAM=1 SC_HAS_DISPATCH=1 SC_HAS_GMAIL=1 SC_HAS_THREAD_BINDING=1)
 target_compile_definitions(seaclaw_core_test PRIVATE SC_HAS_NONE_ENGINE=1 SC_HAS_MARKDOWN_ENGINE=1)
 if(SC_ENABLE_MEMORY_LRU_ENGINE)
@@ -1213,6 +1213,7 @@ set(SC_TEST_SOURCES
     tests/test_channel_integration.c
     tests/test_gmail.c
     tests/test_imessage_extended.c
+    tests/test_intelligence.c
     tests/test_config_extended.c
     tests/test_config_validation.c
     tests/test_json_extended.c
