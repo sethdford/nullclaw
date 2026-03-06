@@ -176,11 +176,7 @@ cron._, skills._, models.list, usage.summary, push.\*, update.check/run, exec.
 
 ## What Remains Stubbed
 
-| Stub                     | File                    | Notes                                                                                                                 |
-| ------------------------ | ----------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Facebook message sampler | `src/persona/sampler.c` | `sc_persona_sampler_facebook_parse` returns `SC_ERR_NOT_SUPPORTED` — Facebook JSON export parsing not yet implemented |
-
-All other subsystems have real implementations, gated by build flags where external dependencies are required.
+Nothing. All subsystems have real implementations, gated by build flags where external dependencies are required.
 
 ## Web UI Dashboard
 

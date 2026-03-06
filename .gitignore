@@ -97,3 +97,4 @@ audit.log
 # Flutter build (generated tokens only)
 apps/flutter/.dart_tool/
 apps/flutter/build/
+build2/
