@@ -29,13 +29,15 @@ typedef struct {
     sc_allocator_t *alloc;
 } persona_tool_ctx_t;
 
-__attribute__((unused)) static const char *persona_dir_path(char *buf, size_t cap) {
+#if !SC_IS_TEST
+static const char *persona_dir_path(char *buf, size_t cap) {
     const char *home = getenv("HOME");
     if (!home || !home[0])
         home = ".";
     int n = snprintf(buf, cap, "%s/.seaclaw/personas", home);
     return (n > 0 && (size_t)n < cap) ? buf : NULL;
 }
+#endif
 
 static sc_error_t do_show(sc_allocator_t *alloc, const char *name, sc_tool_result_t *out) {
 #if SC_IS_TEST
@@ -52,7 +54,11 @@ static sc_error_t do_show(sc_allocator_t *alloc, const char *name, sc_tool_resul
     sc_error_t err = sc_persona_load(alloc, name, strlen(name), &p);
     if (err != SC_OK) {
         char *msg = sc_sprintf(alloc, "Persona not found: %s", name);
-        *out = sc_tool_result_fail_owned(msg ? msg : "not found", msg ? strlen(msg) : 8);
+        if (msg) {
+            *out = sc_tool_result_fail_owned(msg, strlen(msg));
+        } else {
+            *out = sc_tool_result_fail("Persona not found", 17);
+        }
         return SC_OK;
     }
     char *prompt = NULL;
@@ -153,7 +159,11 @@ static sc_error_t do_delete(sc_allocator_t *alloc, const char *name, sc_tool_res
     }
     if (unlink(path) != 0) {
         char *msg = sc_sprintf(alloc, "Failed to delete: %s", name);
-        *out = sc_tool_result_fail_owned(msg ? msg : "delete failed", msg ? strlen(msg) : 12);
+        if (msg) {
+            *out = sc_tool_result_fail_owned(msg, strlen(msg));
+        } else {
+            *out = sc_tool_result_fail("delete failed", 13);
+        }
         return SC_OK;
     }
     char *result = sc_sprintf(alloc, "{\"deleted\":\"%s\"}", name);

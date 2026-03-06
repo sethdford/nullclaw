@@ -141,17 +141,28 @@ static sc_error_t merge_overlays(sc_allocator_t *alloc, sc_persona_overlay_t **o
             if (found)
                 continue;
             buf[n].channel = ov->channel ? sc_strdup(alloc, ov->channel) : NULL;
+            if (ov->channel && !buf[n].channel)
+                goto overlay_oom;
             buf[n].formality = ov->formality ? sc_strdup(alloc, ov->formality) : NULL;
+            if (ov->formality && !buf[n].formality)
+                goto overlay_oom;
             buf[n].avg_length = ov->avg_length ? sc_strdup(alloc, ov->avg_length) : NULL;
+            if (ov->avg_length && !buf[n].avg_length)
+                goto overlay_oom;
             buf[n].emoji_usage = ov->emoji_usage ? sc_strdup(alloc, ov->emoji_usage) : NULL;
+            if (ov->emoji_usage && !buf[n].emoji_usage)
+                goto overlay_oom;
             if (ov->style_notes_count > 0 && ov->style_notes) {
                 buf[n].style_notes =
                     (char **)alloc->alloc(alloc->ctx, ov->style_notes_count * sizeof(char *));
                 if (buf[n].style_notes) {
-                    for (size_t k = 0; k < ov->style_notes_count; k++)
+                    buf[n].style_notes_count = ov->style_notes_count;
+                    for (size_t k = 0; k < ov->style_notes_count; k++) {
                         buf[n].style_notes[k] =
                             ov->style_notes[k] ? sc_strdup(alloc, ov->style_notes[k]) : NULL;
-                    buf[n].style_notes_count = ov->style_notes_count;
+                        if (ov->style_notes[k] && !buf[n].style_notes[k])
+                            goto overlay_oom;
+                    }
                 }
             }
             n++;
@@ -160,6 +171,27 @@ static sc_error_t merge_overlays(sc_allocator_t *alloc, sc_persona_overlay_t **o
     *out = buf;
     *out_count = n;
     return SC_OK;
+overlay_oom:
+    for (size_t i = 0; i <= n; i++) {
+        if (buf[i].channel)
+            alloc->free(alloc->ctx, buf[i].channel, strlen(buf[i].channel) + 1);
+        if (buf[i].formality)
+            alloc->free(alloc->ctx, buf[i].formality, strlen(buf[i].formality) + 1);
+        if (buf[i].avg_length)
+            alloc->free(alloc->ctx, buf[i].avg_length, strlen(buf[i].avg_length) + 1);
+        if (buf[i].emoji_usage)
+            alloc->free(alloc->ctx, buf[i].emoji_usage, strlen(buf[i].emoji_usage) + 1);
+        if (buf[i].style_notes) {
+            for (size_t k = 0; k < buf[i].style_notes_count; k++)
+                if (buf[i].style_notes[k])
+                    alloc->free(alloc->ctx, buf[i].style_notes[k],
+                               strlen(buf[i].style_notes[k]) + 1);
+            alloc->free(alloc->ctx, buf[i].style_notes,
+                       buf[i].style_notes_count * sizeof(char *));
+        }
+    }
+    alloc->free(alloc->ctx, buf, total * sizeof(sc_persona_overlay_t));
+    return SC_ERR_OUT_OF_MEMORY;
 }
 
 sc_error_t sc_persona_creator_synthesize(sc_allocator_t *alloc, const sc_persona_t *partials,
@@ -200,7 +232,15 @@ sc_error_t sc_persona_creator_synthesize(sc_allocator_t *alloc, const sc_persona
                 for (size_t j = 0; j < partials[i].avoided_vocab_count; j++) {
                     const char *v = partials[i].avoided_vocab[j];
                     if (v && !string_in_array(v, abuf, an)) {
-                        abuf[an++] = sc_strdup(alloc, v);
+                        char *dup = sc_strdup(alloc, v);
+                        if (!dup) {
+                            for (size_t k = 0; k < an; k++)
+                                alloc->free(alloc->ctx, abuf[k], strlen(abuf[k]) + 1);
+                            alloc->free(alloc->ctx, abuf, total_avoided * sizeof(char *));
+                            sc_persona_deinit(alloc, out);
+                            return SC_ERR_OUT_OF_MEMORY;
+                        }
+                        abuf[an++] = dup;
                     }
                 }
             }
@@ -216,7 +256,15 @@ sc_error_t sc_persona_creator_synthesize(sc_allocator_t *alloc, const sc_persona
                 for (size_t j = 0; j < partials[i].slang_count; j++) {
                     const char *v = partials[i].slang[j];
                     if (v && !string_in_array(v, sbuf, sn)) {
-                        sbuf[sn++] = sc_strdup(alloc, v);
+                        char *dup = sc_strdup(alloc, v);
+                        if (!dup) {
+                            for (size_t k = 0; k < sn; k++)
+                                alloc->free(alloc->ctx, sbuf[k], strlen(sbuf[k]) + 1);
+                            alloc->free(alloc->ctx, sbuf, total_slang * sizeof(char *));
+                            sc_persona_deinit(alloc, out);
+                            return SC_ERR_OUT_OF_MEMORY;
+                        }
+                        sbuf[sn++] = dup;
                     }
                 }
             }
@@ -243,8 +291,17 @@ sc_error_t sc_persona_creator_synthesize(sc_allocator_t *alloc, const sc_persona
             for (size_t i = 0; i < count; i++) {
                 for (size_t k = 0; k < partials[i].values_count; k++) {
                     const char *v = partials[i].values[k];
-                    if (v && !string_in_array(v, vbuf, vn))
-                        vbuf[vn++] = sc_strdup(alloc, v);
+                    if (v && !string_in_array(v, vbuf, vn)) {
+                        char *dup = sc_strdup(alloc, v);
+                        if (!dup) {
+                            for (size_t j = 0; j < vn; j++)
+                                alloc->free(alloc->ctx, vbuf[j], strlen(vbuf[j]) + 1);
+                            alloc->free(alloc->ctx, vbuf, vtotal * sizeof(char *));
+                            sc_persona_deinit(alloc, out);
+                            return SC_ERR_OUT_OF_MEMORY;
+                        }
+                        vbuf[vn++] = dup;
+                    }
                 }
             }
             out->values = vbuf;
@@ -252,8 +309,13 @@ sc_error_t sc_persona_creator_synthesize(sc_allocator_t *alloc, const sc_persona
         }
     }
 
-    if (count > 0 && partials[0].decision_style)
+    if (count > 0 && partials[0].decision_style) {
         out->decision_style = sc_strdup(alloc, partials[0].decision_style);
+        if (!out->decision_style) {
+            sc_persona_deinit(alloc, out);
+            return SC_ERR_OUT_OF_MEMORY;
+        }
+    }
 
     err = merge_overlays(alloc, &out->overlays, &out->overlays_count, partials, count);
     if (err != SC_OK) {

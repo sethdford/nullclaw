@@ -102,8 +102,13 @@ sc_error_t sc_persona_sampler_facebook_parse(const char *json, size_t json_len, 
         if (!content || content[0] == '\0')
             continue;
         results[count] = sc_strdup(&alloc, content);
-        if (!results[count])
-            break;
+        if (!results[count]) {
+            for (size_t j = 0; j < count; j++)
+                alloc.free(alloc.ctx, results[j], strlen(results[j]) + 1);
+            alloc.free(alloc.ctx, results, cap * sizeof(char *));
+            sc_json_free(&alloc, root);
+            return SC_ERR_OUT_OF_MEMORY;
+        }
         count++;
     }
 
