@@ -93,7 +93,7 @@ export class ScWelcome extends LitElement {
         transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
     }
     .step-card:hover .step-icon-wrap {
-      background: color-mix(in srgb, var(--sc-accent) 16%, transparent);
+      background: color-mix(in srgb, var(--sc-accent) 18%, transparent);
       transform: scale(1.05);
     }
     .step-icon-wrap.done {
@@ -297,7 +297,7 @@ export class ScWelcome extends LitElement {
             (step) => html`
               <sc-card
                 hoverable
-                glass
+                accent
                 class="step-card"
                 @click=${() => this._navigate(step.action)}
               >

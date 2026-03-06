@@ -34,10 +34,12 @@ export class ScButton extends LitElement {
       font-weight: var(--sc-weight-medium);
       cursor: pointer;
       transition:
-        background-color var(--sc-duration-fast) var(--sc-ease-out),
-        color var(--sc-duration-fast) var(--sc-ease-out),
-        box-shadow var(--sc-duration-normal) var(--sc-ease-out),
-        transform var(--sc-duration-normal) var(--sc-spring-out);
+        background-color var(--sc-duration-fast, 100ms) var(--sc-ease-out),
+        color var(--sc-duration-fast, 100ms) var(--sc-ease-out),
+        box-shadow var(--sc-duration-moderate, 300ms)
+          var(--sc-emphasize, cubic-bezier(0.2, 0, 0, 1)),
+        transform var(--sc-duration-moderate, 300ms)
+          var(--sc-emphasize-overshoot, cubic-bezier(0.2, 0, 0, 1.2));
       border-radius: var(--sc-radius);
     }
 
@@ -46,55 +48,83 @@ export class ScButton extends LitElement {
       outline-offset: var(--sc-focus-ring-offset);
     }
 
-    /* Variants */
+    /* Primary — Fidelity-style convex pillow with specular highlights */
     button.variant-primary {
       background: var(--sc-accent);
       background-image: var(--sc-button-gradient-primary);
       color: var(--sc-on-accent, #ffffff);
-      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
-      box-shadow: var(--sc-shadow-sm);
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+      box-shadow:
+        var(--sc-shadow-sm),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.15);
     }
     button.variant-primary:hover:not(:disabled) {
       background: var(--sc-accent-hover);
       background-image: var(--sc-button-gradient-primary);
-      box-shadow: var(--sc-shadow-md);
-      transform: translateY(-1px);
+      transform: translateY(-2px);
+      box-shadow:
+        0 4px 16px rgba(13, 148, 136, 0.25),
+        0 2px 6px rgba(6, 18, 36, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.15);
     }
     button.variant-primary:active:not(:disabled) {
-      transform: scale(0.97);
-      box-shadow: var(--sc-shadow-xs);
-      transition-duration: 50ms;
+      transform: translateY(1px) scaleY(0.97) scaleX(1.01);
+      box-shadow:
+        var(--sc-shadow-xs),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+      transition-duration: 80ms;
     }
 
+    /* Secondary — subtle gradient with inner depth */
     button.variant-secondary {
       background: var(--sc-bg-elevated);
+      background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(0, 0, 0, 0.02));
       color: var(--sc-text);
       border: 1px solid var(--sc-border);
-      box-shadow: var(--sc-shadow-xs);
+      box-shadow:
+        var(--sc-shadow-xs),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        inset 0 -1px 0 rgba(6, 18, 36, 0.04);
     }
     button.variant-secondary:hover:not(:disabled) {
       background: var(--sc-bg-overlay);
-      box-shadow: var(--sc-shadow-sm);
-      transform: translateY(-1px);
+      background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(0, 0, 0, 0.02));
+      transform: translateY(-2px);
+      box-shadow:
+        var(--sc-shadow-sm),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -1px 0 rgba(6, 18, 36, 0.04);
     }
     button.variant-secondary:active:not(:disabled) {
-      transform: scale(0.97);
-      box-shadow: none;
-      transition-duration: 50ms;
+      transform: translateY(1px) scaleY(0.97) scaleX(1.01);
+      box-shadow:
+        inset 0 1px 2px rgba(6, 18, 36, 0.06),
+        inset 0 -1px 0 rgba(6, 18, 36, 0.04);
+      transition-duration: 80ms;
     }
 
     button.variant-destructive {
       background: var(--sc-error-dim);
       color: var(--sc-error);
-      box-shadow: var(--sc-shadow-xs);
+      box-shadow:
+        var(--sc-shadow-xs),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.08);
     }
     button.variant-destructive:hover:not(:disabled) {
-      box-shadow: var(--sc-shadow-sm);
-      transform: translateY(-1px);
+      transform: translateY(-2px);
+      box-shadow:
+        0 4px 16px rgba(249, 112, 102, 0.2),
+        0 2px 6px rgba(6, 18, 36, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.08);
     }
     button.variant-destructive:active:not(:disabled) {
-      transform: scale(0.97);
-      transition-duration: 50ms;
+      transform: translateY(1px) scaleY(0.97) scaleX(1.01);
+      transition-duration: 80ms;
     }
 
     button.variant-ghost {
@@ -104,11 +134,12 @@ export class ScButton extends LitElement {
     button.variant-ghost:hover:not(:disabled) {
       background: var(--sc-hover-overlay);
       color: var(--sc-text);
+      transform: translateY(-1px);
     }
     button.variant-ghost:active:not(:disabled) {
-      transform: scale(0.97);
+      transform: translateY(0px) scaleY(0.97) scaleX(1.01);
       background: var(--sc-accent-subtle);
-      transition-duration: 50ms;
+      transition-duration: 80ms;
     }
 
     /* Sizes */

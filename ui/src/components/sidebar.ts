@@ -64,7 +64,14 @@ export class ScSidebar extends LitElement {
       background: color-mix(in srgb, var(--sc-bg-surface) 82%, transparent);
       backdrop-filter: blur(20px) saturate(180%);
       -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border-right: 1px solid color-mix(in srgb, var(--sc-border-subtle, #27282d) 50%, transparent);
+      border-right: 1px solid transparent;
+      border-image: linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--sc-border-subtle) 60%, transparent) 0%,
+          color-mix(in srgb, var(--sc-border-subtle) 30%, transparent) 50%,
+          transparent 100%
+        )
+        1;
       transition: width var(--sc-duration-normal) var(--sc-ease-out);
       overflow: hidden;
     }

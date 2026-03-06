@@ -69,7 +69,12 @@
     "emphasize": {
       "$value": "cubic-bezier(0.2, 0, 0, 1)",
       "$type": "cubicBezier",
-      "$description": "Dramatic deceleration for emphasis animations"
+      "$description": "Material 3 standard — dramatic deceleration without overshoot"
+    },
+    "emphasize-overshoot": {
+      "$value": "cubic-bezier(0.2, 0, 0, 1.2)",
+      "$type": "cubicBezier",
+      "$description": "Material 3 expressive — deceleration with spring overshoot for hero moments"
     }
   },
   "spring": {

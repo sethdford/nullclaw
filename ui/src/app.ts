@@ -118,21 +118,54 @@ export class ScApp extends LitElement {
       position: relative;
     }
 
-    /* Ambient glow — very faint accent at top-left, gives depth to the canvas */
+    @keyframes sc-ambient-drift {
+      0%,
+      100% {
+        transform: translate(0, 0);
+      }
+      25% {
+        transform: translate(2%, 1%);
+      }
+      50% {
+        transform: translate(-1%, 2%);
+      }
+      75% {
+        transform: translate(1%, -1%);
+      }
+    }
+
+    /* Ambient ocean lighting — living teal atmosphere with subtle drift */
     main::before {
       content: "";
       position: fixed;
-      top: -20%;
+      top: -15%;
       left: -10%;
+      width: 55%;
+      height: 55%;
+      background: radial-gradient(
+        ellipse 70% 60% at 40% 30%,
+        color-mix(in srgb, var(--sc-accent) 7%, transparent),
+        transparent 70%
+      );
+      pointer-events: none;
+      z-index: 0;
+      animation: sc-ambient-drift 25s ease-in-out infinite;
+    }
+    main::after {
+      content: "";
+      position: fixed;
+      bottom: -20%;
+      right: -10%;
       width: 50%;
       height: 50%;
       background: radial-gradient(
-        ellipse at center,
+        ellipse 60% 50% at 60% 60%,
         color-mix(in srgb, var(--sc-accent) 4%, transparent),
         transparent 70%
       );
       pointer-events: none;
       z-index: 0;
+      animation: sc-ambient-drift 30s ease-in-out infinite reverse;
     }
 
     .view-enter {

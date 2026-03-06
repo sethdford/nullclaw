@@ -27,7 +27,7 @@
     }
   },
   "dark": {
-    "$description": "Dark theme — deep ocean",
+    "$description": "Dark theme — deep ocean midnight, tonal blue surfaces, atmospheric glow",
     "bg": { "$value": "{color.neutral.50}", "$type": "color" },
     "bg-inset": { "$value": "{color.neutral.100}", "$type": "color" },
     "bg-surface": { "$value": "{color.neutral.150}", "$type": "color" },
@@ -67,7 +67,7 @@
       "$value": "{color.amber.300}",
       "$type": "color"
     },
-    "on-accent-secondary": { "$value": "#09090b", "$type": "color" },
+    "on-accent-secondary": { "$value": "#060b12", "$type": "color" },
 
     "accent-tertiary": { "$value": "{color.indigo.500}", "$type": "color" },
     "accent-tertiary-text": {
@@ -128,27 +128,27 @@
     },
 
     "shadow-xs": {
-      "$value": "0 1px 2px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)",
+      "$value": "0 1px 2px rgba(3,8,16,0.45), inset 0 1px 0 rgba(255,255,255,0.05)",
       "$type": "shadow"
     },
     "shadow-sm": {
-      "$value": "0 1px 3px rgba(0,0,0,0.35), 0 2px 8px rgba(0,8,20,0.3), inset 0 1px 0 rgba(255,255,255,0.06)",
+      "$value": "0 1px 3px rgba(3,8,16,0.4), 0 2px 8px rgba(3,8,16,0.3), inset 0 1px 0 rgba(255,255,255,0.05)",
       "$type": "shadow"
     },
     "shadow-md": {
-      "$value": "0 2px 4px rgba(0,0,0,0.3), 0 8px 24px rgba(0,8,20,0.35), inset 0 1px 0 rgba(255,255,255,0.05)",
+      "$value": "0 2px 4px rgba(3,8,16,0.35), 0 8px 24px rgba(3,8,16,0.35), inset 0 1px 0 rgba(255,255,255,0.04)",
       "$type": "shadow"
     },
     "shadow-lg": {
-      "$value": "0 4px 8px rgba(0,0,0,0.35), 0 16px 48px rgba(0,8,20,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",
+      "$value": "0 4px 8px rgba(3,8,16,0.4), 0 16px 48px rgba(3,8,16,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",
       "$type": "shadow"
     },
     "shadow-xl": {
-      "$value": "0 8px 16px rgba(0,0,0,0.4), 0 32px 72px rgba(0,8,20,0.45), inset 0 1px 0 rgba(255,255,255,0.04)",
+      "$value": "0 8px 16px rgba(3,8,16,0.45), 0 32px 72px rgba(3,8,16,0.5), inset 0 1px 0 rgba(255,255,255,0.03)",
       "$type": "shadow"
     },
     "shadow-card": {
-      "$value": "0 1px 3px rgba(0,0,0,0.25), 0 8px 24px rgba(0,8,20,0.25), inset 0 1px 0 rgba(255,255,255,0.06)",
+      "$value": "0 1px 3px rgba(3,8,16,0.3), 0 8px 24px rgba(3,8,16,0.25), inset 0 1px 0 rgba(255,255,255,0.05)",
       "$type": "shadow"
     },
     "shadow-glow-accent": {
@@ -160,47 +160,49 @@
       "$type": "shadow"
     },
     "surface-gradient": {
-      "$value": "linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.15) 100%)",
+      "$value": "linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(0,0,0,0.12) 100%)",
       "$type": "string"
     },
     "surface-glow": {
-      "$value": "radial-gradient(ellipse at 50% 0%, rgba(20,184,166,0.04) 0%, transparent 70%)",
-      "$type": "string"
+      "$value": "radial-gradient(ellipse at 50% 0%, rgba(20,184,166,0.08) 0%, transparent 70%)",
+      "$type": "string",
+      "$description": "Ambient teal glow at the top of cards — creates atmospheric depth"
     },
     "button-gradient-primary": {
-      "$value": "linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.15) 100%)",
+      "$value": "linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(0,0,0,0.18) 100%)",
       "$type": "string"
     },
     "hero-gradient": {
-      "$value": "linear-gradient(135deg, rgba(20,184,166,0.06) 0%, rgba(16,185,129,0.03) 50%, transparent 100%)",
-      "$type": "string"
+      "$value": "linear-gradient(135deg, rgba(20,184,166,0.10) 0%, rgba(16,185,129,0.05) 40%, rgba(99,102,241,0.03) 80%, transparent 100%)",
+      "$type": "string",
+      "$description": "Atmospheric ocean gradient — teal to seafoam with a hint of deep indigo"
     }
   },
   "light": {
-    "$description": "Light theme — sandy shore, clear sky, ocean spring day",
-    "bg": { "$value": "{color.neutral.900}", "$type": "color" },
+    "$description": "Light theme — coastal morning: warm canvas, white surfaces, ocean-tinted depth",
+    "bg": { "$value": "{color.neutral.850}", "$type": "color" },
     "bg-inset": { "$value": "{color.neutral.800}", "$type": "color" },
     "bg-surface": { "$value": "#ffffff", "$type": "color" },
-    "bg-warm": { "$value": "{color.neutral.925}", "$type": "color" },
-    "bg-elevated": { "$value": "{color.neutral.850}", "$type": "color" },
+    "bg-warm": { "$value": "{color.neutral.900}", "$type": "color" },
+    "bg-elevated": { "$value": "{color.neutral.825}", "$type": "color" },
     "bg-overlay": { "$value": "{color.neutral.1000}", "$type": "color" },
 
     "text": { "$value": "{color.neutral.100}", "$type": "color" },
     "text-muted": { "$value": "{color.neutral.400}", "$type": "color" },
-    "text-faint": { "$value": "{color.neutral.600}", "$type": "color" },
+    "text-faint": { "$value": "{color.neutral.500}", "$type": "color" },
 
-    "accent": { "$value": "#14b8a6", "$type": "color" },
+    "accent": { "$value": "{color.teal.600}", "$type": "color" },
     "accent-text": {
-      "$value": "#0d9488",
+      "$value": "{color.teal.700}",
       "$type": "color",
       "$description": "WCAG AA: accent color for text on light backgrounds (4.5:1 contrast)"
     },
     "accent-hover": { "$value": "{color.teal.light-600}", "$type": "color" },
     "accent-subtle": {
-      "$value": "{color.teal.light-subtle}",
+      "$value": "rgba(13, 148, 136, 0.08)",
       "$type": "color"
     },
-    "accent-light": { "$value": "#99f6e4", "$type": "color" },
+    "accent-light": { "$value": "{color.teal.100}", "$type": "color" },
     "accent-strong": { "$value": "{color.teal.light-400}", "$type": "color" },
     "on-accent": { "$value": "#ffffff", "$type": "color" },
 
@@ -245,7 +247,7 @@
     "on-accent-tertiary": { "$value": "#ffffff", "$type": "color" },
 
     "border": { "$value": "{color.neutral.700}", "$type": "color" },
-    "border-subtle": { "$value": "{color.neutral.850}", "$type": "color" },
+    "border-subtle": { "$value": "{color.neutral.750}", "$type": "color" },
 
     "success": { "$value": "{color.seafoam.light-500}", "$type": "color" },
     "success-dim": { "$value": "{color.seafoam.light-dim}", "$type": "color" },
@@ -274,52 +276,57 @@
     },
 
     "shadow-xs": {
-      "$value": "0 1px 2px rgba(0,30,60,0.08), inset 0 1px 0 rgba(255,255,255,0.5)",
+      "$value": "0 1px 2px rgba(6,18,36,0.08)",
       "$type": "shadow"
     },
     "shadow-sm": {
-      "$value": "0 1px 3px rgba(0,30,60,0.1), 0 2px 6px rgba(0,30,60,0.08), inset 0 1px 0 rgba(255,255,255,0.5)",
+      "$value": "0 1px 3px rgba(6,18,36,0.1), 0 2px 8px rgba(6,18,36,0.06)",
       "$type": "shadow"
     },
     "shadow-md": {
-      "$value": "0 2px 4px rgba(0,30,60,0.08), 0 8px 20px rgba(0,30,60,0.12), inset 0 1px 0 rgba(255,255,255,0.4)",
+      "$value": "0 2px 6px rgba(6,18,36,0.08), 0 8px 24px rgba(6,18,36,0.1), 0 16px 48px rgba(6,18,36,0.06)",
       "$type": "shadow"
     },
     "shadow-lg": {
-      "$value": "0 4px 8px rgba(0,30,60,0.08), 0 16px 40px rgba(0,30,60,0.14), inset 0 1px 0 rgba(255,255,255,0.3)",
+      "$value": "0 4px 12px rgba(6,18,36,0.1), 0 16px 44px rgba(6,18,36,0.12), 0 32px 80px rgba(6,18,36,0.08)",
       "$type": "shadow"
     },
     "shadow-xl": {
-      "$value": "0 8px 16px rgba(0,30,60,0.1), 0 32px 64px rgba(0,30,60,0.16), inset 0 1px 0 rgba(255,255,255,0.2)",
+      "$value": "0 8px 20px rgba(6,18,36,0.12), 0 32px 64px rgba(6,18,36,0.16), 0 48px 96px rgba(6,18,36,0.08)",
       "$type": "shadow"
     },
     "shadow-card": {
-      "$value": "0 1px 3px rgba(0,30,60,0.08), 0 6px 20px rgba(0,30,60,0.1), inset 0 1px 0 rgba(255,255,255,0.5)",
-      "$type": "shadow"
+      "$value": "0 1px 3px rgba(6,18,36,0.08), 0 4px 12px rgba(6,18,36,0.06), 0 8px 28px rgba(6,18,36,0.04)",
+      "$type": "shadow",
+      "$description": "Triple-layer card shadow — visible separation on light canvas"
     },
     "shadow-glow-accent": {
-      "$value": "0 0 0 1px var(--sc-accent-subtle), 0 4px 16px rgba(20,184,166,0.15)",
-      "$type": "shadow"
+      "$value": "0 0 0 1px rgba(13,148,136,0.12), 0 4px 16px rgba(13,148,136,0.2)",
+      "$type": "shadow",
+      "$description": "Teal-tinted glow for hover/focus states"
     },
     "shadow-inset": {
-      "$value": "inset 0 1px 2px rgba(0,0,0,0.06)",
+      "$value": "inset 0 1px 2px rgba(6,18,36,0.06)",
       "$type": "shadow"
     },
     "surface-gradient": {
-      "$value": "linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(244,244,247,0.6) 100%)",
-      "$type": "string"
+      "$value": "linear-gradient(180deg, #ffffff 0%, #f5f8fb 100%)",
+      "$type": "string",
+      "$description": "White to soft sky-blue — visible depth on light-mode cards"
     },
     "surface-glow": {
-      "$value": "radial-gradient(ellipse at 50% 0%, rgba(20,184,166,0.05) 0%, transparent 70%)",
+      "$value": "radial-gradient(ellipse at 50% 0%, rgba(20,184,166,0.08) 0%, transparent 70%)",
       "$type": "string"
     },
     "button-gradient-primary": {
-      "$value": "linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(0,0,0,0.1) 100%)",
-      "$type": "string"
+      "$value": "linear-gradient(180deg, rgba(255,255,255,0.25) 0%, rgba(0,0,0,0.15) 100%)",
+      "$type": "string",
+      "$description": "Convex pillow gradient — visible 3D depth on buttons"
     },
     "hero-gradient": {
-      "$value": "linear-gradient(135deg, rgba(20,184,166,0.08) 0%, rgba(16,185,129,0.04) 50%, transparent 100%)",
-      "$type": "string"
+      "$value": "linear-gradient(135deg, rgba(20,184,166,0.07) 0%, rgba(20,184,166,0.03) 50%, transparent 100%)",
+      "$type": "string",
+      "$description": "Ocean teal gradient — single-hue, varying intensity for depth"
     }
   },
   "high-contrast": {

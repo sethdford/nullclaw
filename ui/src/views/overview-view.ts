@@ -58,6 +58,9 @@ export class ScOverviewView extends GatewayAwareLitElement {
     :host {
       display: block;
       max-width: 1200px;
+      background-image: var(--sc-hero-gradient);
+      border-radius: var(--sc-radius-xl, 16px);
+      padding: var(--sc-space-lg) var(--sc-space-xl);
     }
     .header {
       display: flex;
@@ -90,10 +93,10 @@ export class ScOverviewView extends GatewayAwareLitElement {
     }
     .stat-label {
       font-size: 0.6875rem;
-      font-weight: var(--sc-weight-medium, 500);
+      font-weight: var(--sc-weight-semibold, 600);
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--sc-text-faint, var(--sc-text-muted));
+      color: var(--sc-accent-text, var(--sc-accent));
       margin-bottom: var(--sc-space-xs);
     }
     .stat-value {
@@ -437,7 +440,7 @@ export class ScOverviewView extends GatewayAwareLitElement {
         </sc-card>
 
         <!-- 2. Providers -->
-        <sc-card hoverable>
+        <sc-card hoverable accent>
           <div class="stat-row">
             <div class="stat-main">
               <div class="stat-label">Providers</div>
@@ -448,13 +451,13 @@ export class ScOverviewView extends GatewayAwareLitElement {
             </div>
             <sc-sparkline
               .data=${[3, 5, 4, 7, 6, 8, cap.providers ?? 0]}
-              color="var(--sc-success)"
+              color="var(--sc-accent)"
             ></sc-sparkline>
           </div>
         </sc-card>
 
         <!-- 3. Channels -->
-        <sc-card hoverable>
+        <sc-card hoverable accent>
           <div class="stat-row">
             <div class="stat-main">
               <div class="stat-label">Channels</div>
@@ -471,7 +474,7 @@ export class ScOverviewView extends GatewayAwareLitElement {
         </sc-card>
 
         <!-- 4. Tools -->
-        <sc-card hoverable>
+        <sc-card hoverable accent>
           <div class="stat-row">
             <div class="stat-main">
               <div class="stat-label">Tools</div>
@@ -482,13 +485,13 @@ export class ScOverviewView extends GatewayAwareLitElement {
             </div>
             <sc-sparkline
               .data=${[8, 8, 9, 8, 9, 9, cap.tools ?? 0]}
-              color="var(--sc-text-muted)"
+              color="var(--sc-accent)"
             ></sc-sparkline>
           </div>
         </sc-card>
 
         <!-- 5. Active Sessions -->
-        <sc-card hoverable>
+        <sc-card hoverable accent>
           <div class="stat-row">
             <div class="stat-main">
               <div class="stat-label">Active Sessions</div>
@@ -502,14 +505,14 @@ export class ScOverviewView extends GatewayAwareLitElement {
             </div>
             <sc-sparkline
               .data=${[0, 1, 2, 1, 3, 2, this.sessions.length]}
-              color=${this.sessions.length > 0 ? "var(--sc-success)" : "var(--sc-text-muted)"}
+              color=${this.sessions.length > 0 ? "var(--sc-accent)" : "var(--sc-text-muted)"}
             ></sc-sparkline>
           </div>
         </sc-card>
 
         ${this.updateInfo.available
           ? html`
-              <sc-card hoverable>
+              <sc-card hoverable accent>
                 <div class="stat-label">Update Available</div>
                 <div
                   class="stat-value"
@@ -524,12 +527,12 @@ export class ScOverviewView extends GatewayAwareLitElement {
 
         <!-- 6. Activity + Channels (two columns, full width) -->
         <div class="two-col activity-section">
-          <sc-card hoverable>
+          <sc-card hoverable accent>
             <div class="stat-label" style="margin-bottom: var(--sc-space-sm);">Live Activity</div>
             <sc-activity-feed .events=${this.activityEvents}></sc-activity-feed>
           </sc-card>
 
-          <sc-card hoverable>
+          <sc-card hoverable accent>
             <div class="stat-label" style="margin-bottom: var(--sc-space-sm);">
               Channels Overview
             </div>
@@ -563,7 +566,7 @@ export class ScOverviewView extends GatewayAwareLitElement {
         </div>
 
         <!-- 7. Recent Sessions (full width) -->
-        <sc-card hoverable class="recent-sessions">
+        <sc-card hoverable accent class="recent-sessions">
           <div class="stat-label" style="margin-bottom: var(--sc-space-sm);">Recent Sessions</div>
           ${this.recentSessions.length === 0
             ? html`

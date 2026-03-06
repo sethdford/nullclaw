@@ -17,42 +17,58 @@ export class ScCard extends LitElement {
     .card {
       position: relative;
       background: var(--sc-bg-surface);
-      border: 1px solid color-mix(in srgb, var(--sc-border-subtle, #27282d) 60%, transparent);
+      background-image: var(--sc-surface-gradient);
+      border: 1px solid var(--sc-border-subtle);
       border-radius: var(--sc-radius-xl, 16px);
       padding: var(--sc-space-xl);
       box-shadow:
-        0 1px 1px rgba(0, 0, 0, 0.08),
-        0 2px 4px rgba(0, 0, 0, 0.06),
-        0 4px 16px rgba(0, 0, 0, 0.04);
+        var(--sc-shadow-card),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -1px 0 rgba(6, 18, 36, 0.04);
       overflow: hidden;
     }
 
-    /* Top-edge luminance — the "lit from above" inset highlight */
+    /* Gradient border glow — bright top edge fading to transparent bottom (Apple Liquid Glass) */
     .card::before {
       content: "";
       position: absolute;
       inset: 0;
       border-radius: inherit;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.7),
+        rgba(255, 255, 255, 0.1) 30%,
+        transparent 60%
+      );
+      mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+      mask-composite: exclude;
+      -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      padding: 1px;
       pointer-events: none;
       z-index: 1;
     }
 
-    /* Ambient surface glow — very faint accent radial at top */
+    /* Ambient teal surface glow from top */
     .card::after {
       content: "";
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
-      height: 120px;
+      height: 100px;
       background: radial-gradient(
-        ellipse 80% 60% at 50% -10%,
-        color-mix(in srgb, var(--sc-accent) 3%, transparent),
+        ellipse 90% 70% at 50% -20%,
+        color-mix(in srgb, var(--sc-accent) 6%, transparent),
         transparent
       );
       border-radius: inherit;
       pointer-events: none;
+      z-index: 0;
     }
 
     .card > ::slotted(*),
@@ -63,70 +79,91 @@ export class ScCard extends LitElement {
 
     .card.elevated {
       box-shadow:
-        0 2px 4px rgba(0, 0, 0, 0.1),
-        0 8px 24px rgba(0, 0, 0, 0.12),
-        0 16px 48px rgba(0, 0, 0, 0.06);
+        var(--sc-shadow-md),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -1px 0 rgba(6, 18, 36, 0.04);
     }
 
+    /* Accent top-band — teal gradient bar + tinted wash below */
     .card.accent {
-      border-top: 2px solid var(--sc-accent);
+      border-top: none;
+      padding-top: calc(var(--sc-space-xl) + 4px);
+    }
+    .card.accent::after {
+      height: 4px;
+      top: 0;
+      background: linear-gradient(
+        90deg,
+        var(--sc-accent),
+        color-mix(in srgb, var(--sc-accent) 40%, transparent)
+      );
+      border-radius: var(--sc-radius-xl, 16px) var(--sc-radius-xl, 16px) 0 0;
+    }
+    .card.accent::before {
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--sc-accent) 6%, transparent),
+        transparent 40%
+      );
+      mask: none;
+      -webkit-mask: none;
+      padding: 0;
     }
 
+    /* Glass variant — Apple Liquid Glass with specular highlight */
     .card.glass {
-      background: color-mix(in srgb, var(--sc-bg-surface) 70%, transparent);
+      background: color-mix(in srgb, var(--sc-bg-surface) 65%, transparent);
       backdrop-filter: blur(24px) saturate(180%);
       -webkit-backdrop-filter: blur(24px) saturate(180%);
-      border: 1px solid color-mix(in srgb, var(--sc-border-subtle, #27282d) 40%, transparent);
+      border: 1px solid color-mix(in srgb, var(--sc-border-subtle) 40%, transparent);
+      box-shadow:
+        var(--sc-shadow-card),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        inset 0 -1px 0 rgba(6, 18, 36, 0.03);
     }
-
     .card.glass::before {
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      background: radial-gradient(
+        ellipse 60% 40% at 25% 0%,
+        rgba(255, 255, 255, 0.15),
+        transparent 70%
+      );
+      mask: none;
+      -webkit-mask: none;
+      padding: 0;
     }
 
     .card.hoverable,
     .card.clickable {
       cursor: pointer;
       transition:
-        transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-        box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1),
-        border-color 280ms ease;
-      will-change: transform;
+        transform var(--sc-duration-moderate, 300ms)
+          var(--sc-emphasize-overshoot, cubic-bezier(0.2, 0, 0, 1.2)),
+        box-shadow var(--sc-duration-moderate, 300ms)
+          var(--sc-emphasize, cubic-bezier(0.2, 0, 0, 1)),
+        border-color var(--sc-duration-normal, 200ms) ease;
+      will-change: transform, box-shadow;
     }
     .card.hoverable:hover,
     .card.clickable:hover {
-      transform: translateY(-3px) scale(1.005);
+      transform: translateY(-4px) scale(1.005);
       box-shadow:
-        0 4px 8px rgba(0, 0, 0, 0.1),
-        0 12px 32px rgba(0, 0, 0, 0.12),
-        0 24px 56px rgba(0, 0, 0, 0.06);
-      border-color: color-mix(in srgb, var(--sc-accent) 20%, var(--sc-border-subtle, #27282d));
+        var(--sc-shadow-lg),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -1px 0 rgba(6, 18, 36, 0.04);
+      border-color: color-mix(in srgb, var(--sc-accent) 20%, var(--sc-border-subtle));
     }
     .card.hoverable:active,
     .card.clickable:active {
-      transform: translateY(-1px) scale(0.985);
+      transform: translateY(0px) scaleX(1.003) scaleY(0.995);
       box-shadow:
-        0 1px 2px rgba(0, 0, 0, 0.08),
-        0 2px 8px rgba(0, 0, 0, 0.06);
-      transition-duration: 100ms;
+        var(--sc-shadow-sm),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -1px 0 rgba(6, 18, 36, 0.06);
+      transition-duration: 80ms;
     }
     .card.clickable:focus-visible {
       outline: var(--sc-focus-ring-width) solid var(--sc-focus-ring);
       outline-offset: var(--sc-focus-ring-offset);
-    }
-
-    @media (prefers-color-scheme: light) {
-      :host(:not([data-theme="dark"])) .card {
-        box-shadow:
-          0 1px 2px rgba(0, 0, 0, 0.04),
-          0 2px 8px rgba(0, 0, 0, 0.04),
-          0 4px 16px rgba(0, 0, 0, 0.02);
-      }
-      :host(:not([data-theme="dark"])) .card::before {
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
-      }
-      :host(:not([data-theme="dark"])) .card::after {
-        background: none;
-      }
     }
 
     @media (prefers-reduced-motion: reduce) {
