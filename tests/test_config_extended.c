@@ -490,6 +490,34 @@ static void test_config_parse_agent_context_pressure(void) {
     free_config(cfg);
 }
 
+static void test_config_persona_per_channel(void) {
+    sc_config_t *cfg = make_config_with_arena();
+    const char *j = "{\"agent\":{\"persona\":\"seth\",\"persona_channels\":{"
+                    "\"imessage\":\"seth_casual\",\"gmail\":\"seth_professional\"}}}}";
+    sc_error_t err = sc_config_parse_json(cfg, j, strlen(j));
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_STR_EQ(cfg->agent.persona, "seth");
+    SC_ASSERT_EQ(cfg->agent.persona_channels_count, 2u);
+
+    const char *im = sc_config_persona_for_channel(cfg, "imessage");
+    SC_ASSERT_NOT_NULL(im);
+    SC_ASSERT_STR_EQ(im, "seth_casual");
+
+    const char *gm = sc_config_persona_for_channel(cfg, "gmail");
+    SC_ASSERT_NOT_NULL(gm);
+    SC_ASSERT_STR_EQ(gm, "seth_professional");
+
+    const char *unknown = sc_config_persona_for_channel(cfg, "telegram");
+    SC_ASSERT_NOT_NULL(unknown);
+    SC_ASSERT_STR_EQ(unknown, "seth");
+
+    const char *global = sc_config_persona_for_channel(cfg, NULL);
+    SC_ASSERT_NOT_NULL(global);
+    SC_ASSERT_STR_EQ(global, "seth");
+
+    free_config(cfg);
+}
+
 static void test_config_parse_runtime_docker(void) {
     sc_config_t *cfg = make_config_with_arena();
     const char *j = "{\"runtime\":{\"kind\":\"docker\",\"docker_image\":\"my-img\"}}";
@@ -1171,6 +1199,7 @@ void run_config_extended_tests(void) {
     SC_RUN_TEST(test_config_parse_agent_compact_context);
     SC_RUN_TEST(test_config_parse_agent_parallel_tools);
     SC_RUN_TEST(test_config_parse_agent_context_pressure);
+    SC_RUN_TEST(test_config_persona_per_channel);
     SC_RUN_TEST(test_config_parse_runtime_docker);
     SC_RUN_TEST(test_config_parse_tools_enabled_list);
     SC_RUN_TEST(test_config_parse_tools_disabled_list);

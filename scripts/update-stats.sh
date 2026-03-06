@@ -6,16 +6,16 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 # Count source + header files
-SRC_COUNT=$(find src include -name '*.c' -o -name '*.h' | wc -l | tr -d ' ')
+SRC_COUNT=$(find src include \( -name '*.c' -o -name '*.h' \) | wc -l | tr -d ' ')
 
 # Count lines of C
-C_LINES=$(find src include -name '*.c' -o -name '*.h' -exec cat {} + | wc -l | tr -d ' ')
+C_LINES=$(find src include \( -name '*.c' -o -name '*.h' \) -exec cat {} + | wc -l | tr -d ' ')
 
 # Count test files
 TEST_FILES=$(find tests -name 'test_*.c' | wc -l | tr -d ' ')
 
 # Count test lines
-TEST_LINES=$(find tests -name '*.c' -o -name '*.h' -exec cat {} + | wc -l | tr -d ' ')
+TEST_LINES=$(find tests \( -name '*.c' -o -name '*.h' \) -exec cat {} + | wc -l | tr -d ' ')
 
 # Get test count from binary if available
 if [ -f build/seaclaw_tests ]; then

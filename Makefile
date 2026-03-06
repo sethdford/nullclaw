@@ -1,7 +1,7 @@
 JOBS ?= $(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 BUILD ?= build
 
-.PHONY: all configure build test clean release asan check fmt format-check fuzz bench setup hooks lint tidy coverage
+.PHONY: all configure build test clean release asan check fmt format-check fuzz bench setup install hooks lint tidy coverage
 
 all: build test
 
@@ -75,6 +75,10 @@ fuzz:
 bench: release
 	@if [ -x scripts/benchmark.sh ]; then scripts/benchmark.sh $(BUILD)/seaclaw; \
 	else echo "Binary: $$(stat -c%s $(BUILD)/seaclaw 2>/dev/null || stat -f%z $(BUILD)/seaclaw) bytes"; fi
+
+install: release
+	cmake --install $(BUILD) --prefix $(or $(PREFIX),$(HOME)/.local)
+	@echo "Installed to $(or $(PREFIX),$(HOME)/.local)/bin/seaclaw"
 
 setup:
 	@echo "==> Installing dependencies"

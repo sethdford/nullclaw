@@ -9,6 +9,9 @@
 #include <stdint.h>
 #include <time.h>
 
+struct sc_agent;
+struct sc_config;
+
 sc_error_t sc_daemon_start(void);
 sc_error_t sc_daemon_stop(void);
 bool sc_daemon_status(void);
@@ -18,6 +21,7 @@ bool sc_daemon_status(void);
 bool sc_cron_schedule_matches(const char *schedule, const struct tm *tm);
 
 struct sc_agent;
+struct sc_config;
 
 typedef sc_error_t (*sc_channel_webhook_fn)(void *channel_ctx, sc_allocator_t *alloc,
                                             const char *body, size_t body_len);
@@ -35,12 +39,13 @@ typedef struct sc_service_channel {
  * Run the service loop: polls channels, dispatches messages to the agent,
  * sends responses back, and executes cron jobs.
  * agent may be NULL for cron-only mode.
+ * config may be NULL; when non-NULL, used for per-channel persona overrides.
  * Blocks until SIGTERM/SIGINT. tick_interval_ms = 0 → default (1000ms).
  * In SC_IS_TEST mode: runs one tick and returns.
  */
 sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                           sc_service_channel_t *channels, size_t channel_count,
-                          struct sc_agent *agent);
+                          struct sc_agent *agent, const struct sc_config *config);
 
 sc_error_t sc_daemon_install(sc_allocator_t *alloc);
 sc_error_t sc_daemon_uninstall(void);

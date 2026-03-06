@@ -407,7 +407,7 @@ static void test_config_parse_nodes_array(void) {
 
 static void test_config_parse_service_loop(void) {
     sc_allocator_t alloc = sc_system_allocator();
-    sc_error_t err = sc_service_run(&alloc, 0, NULL, 0, NULL);
+    sc_error_t err = sc_service_run(&alloc, 0, NULL, 0, NULL, NULL);
     SC_ASSERT_EQ(err, SC_OK);
 }
 

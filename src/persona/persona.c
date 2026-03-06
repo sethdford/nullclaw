@@ -912,6 +912,15 @@ sc_error_t sc_persona_build_prompt(sc_allocator_t *alloc, const sc_persona_t *pe
         }
     }
 
+    if (len > SC_PERSONA_PROMPT_MAX_BYTES) {
+        len = SC_PERSONA_PROMPT_MAX_BYTES;
+        static const char trunc[] = "\n[persona prompt truncated]\n";
+        if (len >= sizeof(trunc) - 1) {
+            memcpy(buf + len - sizeof(trunc) + 1, trunc, sizeof(trunc) - 1);
+        }
+        buf[len] = '\0';
+    }
+
     *out = buf;
     *out_len = len;
     return SC_OK;

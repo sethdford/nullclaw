@@ -1,5 +1,6 @@
 #include "seaclaw/daemon.h"
 #include "seaclaw/agent.h"
+#include "seaclaw/config.h"
 #include "seaclaw/core/error.h"
 #include "seaclaw/core/process_util.h"
 #include "seaclaw/core/string.h"
@@ -194,10 +195,13 @@ static void service_signal_handler(int sig) {
 }
 #endif
 
+/* ── Streaming callback for channels with send_event ─────────────────────── */
+
 /* ── Service loop ──────────────────────────────────────────────────────── */
 
 sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
-                          sc_service_channel_t *channels, size_t channel_count, sc_agent_t *agent) {
+                          sc_service_channel_t *channels, size_t channel_count, sc_agent_t *agent,
+                          const sc_config_t *config) {
     if (!alloc)
         return SC_ERR_INVALID_ARGUMENT;
     if (tick_interval_ms == 0)
@@ -208,6 +212,7 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
     (void)channels;
     (void)channel_count;
     (void)agent;
+    (void)config;
 #ifdef SC_HAS_CRON
     run_cron_tick(alloc);
 #endif
@@ -290,6 +295,17 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                 } else {
                     agent->active_channel = NULL;
                     agent->active_channel_len = 0;
+                }
+
+                /* Apply per-channel persona override if configured */
+                if (config && agent->active_channel) {
+                    const char *channel_persona =
+                        sc_config_persona_for_channel(config, agent->active_channel);
+                    const char *current = agent->persona_name ? agent->persona_name : "";
+                    if (channel_persona && channel_persona[0] &&
+                        strcmp(channel_persona, current) != 0) {
+                        sc_agent_set_persona(agent, channel_persona, strlen(channel_persona));
+                    }
                 }
 
                 /* Restore prior conversation for this sender */

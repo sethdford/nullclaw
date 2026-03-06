@@ -1098,7 +1098,7 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
         }
     }
 
-    err = sc_service_run(alloc, 1000, ch_count > 0 ? channels : NULL, ch_count, &agent);
+    err = sc_service_run(alloc, 1000, ch_count > 0 ? channels : NULL, ch_count, &agent, &cfg);
 
     /* ── Cleanup ──────────────────────────────────────────────────────── */
 #if SC_HAS_EMAIL

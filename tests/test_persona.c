@@ -945,22 +945,23 @@ static void test_persona_load_empty_name(void) {
 
 static void test_persona_prompt_respects_size_cap(void) {
     sc_allocator_t alloc = sc_system_allocator();
-    /* Build JSON with many traits to exceed 8KB prompt */
-    char *traits_json = alloc.alloc(alloc.ctx, 16 * 1024);
+    /* Build JSON with many long traits to exceed 8KB prompt */
+    static const char pad[81] =
+        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+    char *traits_json = alloc.alloc(alloc.ctx, 24 * 1024);
     SC_ASSERT_NOT_NULL(traits_json);
     size_t pos = 0;
-    pos += (size_t)snprintf(traits_json + pos, 16 * 1024 - pos,
+    pos += (size_t)snprintf(traits_json + pos, 24 * 1024 - pos,
                             "{\"version\":1,\"name\":\"big\",\"core\":{"
                             "\"identity\":\"Test persona with many traits for size cap\","
                             "\"traits\":[");
-    for (int i = 0; i < 120 && pos < 14 * 1024; i++) {
+    for (int i = 0; i < 200 && pos < 22 * 1024; i++) {
         if (i > 0)
-            pos += (size_t)snprintf(traits_json + pos, 16 * 1024 - pos, ",");
-        pos += (size_t)snprintf(traits_json + pos, 16 * 1024 - pos, "\"trait_%d_%.*s\"", i,
-                                (int)(80 - 12), "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+            pos += (size_t)snprintf(traits_json + pos, 24 * 1024 - pos, ",");
+        pos += (size_t)snprintf(traits_json + pos, 24 * 1024 - pos, "\"trait_%d_%s\"", i, pad);
     }
     pos +=
-        (size_t)snprintf(traits_json + pos, 16 * 1024 - pos,
+        (size_t)snprintf(traits_json + pos, 24 * 1024 - pos,
                          "],\"vocabulary\":{\"preferred\":[],\"avoided\":[],\"slang\":[]},"
                          "\"communication_rules\":[],\"values\":[],\"decision_style\":\"fast\"}}}");
     traits_json[pos] = '\0';
@@ -968,7 +969,7 @@ static void test_persona_prompt_respects_size_cap(void) {
     sc_persona_t p;
     memset(&p, 0, sizeof(p));
     sc_error_t err = sc_persona_load_json(&alloc, traits_json, pos, &p);
-    alloc.free(alloc.ctx, traits_json, 16 * 1024);
+    alloc.free(alloc.ctx, traits_json, 24 * 1024);
     SC_ASSERT_EQ(err, SC_OK);
 
     char *out = NULL;

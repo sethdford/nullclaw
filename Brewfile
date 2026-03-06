@@ -1,0 +1,6 @@
+brew "cmake"
+brew "sqlite"
+brew "curl"
+brew "llvm"
+brew "just"
+brew "lcov"

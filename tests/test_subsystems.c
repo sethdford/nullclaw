@@ -303,12 +303,12 @@ static void test_cron_match_negative_step(void) {
 
 static void test_service_run_null_agent(void) {
     sc_allocator_t alloc = sc_system_allocator();
-    sc_error_t err = sc_service_run(&alloc, 0, NULL, 0, NULL);
+    sc_error_t err = sc_service_run(&alloc, 0, NULL, 0, NULL, NULL);
     SC_ASSERT_EQ(err, SC_OK);
 }
 
 static void test_service_run_null_alloc(void) {
-    sc_error_t err = sc_service_run(NULL, 0, NULL, 0, NULL);
+    sc_error_t err = sc_service_run(NULL, 0, NULL, 0, NULL, NULL);
     SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
 }
 

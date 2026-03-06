@@ -1323,9 +1323,8 @@ static sc_error_t parse_agent(sc_allocator_t *a, sc_config_t *cfg, const sc_json
         }
         size_t n = pc_obj->data.object.len;
         if (n > 0) {
-            sc_persona_channel_entry_t *arr =
-                (sc_persona_channel_entry_t *)a->alloc(a->ctx,
-                                                        n * sizeof(sc_persona_channel_entry_t));
+            sc_persona_channel_entry_t *arr = (sc_persona_channel_entry_t *)a->alloc(
+                a->ctx, n * sizeof(sc_persona_channel_entry_t));
             if (arr) {
                 memset(arr, 0, n * sizeof(sc_persona_channel_entry_t));
                 size_t count = 0;
@@ -1372,6 +1371,7 @@ static sc_error_t parse_plugins_cfg(sc_allocator_t *a, sc_config_t *cfg,
                                     const sc_json_value_t *obj) {
     if (!obj)
         return SC_OK;
+    /* Support "plugins" as object {"enabled": true, "paths": [...]} or as array ["a.so", "b.so"] */
     const sc_json_value_t *paths_arr = NULL;
     if (obj->type == SC_JSON_OBJECT) {
         cfg->plugins.enabled = sc_json_get_bool(obj, "enabled", cfg->plugins.enabled);
@@ -1392,6 +1392,7 @@ static sc_error_t parse_plugins_cfg(sc_allocator_t *a, sc_config_t *cfg,
     size_t n = paths_arr->data.array.len;
     if (n == 0)
         return SC_OK;
+    /* Free existing plugin_paths if re-parsing */
     if (cfg->plugins.plugin_paths) {
         for (size_t i = 0; i < cfg->plugins.plugin_paths_len; i++)
             if (cfg->plugins.plugin_paths[i])

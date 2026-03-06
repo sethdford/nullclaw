@@ -120,6 +120,19 @@ bool sc_config_get_provider_ws_streaming(const sc_config_t *cfg, const char *nam
     return false;
 }
 
+const char *sc_config_persona_for_channel(const sc_config_t *cfg, const char *channel) {
+    if (!cfg)
+        return NULL;
+    if (channel && cfg->agent.persona_channels && cfg->agent.persona_channels_count > 0) {
+        for (size_t i = 0; i < cfg->agent.persona_channels_count; i++) {
+            if (cfg->agent.persona_channels[i].channel &&
+                strcmp(cfg->agent.persona_channels[i].channel, channel) == 0)
+                return cfg->agent.persona_channels[i].persona;
+        }
+    }
+    return cfg->agent.persona;
+}
+
 static volatile _Atomic int sc_reload_flag = 0;
 
 void sc_config_set_reload_requested(void) {
