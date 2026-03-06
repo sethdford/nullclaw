@@ -49,6 +49,7 @@
 #ifdef SC_HAS_SKILLS
 #include "seaclaw/skillforge.h"
 #endif
+#include "seaclaw/persona.h"
 #include "seaclaw/plugin_loader.h"
 #include "seaclaw/tool.h"
 #include "seaclaw/tools/factory.h"
@@ -137,6 +138,7 @@ static sc_error_t cmd_service(sc_allocator_t *alloc, int argc, char **argv);
 static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv);
 static sc_error_t cmd_skills(sc_allocator_t *alloc, int argc, char **argv);
 static sc_error_t cmd_migrate(sc_allocator_t *alloc, int argc, char **argv);
+static sc_error_t cmd_persona(sc_allocator_t *alloc, int argc, char **argv);
 
 static const sc_command_t commands[] = {
     {"agent", "Start interactive agent (--demo: use local Ollama)", cmd_agent},
@@ -157,6 +159,7 @@ static const sc_command_t commands[] = {
     {"sandbox", "Show sandbox status and backends", cmd_sandbox},
     {"migrate", "Migrate memory backends", cmd_migrate},
     {"memory", "Memory operations", cmd_memory},
+    {"persona", "Create and manage persona profiles", cmd_persona},
     {"workspace", "Workspace management", cmd_workspace},
     {"capabilities", "Show available capabilities", cmd_capabilities},
     {"models", "List available models", cmd_models},
@@ -1277,6 +1280,24 @@ static sc_error_t cmd_skills(sc_allocator_t *alloc, int argc, char **argv) {
     return SC_ERR_NOT_SUPPORTED;
 }
 #endif
+
+static sc_error_t cmd_persona(sc_allocator_t *alloc, int argc, char **argv) {
+    sc_persona_cli_args_t args;
+    sc_error_t err = sc_persona_cli_parse(argc, (const char **)argv, &args);
+    if (err != SC_OK) {
+        fprintf(stderr,
+                "Usage: seaclaw persona <create|update|show|list|delete> [name] [options]\n");
+        fprintf(
+            stderr,
+            "  create <name> [--from-imessage] [--from-gmail] [--from-facebook] [--interactive]\n");
+        fprintf(stderr, "  update <name> [--from-imessage] [--from-gmail] [--from-facebook]\n");
+        fprintf(stderr, "  show <name>\n");
+        fprintf(stderr, "  list\n");
+        fprintf(stderr, "  delete <name>\n");
+        return err;
+    }
+    return sc_persona_cli_run(alloc, &args);
+}
 
 static sc_error_t cmd_migrate(sc_allocator_t *alloc, int argc, char **argv) {
     sc_migration_config_t mc = {

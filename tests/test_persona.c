@@ -5,6 +5,8 @@
 #include "seaclaw/core/arena.h"
 #include "seaclaw/core/string.h"
 #include "seaclaw/persona.h"
+#include "seaclaw/tool.h"
+#include "seaclaw/tools/persona.h"
 #include "test_framework.h"
 #include <string.h>
 
@@ -241,6 +243,91 @@ static void test_persona_prompt_overrides_default(void) {
     alloc.free(alloc.ctx, out, out_len + 1);
 }
 
+static void test_analyzer_builds_prompt(void) {
+    const char *messages[] = {"hey whats up", "down. where at", "thursday works"};
+    char prompt[2048];
+    size_t prompt_len = 0;
+    sc_error_t err = sc_persona_analyzer_build_prompt(messages, 3, "imessage", prompt,
+                                                      sizeof(prompt), &prompt_len);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(prompt_len > 0);
+    SC_ASSERT_NOT_NULL(strstr(prompt, "hey whats up"));
+}
+
+static void test_persona_cli_parse_create(void) {
+    const char *argv[] = {"seaclaw", "persona", "create", "seth", "--from-imessage"};
+    sc_persona_cli_args_t args = {0};
+    sc_error_t err = sc_persona_cli_parse(5, argv, &args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ((int)args.action, (int)SC_PERSONA_ACTION_CREATE);
+    SC_ASSERT_STR_EQ(args.name, "seth");
+    SC_ASSERT_TRUE(args.from_imessage);
+    SC_ASSERT_TRUE(!args.from_gmail);
+}
+
+static void test_persona_cli_parse_show(void) {
+    const char *argv[] = {"seaclaw", "persona", "show", "seth"};
+    sc_persona_cli_args_t args = {0};
+    sc_error_t err = sc_persona_cli_parse(4, argv, &args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ((int)args.action, (int)SC_PERSONA_ACTION_SHOW);
+    SC_ASSERT_STR_EQ(args.name, "seth");
+}
+
+static void test_persona_tool_create(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_t tool = {0};
+    sc_error_t err = sc_persona_tool_create(&alloc, &tool);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(tool.vtable);
+    SC_ASSERT_STR_EQ(tool.vtable->name(tool.ctx), "persona");
+    SC_ASSERT_NOT_NULL(tool.vtable->description(tool.ctx));
+    SC_ASSERT_NOT_NULL(tool.vtable->parameters_json(tool.ctx));
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
+}
+
+static void test_persona_cli_parse_list(void) {
+    const char *argv[] = {"seaclaw", "persona", "list"};
+    sc_persona_cli_args_t args = {0};
+    sc_error_t err = sc_persona_cli_parse(3, argv, &args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ((int)args.action, (int)SC_PERSONA_ACTION_LIST);
+}
+
+static void test_creator_synthesize_merges(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    char *traits1[] = {"direct", "casual"};
+    char *traits2[] = {"curious", "direct"};
+    sc_persona_t partials[] = {
+        {.traits = traits1, .traits_count = 2},
+        {.traits = traits2, .traits_count = 2},
+    };
+    sc_persona_t merged = {0};
+    sc_error_t err = sc_persona_creator_synthesize(&alloc, partials, 2, "testuser", 8, &merged);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_STR_EQ(merged.name, "testuser");
+    SC_ASSERT_EQ(merged.traits_count, (size_t)3);
+    sc_persona_deinit(&alloc, &merged);
+}
+
+static void test_analyzer_parses_response(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    const char *response =
+        "{\"traits\":[\"direct\",\"casual\"],"
+        "\"vocabulary\":{\"preferred\":[\"down\",\"works\"],\"avoided\":[],\"slang\":[]},"
+        "\"communication_rules\":[\"Keeps messages very short\"],"
+        "\"formality\":\"casual\",\"avg_length\":\"short\","
+        "\"emoji_usage\":\"none\"}";
+    sc_persona_t partial = {0};
+    sc_error_t err = sc_persona_analyzer_parse_response(&alloc, response, strlen(response),
+                                                        "imessage", 8, &partial);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(partial.traits_count >= 1);
+    SC_ASSERT_TRUE(partial.overlays_count == 1);
+    sc_persona_deinit(&alloc, &partial);
+}
+
 static void test_sampler_imessage_query(void) {
     char query[512];
     size_t query_len = 0;
@@ -258,6 +345,47 @@ static void test_spawn_config_persona_field(void) {
     cfg.persona_name_len = 4;
     SC_ASSERT_STR_EQ(cfg.persona_name, "seth");
     SC_ASSERT_EQ(cfg.persona_name_len, 4);
+}
+
+static void test_persona_full_round_trip(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    const char *json = "{\"version\":1,\"name\":\"roundtrip\","
+                       "\"core\":{\"identity\":\"Integration test persona\","
+                       "\"traits\":[\"direct\"],"
+                       "\"vocabulary\":{\"preferred\":[\"solid\"],\"avoided\":[],\"slang\":[]},"
+                       "\"communication_rules\":[\"Be brief\"],"
+                       "\"values\":[\"speed\"],\"decision_style\":\"Fast\"},"
+                       "\"channel_overlays\":{\"imessage\":{\"formality\":\"casual\","
+                       "\"avg_length\":\"short\",\"emoji_usage\":\"none\","
+                       "\"style_notes\":[\"no caps\"]}}}";
+
+    sc_persona_t p;
+    memset(&p, 0, sizeof(p));
+    sc_error_t err = sc_persona_load_json(&alloc, json, strlen(json), &p);
+    SC_ASSERT_EQ(err, SC_OK);
+
+    char *prompt = NULL;
+    size_t prompt_len = 0;
+    err = sc_persona_build_prompt(&alloc, &p, "imessage", 8, &prompt, &prompt_len);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(strstr(prompt, "roundtrip") != NULL);
+    SC_ASSERT_TRUE(strstr(prompt, "casual") != NULL);
+    SC_ASSERT_TRUE(strstr(prompt, "no caps") != NULL);
+
+    sc_prompt_config_t cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.persona_prompt = prompt;
+    cfg.persona_prompt_len = prompt_len;
+    char *sys = NULL;
+    size_t sys_len = 0;
+    err = sc_prompt_build_system(&alloc, &cfg, &sys, &sys_len);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(strstr(sys, "roundtrip") != NULL);
+    SC_ASSERT_TRUE(strstr(sys, "SeaClaw") == NULL);
+
+    alloc.free(alloc.ctx, sys, sys_len + 1);
+    alloc.free(alloc.ctx, prompt, prompt_len + 1);
+    sc_persona_deinit(&alloc, &p);
 }
 
 static void test_persona_select_examples_no_match(void) {
@@ -405,8 +533,16 @@ void run_persona_tests(void) {
     SC_RUN_TEST(test_persona_examples_load_json);
     SC_RUN_TEST(test_persona_prompt_overrides_default);
     SC_RUN_TEST(test_spawn_config_persona_field);
+    SC_RUN_TEST(test_persona_cli_parse_create);
+    SC_RUN_TEST(test_persona_cli_parse_show);
+    SC_RUN_TEST(test_persona_cli_parse_list);
+    SC_RUN_TEST(test_persona_tool_create);
+    SC_RUN_TEST(test_creator_synthesize_merges);
+    SC_RUN_TEST(test_analyzer_builds_prompt);
+    SC_RUN_TEST(test_analyzer_parses_response);
     SC_RUN_TEST(test_sampler_imessage_query);
     SC_RUN_TEST(test_persona_select_examples_match);
     SC_RUN_TEST(test_persona_select_examples_no_channel);
     SC_RUN_TEST(test_persona_select_examples_no_match);
+    SC_RUN_TEST(test_persona_full_round_trip);
 }

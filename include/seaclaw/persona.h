@@ -75,4 +75,43 @@ sc_error_t sc_persona_select_examples(const sc_persona_t *persona, const char *c
 const sc_persona_overlay_t *sc_persona_find_overlay(const sc_persona_t *persona,
                                                     const char *channel, size_t channel_len);
 
+/* Message sampler — builds SQL / parses exports for persona creation pipeline */
+sc_error_t sc_persona_sampler_imessage_query(char *buf, size_t cap, size_t *out_len, size_t limit);
+sc_error_t sc_persona_sampler_facebook_parse(const char *json, size_t json_len, char ***out,
+                                             size_t *out_count);
+
+/* Provider analyzer — builds extraction prompt, parses provider JSON into partial persona */
+sc_error_t sc_persona_analyzer_build_prompt(const char **messages, size_t msg_count,
+                                            const char *channel, char *buf, size_t cap,
+                                            size_t *out_len);
+sc_error_t sc_persona_analyzer_parse_response(sc_allocator_t *alloc, const char *response,
+                                              size_t resp_len, const char *channel,
+                                              size_t channel_len, sc_persona_t *out);
+
+/* Creator pipeline — merges partial personas into one */
+sc_error_t sc_persona_creator_synthesize(sc_allocator_t *alloc, const sc_persona_t *partials,
+                                         size_t count, const char *name, size_t name_len,
+                                         sc_persona_t *out);
+
+/* CLI types and commands */
+typedef enum {
+    SC_PERSONA_ACTION_CREATE,
+    SC_PERSONA_ACTION_UPDATE,
+    SC_PERSONA_ACTION_SHOW,
+    SC_PERSONA_ACTION_LIST,
+    SC_PERSONA_ACTION_DELETE
+} sc_persona_action_t;
+
+typedef struct sc_persona_cli_args {
+    sc_persona_action_t action;
+    const char *name;
+    bool from_imessage;
+    bool from_gmail;
+    bool from_facebook;
+    bool interactive;
+} sc_persona_cli_args_t;
+
+sc_error_t sc_persona_cli_parse(int argc, const char **argv, sc_persona_cli_args_t *out);
+sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t *args);
+
 #endif /* SC_PERSONA_H */

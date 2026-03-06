@@ -70,6 +70,7 @@
 #ifdef SC_HAS_CRON
 #include "seaclaw/tools/schedule.h"
 #endif
+#include "seaclaw/tools/persona.h"
 #include "seaclaw/tools/schema.h"
 #include "seaclaw/tools/send_message.h"
 #include "seaclaw/tools/shell.h"
@@ -85,7 +86,8 @@
 #define SC_TOOLS_CRON_COUNT 0
 #endif
 #define SC_TOOLS_COUNT_BASE \
-    (41 + SC_TOOLS_CRON_COUNT) /* 36 base + facebook,instagram,twitter,gcloud,firebase + cron */
+    (42 +                   \
+     SC_TOOLS_CRON_COUNT) /* 36 base + facebook,instagram,twitter,gcloud,firebase,cron,persona */
 #ifdef SC_HAS_TOOLS_BROWSER
 #define SC_TOOLS_BROWSER_COUNT 3
 #else
@@ -360,6 +362,11 @@ sc_error_t sc_tools_create_default(sc_allocator_t *alloc, const char *workspace_
     idx++;
 
     err = sc_agent_spawn_tool_create(alloc, agent_pool, &tools[idx]);
+    if (err != SC_OK)
+        goto fail;
+    idx++;
+
+    err = sc_persona_tool_create(alloc, &tools[idx]);
     if (err != SC_OK)
         goto fail;
     idx++;
