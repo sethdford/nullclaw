@@ -8,8 +8,8 @@ Last updated: 2026-03-03
 | ------------------------------ | ---------------------- |
 | Source files (src/ + include/) | **~486**               |
 | Lines of C/H/ASM code          | **~73K+**              |
-| Test files                     | 84                     |
-| Tests passing                  | **2,487/2,487 (100%)** |
+| Test files                     | 85                     |
+| Tests passing                  | **2,513/2,513 (100%)** |
 | Binary size (MinSizeRel+LTO)   | **430 KB**             |
 | Peak RSS (test suite)          | **~5.9 MB**            |
 
@@ -42,9 +42,9 @@ Last updated: 2026-03-03
 
 ### Receive only (1 channel)
 
-| Channel | send()          | listen()              | Config Required                                  |
-| ------- | --------------- | --------------------- | ------------------------------------------------ |
-| Gmail   | Not supported   | Gmail API poll        | `client_id`, `client_secret`, `refresh_token`    |
+| Channel | send()        | listen()       | Config Required                               |
+| ------- | ------------- | -------------- | --------------------------------------------- |
+| Gmail   | Not supported | Gmail API poll | `client_id`, `client_secret`, `refresh_token` |
 
 ### Send only (2 channels)
 
