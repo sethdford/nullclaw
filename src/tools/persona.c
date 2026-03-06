@@ -231,7 +231,7 @@ static sc_error_t do_feedback(sc_allocator_t *alloc, const char *persona_name, c
     fb.context = context ? context : "";
     fb.context_len = context ? strlen(context) : 0;
 
-    sc_error_t err = sc_persona_feedback_record(alloc, persona_name, strlen(persona_name), &fb);
+    sc_error_t err = sc_persona_feedback_record(alloc, name, strlen(name), &fb);
     if (err != SC_OK) {
         *out = sc_tool_result_fail("Failed to record feedback", 26);
         return SC_OK;

@@ -920,47 +920,4 @@ fail:
     return err;
 }
 
-/* --- Feedback recording (stores corrections for future persona refinement) --- */
-
-sc_error_t sc_persona_feedback_record(sc_allocator_t *alloc, const char *persona_name,
-                                      size_t persona_name_len,
-                                      const sc_persona_feedback_t *feedback) {
-    if (!alloc || !persona_name || !persona_name_len || !feedback)
-        return SC_ERR_INVALID_ARGUMENT;
-    if (!feedback->corrected_response || !feedback->corrected_response_len)
-        return SC_ERR_INVALID_ARGUMENT;
-
-#if SC_IS_TEST
-    (void)persona_name_len;
-    return SC_OK;
-#else
-    char path[SC_PERSONA_PATH_MAX];
-    int n = snprintf(path, sizeof(path), "%s/.seaclaw/personas/%.*s/feedback.jsonl",
-                     getenv("HOME") ? getenv("HOME") : ".", (int)persona_name_len, persona_name);
-    if (n < 0 || (size_t)n >= sizeof(path))
-        return SC_ERR_INVALID_ARGUMENT;
-
-    FILE *f = fopen(path, "a");
-    if (!f)
-        return SC_ERR_NOT_SUPPORTED;
-
-    fprintf(f,
-            "{\"channel\":\"%.*s\",\"original\":\"%.*s\",\"corrected\":\"%.*s\",\"context\":\"%.*"
-            "s\"}\n",
-            (int)feedback->channel_len, feedback->channel ? feedback->channel : "",
-            (int)feedback->original_response_len,
-            feedback->original_response ? feedback->original_response : "",
-            (int)feedback->corrected_response_len, feedback->corrected_response,
-            (int)feedback->context_len, feedback->context ? feedback->context : "");
-    fclose(f);
-    return SC_OK;
-#endif
-}
-
-sc_error_t sc_persona_feedback_apply(sc_allocator_t *alloc, const char *persona_name,
-                                     size_t persona_name_len) {
-    if (!alloc || !persona_name || !persona_name_len)
-        return SC_ERR_INVALID_ARGUMENT;
-    /* Future: read feedback.jsonl and merge corrections into persona profile */
-    return SC_OK;
-}
+/* Feedback recording and apply are in feedback.c */
