@@ -12,6 +12,8 @@
 #define SC_AUDIT_MAX_PATH      1024
 #define SC_AUDIT_HMAC_LEN      32
 
+static void build_key_path(char *out, size_t cap, const char *base, size_t blen);
+
 static uint64_t g_audit_next_id = 0;
 
 static void audit_secure_zero(void *p, size_t n) {
@@ -605,10 +607,7 @@ sc_audit_logger_t *sc_audit_logger_create(sc_allocator_t *alloc, const sc_audit_
     char key_path[SC_AUDIT_MAX_PATH];
     if (base_len + 17 >= sizeof(key_path))
         return NULL;
-    if (base_len > 0 && base_dir[base_len - 1] == '/')
-        snprintf(key_path, sizeof(key_path), "%s.audit_hmac_key", base_dir);
-    else
-        snprintf(key_path, sizeof(key_path), "%s/.audit_hmac_key", base_dir);
+    build_key_path(key_path, sizeof(key_path), base_dir, base_len);
 
     sc_audit_logger_t *logger =
         (sc_audit_logger_t *)alloc->alloc(alloc->ctx, sizeof(sc_audit_logger_t));
@@ -865,10 +864,7 @@ sc_error_t sc_audit_load_key(const char *base_dir, unsigned char key[32]) {
     size_t base_len = strlen(base_dir);
     if (base_len + 17 >= sizeof(key_path))
         return SC_ERR_INVALID_ARGUMENT;
-    if (base_len > 0 && base_dir[base_len - 1] == '/')
-        snprintf(key_path, sizeof(key_path), "%s.audit_hmac_key", base_dir);
-    else
-        snprintf(key_path, sizeof(key_path), "%s/.audit_hmac_key", base_dir);
+    build_key_path(key_path, sizeof(key_path), base_dir, base_len);
     FILE *f = fopen(key_path, "rb");
     if (!f)
         return SC_ERR_IO;
@@ -887,6 +883,19 @@ sc_error_t sc_audit_load_key(const char *base_dir, unsigned char key[32]) {
     return SC_OK;
 }
 
+static void build_key_path(char *out, size_t cap, const char *base, size_t blen) {
+    const char suffix[] = ".audit_hmac_key";
+    const size_t slen = sizeof(suffix) - 1;
+    memcpy(out, base, blen);
+    if (blen > 0 && base[blen - 1] != '/') {
+        out[blen] = '/';
+        memcpy(out + blen + 1, suffix, slen + 1);
+    } else {
+        memcpy(out + blen, suffix, slen + 1);
+    }
+    (void)cap;
+}
+
 static sc_error_t
 load_keys_from_base_dir(const char *base_dir,
                         unsigned char keys[SC_AUDIT_MAX_KEY_HISTORY][SC_AUDIT_HMAC_LEN],
@@ -895,10 +904,7 @@ load_keys_from_base_dir(const char *base_dir,
     size_t base_len = strlen(base_dir);
     if (base_len + 17 >= sizeof(key_path))
         return SC_ERR_INVALID_ARGUMENT;
-    if (base_len > 0 && base_dir[base_len - 1] == '/')
-        snprintf(key_path, sizeof(key_path), "%s.audit_hmac_key", base_dir);
-    else
-        snprintf(key_path, sizeof(key_path), "%s/.audit_hmac_key", base_dir);
+    build_key_path(key_path, sizeof(key_path), base_dir, base_len);
 
     char hist_path[SC_AUDIT_MAX_PATH];
     get_key_history_path(key_path, hist_path, sizeof(hist_path));

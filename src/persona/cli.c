@@ -187,9 +187,9 @@ sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t
         (void)alloc;
         return SC_OK;
 #else
-        size_t msg_count = 0;
         if (args->from_imessage) {
 #if defined(__APPLE__) && defined(__MACH__) && defined(SC_ENABLE_SQLITE)
+            size_t msg_count = 0;
             const char *home = getenv("HOME");
             if (!home || !home[0]) {
                 fprintf(stderr, "HOME not set\n");
