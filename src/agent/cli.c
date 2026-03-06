@@ -150,6 +150,8 @@ typedef struct agent_turn_ctx {
 
 static void *agent_turn_thread(void *arg) {
     agent_turn_ctx_t *ctx = (agent_turn_ctx_t *)arg;
+    ctx->agent->active_channel = "cli";
+    ctx->agent->active_channel_len = 3;
     ctx->err = sc_agent_turn_stream(ctx->agent, ctx->msg, ctx->msg_len, cli_stream_token, NULL,
                                     &ctx->response, &ctx->response_len);
     ctx->done = 1;
@@ -583,6 +585,8 @@ sc_error_t sc_agent_cli_run(sc_allocator_t *alloc, const char *const *argv, size
 #else
         char *response = NULL;
         size_t response_len = 0;
+        agent.active_channel = "cli";
+        agent.active_channel_len = 3;
         printf("Thinking...\r");
         fflush(stdout);
         err = sc_agent_turn_stream(&agent, line, line_len, cli_stream_token, NULL, &response,

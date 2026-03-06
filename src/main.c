@@ -491,7 +491,7 @@ typedef struct webhook_dispatcher_ctx {
     size_t ch_count;
 } webhook_dispatcher_ctx_t;
 
-__attribute__((unused)) static void webhook_dispatcher(const char *channel, const char *body,
+static void webhook_dispatcher(const char *channel, const char *body,
                                                        size_t body_len, void *ctx) {
     webhook_dispatcher_ctx_t *d = (webhook_dispatcher_ctx_t *)ctx;
     if (!d || !channel || !body)
@@ -1403,13 +1403,20 @@ static bool gw_agent_on_message(sc_bus_event_type_t type, const sc_bus_event_t *
 
     char *reply = NULL;
     size_t reply_len = 0;
+    b->agent->active_channel = "gateway";
+    b->agent->active_channel_len = 8;
     sc_error_t err = sc_agent_turn(b->agent, msg, strlen(msg), &reply, &reply_len);
     if (err == SC_OK && reply && reply_len > 0) {
         sc_bus_event_t rev;
         memset(&rev, 0, sizeof(rev));
         rev.type = SC_BUS_MESSAGE_SENT;
-        snprintf(rev.channel, SC_BUS_CHANNEL_LEN, "%s", ev->channel[0] ? ev->channel : "gateway");
-        snprintf(rev.id, SC_BUS_ID_LEN, "%s", ev->id);
+        int nc = snprintf(rev.channel, SC_BUS_CHANNEL_LEN, "%s",
+                          ev->channel[0] ? ev->channel : "gateway");
+        if (nc < 0 || (size_t)nc >= SC_BUS_CHANNEL_LEN)
+            (void)snprintf(rev.channel, SC_BUS_CHANNEL_LEN, "gateway");
+        int ni = snprintf(rev.id, SC_BUS_ID_LEN, "%s", ev->id);
+        if (ni < 0 || (size_t)ni >= SC_BUS_ID_LEN)
+            rev.id[0] = '\0';
         rev.payload = reply;
         size_t rl = reply_len;
         if (rl >= SC_BUS_MSG_LEN)
@@ -1422,8 +1429,13 @@ static bool gw_agent_on_message(sc_bus_event_type_t type, const sc_bus_event_t *
         sc_bus_event_t eev;
         memset(&eev, 0, sizeof(eev));
         eev.type = SC_BUS_ERROR;
-        snprintf(eev.channel, SC_BUS_CHANNEL_LEN, "%s", ev->channel[0] ? ev->channel : "gateway");
-        snprintf(eev.id, SC_BUS_ID_LEN, "%s", ev->id);
+        int ec = snprintf(eev.channel, SC_BUS_CHANNEL_LEN, "%s",
+                         ev->channel[0] ? ev->channel : "gateway");
+        if (ec < 0 || (size_t)ec >= SC_BUS_CHANNEL_LEN)
+            (void)snprintf(eev.channel, SC_BUS_CHANNEL_LEN, "gateway");
+        int ei = snprintf(eev.id, SC_BUS_ID_LEN, "%s", ev->id);
+        if (ei < 0 || (size_t)ei >= SC_BUS_ID_LEN)
+            eev.id[0] = '\0';
         const char *emsg = sc_error_string(err);
         size_t el = strlen(emsg);
         if (el >= SC_BUS_MSG_LEN)

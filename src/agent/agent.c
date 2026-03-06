@@ -23,6 +23,7 @@
 #include "seaclaw/voice.h"
 #include <ctype.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -157,12 +158,8 @@ sc_error_t sc_agent_from_config(
     out->custom_instructions_len = 0;
     if (custom_instructions && custom_instructions_len > 0) {
         out->custom_instructions = sc_strndup(alloc, custom_instructions, custom_instructions_len);
-        if (!out->custom_instructions) {
-            alloc->free(alloc->ctx, out->workspace_dir, out->workspace_dir_len + 1);
-            alloc->free(alloc->ctx, out->default_provider, out->default_provider_len + 1);
-            alloc->free(alloc->ctx, out->model_name, out->model_name_len + 1);
+        if (!out->custom_instructions)
             return SC_ERR_OUT_OF_MEMORY;
-        }
         out->custom_instructions_len = custom_instructions_len;
     }
 
@@ -282,6 +279,10 @@ sc_error_t sc_agent_from_config(
             memset(out->persona, 0, sizeof(sc_persona_t));
             sc_error_t perr = sc_persona_load(alloc, persona, persona_len, out->persona);
             if (perr != SC_OK) {
+#ifndef SC_IS_TEST
+                fprintf(stderr, "[seaclaw] warning: persona '%.*s' not found, running without persona\n",
+                        (int)persona_len, persona);
+#endif
                 alloc->free(alloc->ctx, out->persona, sizeof(sc_persona_t));
                 out->persona = NULL;
             }
@@ -1735,12 +1736,15 @@ sc_error_t sc_agent_turn_stream(sc_agent_t *agent, const char *msg, size_t msg_l
                 on_token(*response_out + i, n, token_ctx);
             }
         }
+        sc_agent_clear_current_for_tools();
         return fallback_err;
     }
 
     sc_error_t err = append_history(agent, SC_ROLE_USER, msg, msg_len, NULL, 0, NULL, 0);
-    if (err != SC_OK)
+    if (err != SC_OK) {
+        sc_agent_clear_current_for_tools();
         return err;
+    }
 
     char *memory_ctx = NULL;
     size_t memory_ctx_len = 0;
@@ -1762,6 +1766,7 @@ sc_error_t sc_agent_turn_stream(sc_agent_t *agent, const char *msg, size_t msg_l
         if (perr != SC_OK) {
             if (memory_ctx)
                 agent->alloc->free(agent->alloc->ctx, memory_ctx, memory_ctx_len + 1);
+            sc_agent_clear_current_for_tools();
             return perr;
         }
     }
@@ -1774,8 +1779,10 @@ sc_error_t sc_agent_turn_stream(sc_agent_t *agent, const char *msg, size_t msg_l
                                          memory_ctx_len, &system_prompt, &system_prompt_len);
         if (memory_ctx)
             agent->alloc->free(agent->alloc->ctx, memory_ctx, memory_ctx_len + 1);
-        if (err != SC_OK)
+        if (err != SC_OK) {
+            sc_agent_clear_current_for_tools();
             return err;
+        }
     } else {
         sc_prompt_config_t cfg = {
             .provider_name = agent->provider.vtable->get_name(agent->provider.ctx),
@@ -1800,8 +1807,10 @@ sc_error_t sc_agent_turn_stream(sc_agent_t *agent, const char *msg, size_t msg_l
         persona_prompt = NULL;
         if (memory_ctx)
             agent->alloc->free(agent->alloc->ctx, memory_ctx, memory_ctx_len + 1);
-        if (err != SC_OK)
+        if (err != SC_OK) {
+            sc_agent_clear_current_for_tools();
             return err;
+        }
     }
 
     sc_chat_message_t *msgs = NULL;
@@ -1861,8 +1870,10 @@ sc_error_t sc_agent_turn_stream(sc_agent_t *agent, const char *msg, size_t msg_l
             agent->alloc->free(agent->alloc->ctx, msgs, msgs_count * sizeof(sc_chat_message_t));
         if (system_prompt)
             agent->alloc->free(agent->alloc->ctx, system_prompt, system_prompt_len + 1);
-        if (err != SC_OK)
+        if (err != SC_OK) {
+            sc_agent_clear_current_for_tools();
             return err;
+        }
         agent->total_tokens += sresp.usage.total_tokens;
         agent_record_cost(agent, &sresp.usage);
         if (sresp.content && sresp.content_len > 0) {
@@ -1875,6 +1886,7 @@ sc_error_t sc_agent_turn_stream(sc_agent_t *agent, const char *msg, size_t msg_l
                 *response_len_out = sresp.content_len;
             agent_maybe_tts(agent, sresp.content, sresp.content_len);
         }
+        sc_agent_clear_current_for_tools();
         return SC_OK;
     }
 }

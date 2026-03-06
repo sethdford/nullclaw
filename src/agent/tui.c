@@ -536,6 +536,8 @@ typedef struct tui_turn_ctx {
 
 static void *tui_turn_thread(void *arg) {
     tui_turn_ctx_t *ctx = (tui_turn_ctx_t *)arg;
+    ctx->state->agent->active_channel = "tui";
+    ctx->state->agent->active_channel_len = 3;
     ctx->err = sc_agent_turn_stream(ctx->state->agent, ctx->msg, ctx->msg_len, tui_stream_token,
                                     ctx->state, &ctx->response, &ctx->response_len);
     ctx->done = 1;
@@ -634,6 +636,8 @@ static pthread_t g_bg_tid;
 
 static void *bg_task_thread(void *arg) {
     tui_bg_task_t *task = (tui_bg_task_t *)arg;
+    task->state->agent->active_channel = "tui";
+    task->state->agent->active_channel_len = 3;
     task->err = sc_agent_turn(task->state->agent, task->msg, task->msg_len, &task->response,
                               &task->response_len);
     task->done = 1;
