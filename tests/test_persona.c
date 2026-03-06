@@ -328,6 +328,41 @@ static void test_analyzer_parses_response(void) {
     sc_persona_deinit(&alloc, &partial);
 }
 
+static void test_sampler_facebook_parse_basic(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    const char *json = "{\"messages\":["
+                       "{\"sender_name\":\"Alice\",\"content\":\"hey there\"},"
+                       "{\"sender_name\":\"Bob\",\"content\":\"hi alice\"},"
+                       "{\"sender_name\":\"Alice\",\"content\":\"whats up\"},"
+                       "{\"sender_name\":\"Alice\",\"content\":\"see you later\"}"
+                       "]}";
+    char **msgs = NULL;
+    size_t count = 0;
+    sc_error_t err = sc_persona_sampler_facebook_parse(json, strlen(json), &msgs, &count);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(count, (size_t)3);
+    SC_ASSERT_STR_EQ(msgs[0], "hey there");
+    SC_ASSERT_STR_EQ(msgs[1], "whats up");
+    SC_ASSERT_STR_EQ(msgs[2], "see you later");
+    for (size_t i = 0; i < count; i++)
+        alloc.free(alloc.ctx, msgs[i], strlen(msgs[i]) + 1);
+    alloc.free(alloc.ctx, msgs, count * sizeof(char *));
+}
+
+static void test_sampler_facebook_parse_empty(void) {
+    const char *json = "{\"messages\":[]}";
+    char **msgs = NULL;
+    size_t count = 99;
+    sc_error_t err = sc_persona_sampler_facebook_parse(json, strlen(json), &msgs, &count);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(count, (size_t)0);
+}
+
+static void test_sampler_facebook_parse_null(void) {
+    sc_error_t err = sc_persona_sampler_facebook_parse(NULL, 0, NULL, NULL);
+    SC_ASSERT_NEQ(err, SC_OK);
+}
+
 static void test_sampler_imessage_query(void) {
     char query[512];
     size_t query_len = 0;
@@ -541,6 +576,9 @@ void run_persona_tests(void) {
     SC_RUN_TEST(test_analyzer_builds_prompt);
     SC_RUN_TEST(test_analyzer_parses_response);
     SC_RUN_TEST(test_sampler_imessage_query);
+    SC_RUN_TEST(test_sampler_facebook_parse_basic);
+    SC_RUN_TEST(test_sampler_facebook_parse_empty);
+    SC_RUN_TEST(test_sampler_facebook_parse_null);
     SC_RUN_TEST(test_persona_select_examples_match);
     SC_RUN_TEST(test_persona_select_examples_no_channel);
     SC_RUN_TEST(test_persona_select_examples_no_match);
