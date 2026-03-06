@@ -564,10 +564,12 @@ sc_error_t sc_persona_build_prompt(sc_allocator_t *alloc, const sc_persona_t *pe
             goto fail;
     }
 
-    err = append_prompt(alloc, &buf, &len, &cap,
-                        "Match this style naturally. Don't exaggerate traits — aim for "
-                        "authenticity, not caricature.\n\n",
-                        87);
+    {
+        static const char style_note[] =
+            "Match this style naturally. Don't exaggerate traits — aim for "
+            "authenticity, not caricature.\n\n";
+        err = append_prompt(alloc, &buf, &len, &cap, style_note, sizeof(style_note) - 1);
+    }
     if (err != SC_OK)
         goto fail;
 

@@ -34,7 +34,7 @@ export class ScThinking extends LitElement {
       border-radius: var(--sc-radius-lg);
       background: color-mix(
         in srgb,
-        var(--sc-surface) var(--sc-glass-subtle-bg-opacity, 4%),
+        var(--sc-surface, var(--sc-bg-surface)) var(--sc-glass-subtle-bg-opacity, 4%),
         transparent
       );
       backdrop-filter: blur(var(--sc-glass-subtle-blur, 12px))
@@ -50,7 +50,7 @@ export class ScThinking extends LitElement {
     .container:hover {
       background: color-mix(
         in srgb,
-        var(--sc-surface) calc(var(--sc-glass-subtle-bg-opacity, 4%) * 1.5),
+        var(--sc-surface, var(--sc-bg-surface)) calc(var(--sc-glass-subtle-bg-opacity, 4%) * 1.5),
         transparent
       );
     }

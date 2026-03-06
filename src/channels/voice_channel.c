@@ -66,6 +66,7 @@ static sc_error_t voice_send(void *ctx, const char *target, size_t target_len, c
     (void)target_len;
     (void)media;
     (void)media_count;
+    (void)message_len;
 
 #ifdef SC_HAS_SONATA
     const size_t buf_samples = VOICE_MAX_SAMPLES;

@@ -1,5 +1,10 @@
 @import "./_tokens.css";
 
+:root {
+  --sc-surface: var(--sc-bg-surface);
+  --sc-overlay: rgba(0, 0, 0, 0.6);
+}
+
 @font-face {
   font-family: "Avenir";
   src: local("Avenir Book"), local("Avenir-Book"), local("AvenirLTStd-Book");
@@ -611,9 +616,9 @@ body {
 .sc-glass-interactive:focus-visible {
   box-shadow:
     0 0 0 var(--sc-focus-ring-width, 2px)
-      var(--sc-glass-interactive-focus-glow-color, rgba(20, 184, 166, 0.35)),
+      var(--sc-glass-interactive-focus-glow-color, rgba(122, 182, 72, 0.35)),
     0 0 var(--sc-glass-interactive-focus-glow-spread, 8px)
-      var(--sc-glass-interactive-focus-glow-color, rgba(20, 184, 166, 0.35));
+      var(--sc-glass-interactive-focus-glow-color, rgba(122, 182, 72, 0.35));
   outline: none;
 }
 

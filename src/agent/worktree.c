@@ -27,7 +27,7 @@ static sc_worktree_t *find_by_agent_id(sc_worktree_manager_t *mgr, uint64_t agen
     return NULL;
 }
 
-static sc_error_t run_git_cmd(const char *repo_root, const char *fmt, ...) {
+static sc_error_t __attribute__((unused)) run_git_cmd(const char *repo_root, const char *fmt, ...) {
     char cmd[1024];
     va_list ap;
     va_start(ap, fmt);

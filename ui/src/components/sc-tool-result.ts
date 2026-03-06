@@ -27,7 +27,7 @@ export class ScToolResult extends LitElement {
       overflow: hidden;
       background: color-mix(
         in srgb,
-        var(--sc-surface) var(--sc-glass-standard-bg-opacity, 6%),
+        var(--sc-surface, var(--sc-bg-surface)) var(--sc-glass-standard-bg-opacity, 6%),
         transparent
       );
       backdrop-filter: blur(var(--sc-glass-standard-blur, 24px))
@@ -66,7 +66,7 @@ export class ScToolResult extends LitElement {
     }
 
     .header:hover {
-      background: color-mix(in srgb, var(--sc-surface) 8%, transparent);
+      background: color-mix(in srgb, var(--sc-surface, var(--sc-bg-surface)) 8%, transparent);
     }
 
     .header:focus-visible {

@@ -127,7 +127,7 @@ export class ScMessageStream extends LitElement {
       margin-right: auto;
       background: color-mix(
         in srgb,
-        var(--sc-surface) var(--sc-glass-standard-bg-opacity, 6%),
+        var(--sc-surface, var(--sc-bg-surface)) var(--sc-glass-standard-bg-opacity, 6%),
         transparent
       );
       backdrop-filter: blur(var(--sc-glass-standard-blur, 24px))

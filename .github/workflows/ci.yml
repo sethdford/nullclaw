@@ -172,6 +172,7 @@ jobs:
         run: |
           cmake -B build-fuzz \
             -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
             -DSC_ENABLE_FUZZ=ON \
             -DSC_ENABLE_ALL_CHANNELS=ON \
             -DSC_ENABLE_CURL=ON
@@ -260,12 +261,34 @@ jobs:
         run: npm run build
 
       - name: E2E tests
-        run: npm run test:e2e --if-present
+        run: npx playwright test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: ui/playwright-report/
+          retention-days: 14
+
+      - name: Visual regression screenshots
+        if: always()
+        run: |
+          npx vite preview --port 4173 &
+          sleep 3
+          npx playwright screenshot --browser chromium "http://localhost:4173/" "visual-overview.png"
+          npx playwright screenshot --browser chromium "http://localhost:4173/#chat" "visual-chat.png"
         continue-on-error: true
 
-      - name: Visual regression
-        run: npx playwright screenshot --browser chromium "http://localhost:4173/" "visual-overview.png" || true
-        continue-on-error: true
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-screenshots
+          path: |
+            ui/visual-overview.png
+            ui/visual-chat.png
+          retention-days: 14
 
   swift:
     runs-on: macos-latest
@@ -298,4 +321,24 @@ jobs:
       - name: Build Android app
         working-directory: apps/android
         run: ./gradlew assembleDebug 2>&1 || echo "::warning::Android build failed — check app sources"
+        continue-on-error: true
+
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.27.x"
+          channel: stable
+
+      - name: Flutter analyze
+        working-directory: apps/flutter
+        run: flutter analyze 2>&1 || echo "::warning::Flutter analyze found issues"
+        continue-on-error: true
+
+      - name: Flutter test
+        working-directory: apps/flutter
+        run: flutter test 2>&1 || echo "::warning::Flutter tests failed"
         continue-on-error: true
