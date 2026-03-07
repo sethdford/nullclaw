@@ -66,7 +66,7 @@ Types: `feat fix refactor test docs chore perf ci build style`
 
 | Path               | What                                           |
 | ------------------ | ---------------------------------------------- |
-| `src/`             | All C source (~599 files, ~105K lines)         |
+| `src/`             | All C source (~599 files, ~106K lines)         |
 | `include/seaclaw/` | Public headers                                 |
 | `tests/`           | 102 test files, 3207+ tests                    |
 | `fuzz/`            | libFuzzer harnesses                            |

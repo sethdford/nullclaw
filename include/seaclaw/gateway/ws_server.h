@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define SC_WS_SERVER_MAX_CONNS 8
+#define SC_WS_SERVER_MAX_CONNS 32
 #define SC_WS_SERVER_MAX_MSG   (64 * 1024)
 #define SC_WS_SERVER_RECV_BUF  (8 * 1024)
 
