@@ -164,6 +164,8 @@ static void test_diff_tool_create(void) {
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_NOT_NULL(tool.vtable);
     SC_ASSERT_STR_EQ(tool.vtable->name(tool.ctx), "diff");
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
 }
 
 static void test_diff_tool_create_null_out_fails(void) {
@@ -179,6 +181,8 @@ static void test_diff_tool_execute_null_args_fails(void) {
     sc_tool_result_t res = {0};
     sc_error_t err = tool.vtable->execute(tool.ctx, &alloc, NULL, &res);
     SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
 }
 
 static void test_apply_patch_create(void) {

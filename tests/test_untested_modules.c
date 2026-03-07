@@ -96,6 +96,7 @@ static void test_crontab_load_nonexistent_returns_empty(void) {
     sc_error_t err = sc_crontab_load(&alloc, "/nonexistent/crontab.json", &entries, &count);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_EQ(count, 0u);
+    sc_crontab_entries_free(&alloc, entries, count);
 }
 
 static void test_crontab_entries_free_null_safe(void) {

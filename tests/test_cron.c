@@ -511,6 +511,7 @@ static void test_crontab_load_empty(void) {
     sc_error_t err = sc_crontab_load(&alloc, "/nonexistent/path/crontab.json", &entries, &count);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_EQ(count, 0u);
+    sc_crontab_entries_free(&alloc, entries, count);
 }
 
 static void test_crontab_save_load_roundtrip(void) {

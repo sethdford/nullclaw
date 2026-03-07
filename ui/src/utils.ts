@@ -28,6 +28,14 @@ export function formatRelative(v: number | string | undefined | null): string {
 export const SESSION_KEY_DEFAULT = "default";
 export const SESSION_KEY_VOICE = "voice";
 
+export function formatTime(ts: number): string {
+  const d = new Date(ts);
+  return d.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export const EVENT_NAMES = {
   CHAT: "chat",
   TOOL_CALL: "agent.tool",

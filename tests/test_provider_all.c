@@ -142,8 +142,7 @@ static void test_openai_chat_mock(void) {
     sc_error_t err = prov.vtable->chat(prov.ctx, &alloc, &req, "gpt-4", 4, 0.7, &resp);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_NOT_NULL(resp.content);
-    if (resp.content)
-        alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    sc_chat_response_free(&alloc, &resp);
     if (prov.vtable->deinit)
         prov.vtable->deinit(prov.ctx, &alloc);
 }
@@ -268,10 +267,7 @@ static void test_openai_model_passthrough(void) {
     sc_error_t err = prov.vtable->chat(prov.ctx, &alloc, &req, "gpt-4o", 6, 0.5, &resp);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_NOT_NULL(resp.content);
-    if (resp.content)
-        alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
-    if (resp.model)
-        alloc.free(alloc.ctx, (void *)resp.model, resp.model_len + 1);
+    sc_chat_response_free(&alloc, &resp);
     if (prov.vtable->deinit)
         prov.vtable->deinit(prov.ctx, &alloc);
 }
@@ -286,8 +282,7 @@ static void test_openai_temperature_passthrough(void) {
     sc_error_t err = prov.vtable->chat(prov.ctx, &alloc, &req, "gpt-4", 4, 0.0, &resp);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_NOT_NULL(resp.content);
-    if (resp.content)
-        alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    sc_chat_response_free(&alloc, &resp);
     if (prov.vtable->deinit)
         prov.vtable->deinit(prov.ctx, &alloc);
 }
@@ -322,8 +317,7 @@ static void test_openai_chat_empty_messages_graceful(void) {
     sc_error_t err = prov.vtable->chat(prov.ctx, &alloc, &req, "gpt-4", 4, 0.7, &resp);
     SC_ASSERT_TRUE(err == SC_OK || err == SC_ERR_INVALID_ARGUMENT ||
                    err == SC_ERR_PROVIDER_RESPONSE);
-    if (err == SC_OK && resp.content)
-        alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    sc_chat_response_free(&alloc, &resp);
     if (prov.vtable->deinit)
         prov.vtable->deinit(prov.ctx, &alloc);
 }
@@ -1110,8 +1104,7 @@ static void test_openrouter_chat_empty_messages_graceful(void) {
     sc_error_t err = prov.vtable->chat(prov.ctx, &alloc, &req, "openai/gpt-4", 14, 0.7, &resp);
     SC_ASSERT_TRUE(err == SC_OK || err == SC_ERR_INVALID_ARGUMENT ||
                    err == SC_ERR_PROVIDER_RESPONSE);
-    if (err == SC_OK)
-        sc_chat_response_free(&alloc, &resp);
+    sc_chat_response_free(&alloc, &resp);
     if (prov.vtable->deinit)
         prov.vtable->deinit(prov.ctx, &alloc);
 }
@@ -2336,8 +2329,7 @@ static void test_reliable_chat_passthrough(void) {
     sc_error_t err = prov.vtable->chat(prov.ctx, &alloc, &req, "gpt-4", 4, 0.7, &resp);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_NOT_NULL(resp.content);
-    if (resp.content)
-        alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    sc_chat_response_free(&alloc, &resp);
     if (prov.vtable->deinit)
         prov.vtable->deinit(prov.ctx, &alloc);
 }
@@ -2764,8 +2756,7 @@ static void test_openai_structured_output_json_mode(void) {
     sc_error_t err = prov.vtable->chat(prov.ctx, &alloc, &req, "gpt-4", 5, 0.7, &resp);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_TRUE(resp.content != NULL);
-    if (resp.content)
-        alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    sc_chat_response_free(&alloc, &resp);
     if (prov.vtable->deinit)
         prov.vtable->deinit(prov.ctx, &alloc);
 }
@@ -2833,8 +2824,7 @@ static void test_structured_output_null_format_no_crash(void) {
     sc_chat_response_t resp = {0};
     sc_error_t err = prov.vtable->chat(prov.ctx, &alloc, &req, "gpt-4", 5, 0.7, &resp);
     SC_ASSERT_EQ(err, SC_OK);
-    if (resp.content)
-        alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    sc_chat_response_free(&alloc, &resp);
     if (prov.vtable->deinit)
         prov.vtable->deinit(prov.ctx, &alloc);
 }
@@ -2850,8 +2840,7 @@ static void test_ollama_structured_output_json_mode(void) {
     sc_chat_response_t resp = {0};
     sc_error_t err = prov.vtable->chat(prov.ctx, &alloc, &req, "llama3", 6, 0.7, &resp);
     SC_ASSERT_EQ(err, SC_OK);
-    if (resp.content)
-        alloc.free(alloc.ctx, (void *)resp.content, resp.content_len + 1);
+    sc_chat_response_free(&alloc, &resp);
     if (prov.vtable->deinit)
         prov.vtable->deinit(prov.ctx, &alloc);
 }

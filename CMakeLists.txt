@@ -1027,7 +1027,8 @@ set(SC_TEST_EXTRA_CHANNELS)
 if(NOT SC_ENABLE_ALL_CHANNELS)
     list(APPEND SC_TEST_EXTRA_CHANNELS
         src/channels/signal.c src/channels/nostr.c src/channels/qq.c
-        src/channels/maixcam.c src/channels/dispatch.c src/channels/gmail.c)
+        src/channels/maixcam.c src/channels/dispatch.c
+        src/channels/gmail_base64.c src/channels/gmail.c)
 endif()
 if(NOT SC_ENABLE_MQTT)
     list(APPEND SC_TEST_EXTRA_CHANNELS src/channels/mqtt.c)

@@ -104,6 +104,7 @@ static void test_sqlite_memory_get(void) {
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_TRUE(found);
     SC_ASSERT_STR_EQ(entry.key, "k1");
+    sc_memory_entry_free_fields(&alloc, &entry);
     mem.vtable->deinit(mem.ctx);
 }
 
