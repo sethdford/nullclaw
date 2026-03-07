@@ -183,7 +183,7 @@ export class ScSidebar extends LitElement {
         transform var(--sc-duration-normal) var(--sc-spring-out);
       margin-bottom: var(--sc-space-xs);
       text-align: left;
-      font-family: inherit;
+      font-family: var(--sc-font);
     }
 
     .nav-item:active {
