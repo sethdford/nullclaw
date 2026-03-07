@@ -82,8 +82,23 @@ static void test_daemon_stop_test_mode(void) {
 
 static void test_daemon_status_test_mode(void) {
     bool status = sc_daemon_status();
-    /* In test mode, status returns false */
     SC_ASSERT_FALSE(status);
+}
+
+static void test_daemon_install_test_mode(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_error_t err = sc_daemon_install(&alloc);
+    SC_ASSERT(err == SC_OK);
+}
+
+static void test_daemon_uninstall_test_mode(void) {
+    sc_error_t err = sc_daemon_uninstall();
+    SC_ASSERT(err == SC_OK);
+}
+
+static void test_daemon_logs_test_mode(void) {
+    sc_error_t err = sc_daemon_logs();
+    SC_ASSERT(err == SC_OK);
 }
 
 static void test_migration_run_test_mode(void) {
@@ -321,6 +336,9 @@ void run_subsystems_tests(void) {
     SC_RUN_TEST(test_daemon_start_test_mode);
     SC_RUN_TEST(test_daemon_stop_test_mode);
     SC_RUN_TEST(test_daemon_status_test_mode);
+    SC_RUN_TEST(test_daemon_install_test_mode);
+    SC_RUN_TEST(test_daemon_uninstall_test_mode);
+    SC_RUN_TEST(test_daemon_logs_test_mode);
 
     SC_RUN_TEST(test_migration_run_test_mode);
     SC_RUN_TEST(test_migration_invalid_args);

@@ -527,6 +527,245 @@ bool sc_daemon_status(void) {
 }
 #endif
 
+/* ── Platform service install/uninstall/logs ─────────────────────────── */
+
+#if defined(SC_IS_TEST)
+
+sc_error_t sc_daemon_install(sc_allocator_t *alloc) {
+    (void)alloc;
+    return SC_OK;
+}
+
+sc_error_t sc_daemon_uninstall(void) {
+    return SC_OK;
+}
+
+sc_error_t sc_daemon_logs(void) {
+    return SC_OK;
+}
+
+#elif defined(__APPLE__)
+
+#define SC_LAUNCHD_LABEL "com.seaclaw.agent"
+#define SC_LAUNCHD_DIR   "Library/LaunchAgents"
+
+static int get_binary_path(char *buf, size_t buf_size) {
+    const char *paths[] = {"/usr/local/bin/seaclaw", "/opt/homebrew/bin/seaclaw", NULL};
+    for (int i = 0; paths[i]; i++) {
+        if (access(paths[i], X_OK) == 0) {
+            size_t len = strlen(paths[i]);
+            if (len < buf_size) {
+                memcpy(buf, paths[i], len + 1);
+                return (int)len;
+            }
+        }
+    }
+    return -1;
+}
+
+sc_error_t sc_daemon_install(sc_allocator_t *alloc) {
+    (void)alloc;
+    const char *home = getenv("HOME");
+    if (!home)
+        return SC_ERR_INVALID_ARGUMENT;
+
+    char bin[SC_MAX_PATH];
+    if (get_binary_path(bin, sizeof(bin)) < 0)
+        return SC_ERR_NOT_FOUND;
+
+    char dir[SC_MAX_PATH];
+    int n = snprintf(dir, sizeof(dir), "%s/%s", home, SC_LAUNCHD_DIR);
+    if (n <= 0 || (size_t)n >= sizeof(dir))
+        return SC_ERR_IO;
+    mkdir(dir, 0755);
+
+    char plist[SC_MAX_PATH];
+    n = snprintf(plist, sizeof(plist), "%s/%s.plist", dir, SC_LAUNCHD_LABEL);
+    if (n <= 0 || (size_t)n >= sizeof(plist))
+        return SC_ERR_IO;
+
+    char log_path[SC_MAX_PATH];
+    n = snprintf(log_path, sizeof(log_path), "%s/.seaclaw/seaclaw.log", home);
+    if (n <= 0 || (size_t)n >= sizeof(log_path))
+        return SC_ERR_IO;
+
+    FILE *f = fopen(plist, "w");
+    if (!f)
+        return SC_ERR_IO;
+
+    fprintf(f,
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+            "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" "
+            "\"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
+            "<plist version=\"1.0\">\n"
+            "<dict>\n"
+            "  <key>Label</key>\n"
+            "  <string>%s</string>\n"
+            "  <key>ProgramArguments</key>\n"
+            "  <array>\n"
+            "    <string>%s</string>\n"
+            "    <string>service-loop</string>\n"
+            "  </array>\n"
+            "  <key>RunAtLoad</key>\n"
+            "  <true/>\n"
+            "  <key>KeepAlive</key>\n"
+            "  <true/>\n"
+            "  <key>StandardOutPath</key>\n"
+            "  <string>%s</string>\n"
+            "  <key>StandardErrorPath</key>\n"
+            "  <string>%s</string>\n"
+            "  <key>EnvironmentVariables</key>\n"
+            "  <dict>\n"
+            "    <key>HOME</key>\n"
+            "    <string>%s</string>\n"
+            "  </dict>\n"
+            "</dict>\n"
+            "</plist>\n",
+            SC_LAUNCHD_LABEL, bin, log_path, log_path, home);
+    fclose(f);
+
+    char cmd[SC_MAX_PATH * 2];
+    n = snprintf(cmd, sizeof(cmd), "launchctl load -w \"%s\"", plist);
+    if (n <= 0 || (size_t)n >= sizeof(cmd))
+        return SC_ERR_IO;
+    if (system(cmd) != 0)
+        return SC_ERR_IO;
+
+    return SC_OK;
+}
+
+sc_error_t sc_daemon_uninstall(void) {
+    const char *home = getenv("HOME");
+    if (!home)
+        return SC_ERR_INVALID_ARGUMENT;
+
+    char plist[SC_MAX_PATH];
+    int n =
+        snprintf(plist, sizeof(plist), "%s/%s/%s.plist", home, SC_LAUNCHD_DIR, SC_LAUNCHD_LABEL);
+    if (n <= 0 || (size_t)n >= sizeof(plist))
+        return SC_ERR_IO;
+
+    char cmd[SC_MAX_PATH * 2];
+    n = snprintf(cmd, sizeof(cmd), "launchctl unload \"%s\"", plist);
+    if (n > 0 && (size_t)n < sizeof(cmd))
+        system(cmd);
+
+    remove(plist);
+    return SC_OK;
+}
+
+sc_error_t sc_daemon_logs(void) {
+    const char *home = getenv("HOME");
+    if (!home)
+        return SC_ERR_INVALID_ARGUMENT;
+
+    char log_path[SC_MAX_PATH];
+    int n = snprintf(log_path, sizeof(log_path), "%s/.seaclaw/seaclaw.log", home);
+    if (n <= 0 || (size_t)n >= sizeof(log_path))
+        return SC_ERR_IO;
+
+    char cmd[SC_MAX_PATH + 16];
+    n = snprintf(cmd, sizeof(cmd), "tail -f \"%s\"", log_path);
+    if (n <= 0 || (size_t)n >= sizeof(cmd))
+        return SC_ERR_IO;
+
+    return system(cmd) == 0 ? SC_OK : SC_ERR_IO;
+}
+
+#elif defined(__linux__)
+
+#define SC_SYSTEMD_UNIT "seaclaw.service"
+
+sc_error_t sc_daemon_install(sc_allocator_t *alloc) {
+    (void)alloc;
+    const char *home = getenv("HOME");
+    if (!home)
+        return SC_ERR_INVALID_ARGUMENT;
+
+    char dir[SC_MAX_PATH];
+    int n = snprintf(dir, sizeof(dir), "%s/.config/systemd/user", home);
+    if (n <= 0 || (size_t)n >= sizeof(dir))
+        return SC_ERR_IO;
+
+    char mkdir_cmd[SC_MAX_PATH + 16];
+    n = snprintf(mkdir_cmd, sizeof(mkdir_cmd), "mkdir -p \"%s\"", dir);
+    if (n <= 0 || (size_t)n >= sizeof(mkdir_cmd))
+        return SC_ERR_IO;
+    system(mkdir_cmd);
+
+    char bin[SC_MAX_PATH];
+    int found = 0;
+    const char *paths[] = {"/usr/local/bin/seaclaw", "/usr/bin/seaclaw", NULL};
+    for (int i = 0; paths[i]; i++) {
+        if (access(paths[i], X_OK) == 0) {
+            size_t len = strlen(paths[i]);
+            if (len < sizeof(bin)) {
+                memcpy(bin, paths[i], len + 1);
+                found = 1;
+                break;
+            }
+        }
+    }
+    if (!found)
+        return SC_ERR_NOT_FOUND;
+
+    char unit_path[SC_MAX_PATH];
+    n = snprintf(unit_path, sizeof(unit_path), "%s/%s", dir, SC_SYSTEMD_UNIT);
+    if (n <= 0 || (size_t)n >= sizeof(unit_path))
+        return SC_ERR_IO;
+
+    FILE *f = fopen(unit_path, "w");
+    if (!f)
+        return SC_ERR_IO;
+
+    fprintf(f,
+            "[Unit]\n"
+            "Description=SeaClaw AI Assistant\n"
+            "After=network-online.target\n"
+            "Wants=network-online.target\n"
+            "\n"
+            "[Service]\n"
+            "Type=simple\n"
+            "ExecStart=%s service-loop\n"
+            "Restart=on-failure\n"
+            "RestartSec=5\n"
+            "Environment=HOME=%s\n"
+            "\n"
+            "[Install]\n"
+            "WantedBy=default.target\n",
+            bin, home);
+    fclose(f);
+
+    system("systemctl --user daemon-reload");
+    if (system("systemctl --user enable --now " SC_SYSTEMD_UNIT) != 0)
+        return SC_ERR_IO;
+
+    return SC_OK;
+}
+
+sc_error_t sc_daemon_uninstall(void) {
+    system("systemctl --user disable --now " SC_SYSTEMD_UNIT);
+
+    const char *home = getenv("HOME");
+    if (!home)
+        return SC_ERR_INVALID_ARGUMENT;
+
+    char unit_path[SC_MAX_PATH];
+    int n =
+        snprintf(unit_path, sizeof(unit_path), "%s/.config/systemd/user/%s", home, SC_SYSTEMD_UNIT);
+    if (n > 0 && (size_t)n < sizeof(unit_path))
+        remove(unit_path);
+
+    system("systemctl --user daemon-reload");
+    return SC_OK;
+}
+
+sc_error_t sc_daemon_logs(void) {
+    return system("journalctl --user -u " SC_SYSTEMD_UNIT " -f") == 0 ? SC_OK : SC_ERR_IO;
+}
+
+#else
+
 sc_error_t sc_daemon_install(sc_allocator_t *alloc) {
     (void)alloc;
     return SC_ERR_NOT_SUPPORTED;
@@ -539,3 +778,5 @@ sc_error_t sc_daemon_uninstall(void) {
 sc_error_t sc_daemon_logs(void) {
     return SC_ERR_NOT_SUPPORTED;
 }
+
+#endif

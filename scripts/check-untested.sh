@@ -31,4 +31,6 @@ else
     echo "$FOUND source file(s) with no test references found."
 fi
 
-exit 0
+if [ "$FOUND" -gt 0 ]; then
+    exit 1
+fi

@@ -287,6 +287,14 @@ static sc_error_t git_execute(void *ctx, sc_allocator_t *alloc, const sc_json_va
             *out = sc_tool_result_fail("Missing 'paths' for add", 22);
             return SC_OK;
         }
+        if (strcmp(p, ".") != 0) {
+            sc_error_t perr = sc_tool_validate_path(p, c->workspace_dir,
+                                                    c->workspace_dir ? c->workspace_dir_len : 0);
+            if (perr != SC_OK) {
+                *out = sc_tool_result_fail("path traversal or invalid path", 30);
+                return SC_OK;
+            }
+        }
         argv[argc++] = "add";
         argv[argc++] = "--";
         argv[argc++] = p;

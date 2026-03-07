@@ -780,6 +780,13 @@ sc_error_t sc_json_stringify(sc_allocator_t *alloc, const sc_json_value_t *val, 
             alloc->free(alloc->ctx, buf, cap);
         return err;
     }
+    if (cap > len + 1) {
+        char *shrunk = (char *)alloc->realloc(alloc->ctx, buf, cap, len + 1);
+        if (shrunk) {
+            buf = shrunk;
+            cap = len + 1;
+        }
+    }
     *out = buf;
     if (out_len)
         *out_len = len;

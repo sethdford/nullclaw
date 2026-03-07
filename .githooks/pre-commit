@@ -12,15 +12,13 @@ fi
 if [ -d "src" ] && [ -f "CMakeLists.txt" ]; then
     staged_ch=$(git diff --cached --name-only --diff-filter=ACM -- '*.c' '*.h')
     if [ -n "$staged_ch" ]; then
-        for f in $staged_ch; do
+        echo "$staged_ch" | while IFS= read -r f; do
             if grep -qn '	' "$f" 2>/dev/null; then
                 echo "Warning: tabs found in $f (project uses spaces)"
             fi
         done
-        # Auto-format staged files, then re-stage them
         echo "$staged_ch" | xargs "$CLANG_FMT" -i 2>/dev/null
         echo "$staged_ch" | xargs git add
-        # Verify formatting is clean
         echo "$staged_ch" | xargs "$CLANG_FMT" --dry-run -Werror
         if [ $? -ne 0 ]; then
             echo "clang-format failed even after auto-format. Check .clang-format config."
@@ -65,9 +63,8 @@ if [ -n "$staged_assets" ]; then
 fi
 
 # Lint for raw hex colors in staged CSS/TS/Astro files
-# Skip token definition files (they define the colors themselves)
 if [ -x "scripts/lint-raw-colors.sh" ]; then
-    staged_style=$(git diff --cached --name-only --diff-filter=ACM -- '*.css' '*.ts' '*.tsx' '*.astro' | grep -v 'tokens\.' | grep -v 'design-tokens/')
+    staged_style=$(git diff --cached --name-only --diff-filter=ACM -- '*.css' '*.ts' '*.tsx' '*.astro' | grep -v 'tokens\.' | grep -v 'design-tokens/' || true)
     if [ -n "$staged_style" ]; then
         ./scripts/lint-raw-colors.sh
         if [ $? -ne 0 ]; then

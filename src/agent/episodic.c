@@ -125,7 +125,7 @@ cleanup:
             alloc->free(alloc->ctx, (void *)entries[i].key, entries[i].key_len + 1);
         if (entries[i].content)
             alloc->free(alloc->ctx, (void *)entries[i].content, entries[i].content_len + 1);
-        if (entries[i].id)
+        if (entries[i].id && entries[i].id != entries[i].key)
             alloc->free(alloc->ctx, (void *)entries[i].id, entries[i].id_len + 1);
         if (entries[i].timestamp)
             alloc->free(alloc->ctx, (void *)entries[i].timestamp, entries[i].timestamp_len + 1);
