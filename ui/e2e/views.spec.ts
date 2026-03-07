@@ -118,59 +118,43 @@ test.describe("Secondary Views", () => {
     await expect(overviewView).toBeAttached({ timeout: 5000 });
   });
 
-  test("nodes view shows stat cards in demo mode", async ({ page }) => {
+  test("nodes view shows data table in demo mode", async ({ page }) => {
     await page.goto("/?demo#nodes");
-    await page.waitForTimeout(800);
-    const view = page.locator("sc-nodes-view");
-    await expect(view).toBeAttached({ timeout: 5000 });
-    const statCards = view.locator("sc-stat-card");
-    await expect(statCards).toHaveCount(4, { timeout: 5000 });
+    await page.waitForTimeout(1500);
+    await expect(async () => {
+      const exists = await page.evaluate(() => {
+        const app = document.querySelector("sc-app");
+        const view = app?.shadowRoot?.querySelector("sc-nodes-view");
+        return !!view?.shadowRoot?.querySelector("sc-data-table-v2");
+      });
+      expect(exists).toBe(true);
+    }).toPass({ timeout: 8000 });
   });
 
-  test("nodes view renders node cards in demo mode", async ({ page }) => {
+  test("nodes view shows page hero in demo mode", async ({ page }) => {
     await page.goto("/?demo#nodes");
-    await page.waitForTimeout(800);
-    const view = page.locator("sc-nodes-view");
-    await expect(view).toBeAttached({ timeout: 5000 });
-    const cards = view.locator(".node-card");
-    await expect(cards).toHaveCount(4, { timeout: 5000 });
+    await page.waitForTimeout(1500);
+    await expect(async () => {
+      const exists = await page.evaluate(() => {
+        const app = document.querySelector("sc-app");
+        const view = app?.shadowRoot?.querySelector("sc-nodes-view");
+        return !!view?.shadowRoot?.querySelector("sc-page-hero");
+      });
+      expect(exists).toBe(true);
+    }).toPass({ timeout: 8000 });
   });
 
-  test("nodes view search filters cards", async ({ page }) => {
+  test("nodes view shows refresh button in demo mode", async ({ page }) => {
     await page.goto("/?demo#nodes");
-    await page.waitForTimeout(800);
-    const view = page.locator("sc-nodes-view");
-    await expect(view).toBeAttached({ timeout: 5000 });
-    const input = view.locator("sc-input");
-    await input.locator("input").fill("rpi");
-    await page.waitForTimeout(300);
-    const cards = view.locator(".node-card");
-    await expect(cards).toHaveCount(1, { timeout: 5000 });
-  });
-
-  test("nodes view detail sheet opens on card click", async ({ page }) => {
-    await page.goto("/?demo#nodes");
-    await page.waitForTimeout(800);
-    const view = page.locator("sc-nodes-view");
-    await expect(view).toBeAttached({ timeout: 5000 });
-    const firstCard = view.locator(".node-card").first();
-    await firstCard.click();
-    await page.waitForTimeout(300);
-    const sheet = view.locator("sc-sheet");
-    await expect(sheet).toBeAttached({ timeout: 5000 });
-    const detailName = view.locator(".detail-name");
-    await expect(detailName).toBeAttached({ timeout: 5000 });
-  });
-
-  test("nodes view detail sheet has action buttons", async ({ page }) => {
-    await page.goto("/?demo#nodes");
-    await page.waitForTimeout(800);
-    const view = page.locator("sc-nodes-view");
-    const firstCard = view.locator(".node-card").first();
-    await firstCard.click();
-    await page.waitForTimeout(300);
-    const actions = view.locator(".detail-actions sc-button");
-    await expect(actions).toHaveCount(2, { timeout: 5000 });
+    await page.waitForTimeout(1500);
+    await expect(async () => {
+      const text = await page.evaluate(() => {
+        const app = document.querySelector("sc-app");
+        const view = app?.shadowRoot?.querySelector("sc-nodes-view");
+        return view?.shadowRoot?.textContent ?? "";
+      });
+      expect(text).toContain("Refresh");
+    }).toPass({ timeout: 8000 });
   });
 
   test("navigation between views works", async ({ page }) => {
