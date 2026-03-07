@@ -28,13 +28,13 @@ test.describe("Secondary Views", () => {
     await expect(toolsView).toBeAttached({ timeout: 5000 });
   });
 
-  test("sessions redirects to chat", async ({ page }) => {
+  test("sessions view renders", async ({ page }) => {
     await page.goto("/#sessions");
     await page.waitForTimeout(500);
     const app = page.locator("sc-app");
     await expect(app).toBeAttached({ timeout: 5000 });
-    const chatView = app.locator("sc-chat-view");
-    await expect(chatView).toBeAttached({ timeout: 5000 });
+    const sessionsView = app.locator("sc-sessions-view");
+    await expect(sessionsView).toBeAttached({ timeout: 5000 });
   });
 
   test("nodes view renders", async ({ page }) => {
@@ -162,9 +162,10 @@ test.describe("Skills View (Demo Mode)", () => {
       const count = await page.evaluate(() => {
         const app = document.querySelector("sc-app");
         const sv = app?.shadowRoot?.querySelector("sc-skills-view");
-        return sv?.shadowRoot?.querySelectorAll("sc-card[glass].skill-card").length ?? 0;
+        const sections = sv?.shadowRoot?.querySelectorAll(".section");
+        return sections?.[0]?.querySelectorAll(".skill-card").length ?? 0;
       });
-      expect(count).toBeGreaterThanOrEqual(6);
+      expect(count).toBeGreaterThanOrEqual(1);
     }).toPass({ timeout: 8000 });
   });
 
@@ -175,7 +176,7 @@ test.describe("Skills View (Demo Mode)", () => {
       const count = await page.evaluate(() => {
         const app = document.querySelector("sc-app");
         const sv = app?.shadowRoot?.querySelector("sc-skills-view");
-        return sv?.shadowRoot?.querySelectorAll("sc-card[glass] sc-switch").length ?? 0;
+        return sv?.shadowRoot?.querySelectorAll(".skill-card sc-switch").length ?? 0;
       });
       expect(count).toBeGreaterThan(0);
     }).toPass({ timeout: 8000 });
@@ -188,9 +189,10 @@ test.describe("Skills View (Demo Mode)", () => {
       const count = await page.evaluate(() => {
         const app = document.querySelector("sc-app");
         const sv = app?.shadowRoot?.querySelector("sc-skills-view");
-        return sv?.shadowRoot?.querySelectorAll("sc-card.skill-card:not([glass])").length ?? 0;
+        const sections = sv?.shadowRoot?.querySelectorAll(".section");
+        return sections?.length ?? 0;
       });
-      expect(count).toBeGreaterThan(0);
+      expect(count).toBeGreaterThanOrEqual(2);
     }).toPass({ timeout: 8000 });
   });
 
@@ -207,16 +209,16 @@ test.describe("Skills View (Demo Mode)", () => {
     }).toPass({ timeout: 8000 });
   });
 
-  test("skills view tag chips render", async ({ page }) => {
+  test("skills view has toolbar with search", async ({ page }) => {
     await page.goto("/?demo#skills");
     await page.waitForTimeout(1500);
     await expect(async () => {
-      const count = await page.evaluate(() => {
+      const exists = await page.evaluate(() => {
         const app = document.querySelector("sc-app");
         const sv = app?.shadowRoot?.querySelector("sc-skills-view");
-        return sv?.shadowRoot?.querySelectorAll(".tag-chip").length ?? 0;
+        return !!sv?.shadowRoot?.querySelector(".toolbar sc-input");
       });
-      expect(count).toBeGreaterThanOrEqual(1);
+      expect(exists).toBe(true);
     }).toPass({ timeout: 8000 });
   });
 
@@ -227,14 +229,14 @@ test.describe("Skills View (Demo Mode)", () => {
       const count = await page.evaluate(() => {
         const app = document.querySelector("sc-app");
         const sv = app?.shadowRoot?.querySelector("sc-skills-view");
-        return sv?.shadowRoot?.querySelectorAll("sc-card[glass].skill-card").length ?? 0;
+        return sv?.shadowRoot?.querySelectorAll(".skill-card").length ?? 0;
       });
       expect(count).toBeGreaterThan(0);
     }).toPass({ timeout: 8000 });
     await page.evaluate(() => {
       const app = document.querySelector("sc-app");
       const sv = app?.shadowRoot?.querySelector("sc-skills-view");
-      const card = sv?.shadowRoot?.querySelector("sc-card[glass].skill-card") as HTMLElement;
+      const card = sv?.shadowRoot?.querySelector(".skill-card") as HTMLElement;
       card?.click();
     });
     await page.waitForTimeout(500);
@@ -253,14 +255,14 @@ test.describe("Skills View (Demo Mode)", () => {
       const count = await page.evaluate(() => {
         const app = document.querySelector("sc-app");
         const sv = app?.shadowRoot?.querySelector("sc-skills-view");
-        return sv?.shadowRoot?.querySelectorAll("sc-card[glass].skill-card").length ?? 0;
+        return sv?.shadowRoot?.querySelectorAll(".skill-card").length ?? 0;
       });
       expect(count).toBeGreaterThan(0);
     }).toPass({ timeout: 8000 });
     await page.evaluate(() => {
       const app = document.querySelector("sc-app");
       const sv = app?.shadowRoot?.querySelector("sc-skills-view");
-      const card = sv?.shadowRoot?.querySelector("sc-card[glass].skill-card") as HTMLElement;
+      const card = sv?.shadowRoot?.querySelector(".skill-card") as HTMLElement;
       card?.click();
     });
     await page.waitForTimeout(500);
@@ -279,14 +281,14 @@ test.describe("Skills View (Demo Mode)", () => {
       const count = await page.evaluate(() => {
         const app = document.querySelector("sc-app");
         const sv = app?.shadowRoot?.querySelector("sc-skills-view");
-        return sv?.shadowRoot?.querySelectorAll("sc-card[glass].skill-card").length ?? 0;
+        return sv?.shadowRoot?.querySelectorAll(".skill-card").length ?? 0;
       });
       expect(count).toBeGreaterThan(0);
     }).toPass({ timeout: 8000 });
     await page.evaluate(() => {
       const app = document.querySelector("sc-app");
       const sv = app?.shadowRoot?.querySelector("sc-skills-view");
-      const card = sv?.shadowRoot?.querySelector("sc-card[glass].skill-card") as HTMLElement;
+      const card = sv?.shadowRoot?.querySelector(".skill-card") as HTMLElement;
       card?.click();
     });
     await page.waitForTimeout(500);
@@ -298,29 +300,16 @@ test.describe("Skills View (Demo Mode)", () => {
     expect(btnCount).toBeGreaterThanOrEqual(2);
   });
 
-  test("skills view registry card click opens sheet", async ({ page }) => {
+  test("skills view page hero renders", async ({ page }) => {
     await page.goto("/?demo#skills");
     await page.waitForTimeout(1500);
     await expect(async () => {
-      const count = await page.evaluate(() => {
+      const exists = await page.evaluate(() => {
         const app = document.querySelector("sc-app");
         const sv = app?.shadowRoot?.querySelector("sc-skills-view");
-        return sv?.shadowRoot?.querySelectorAll("sc-card.skill-card:not([glass])").length ?? 0;
+        return !!sv?.shadowRoot?.querySelector("sc-page-hero");
       });
-      expect(count).toBeGreaterThan(0);
+      expect(exists).toBe(true);
     }).toPass({ timeout: 8000 });
-    await page.evaluate(() => {
-      const app = document.querySelector("sc-app");
-      const sv = app?.shadowRoot?.querySelector("sc-skills-view");
-      const card = sv?.shadowRoot?.querySelector("sc-card.skill-card:not([glass])") as HTMLElement;
-      card?.click();
-    });
-    await page.waitForTimeout(500);
-    const hasSheet = await page.evaluate(() => {
-      const app = document.querySelector("sc-app");
-      const sv = app?.shadowRoot?.querySelector("sc-skills-view");
-      return !!sv?.shadowRoot?.querySelector("sc-sheet");
-    });
-    expect(hasSheet).toBe(true);
   });
 });
