@@ -380,6 +380,12 @@ void sc_agent_set_retrieval_engine(sc_agent_t *agent, sc_retrieval_engine_t *eng
     agent->retrieval_engine = engine;
 }
 
+void sc_agent_set_awareness(sc_agent_t *agent, struct sc_awareness *awareness) {
+    if (!agent)
+        return;
+    agent->awareness = awareness;
+}
+
 void sc_agent_deinit(sc_agent_t *agent) {
     if (!agent)
         return;
@@ -1159,6 +1165,12 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
         (void)sc_memory_loader_load(&loader, msg, msg_len, "", 0, &memory_ctx, &memory_ctx_len);
     }
 
+    /* Build situational awareness context */
+    char *awareness_ctx = NULL;
+    size_t awareness_ctx_len = 0;
+    if (agent->awareness)
+        awareness_ctx = sc_awareness_context(agent->awareness, agent->alloc, &awareness_ctx_len);
+
     /* Build persona prompt fresh each turn (channel-dependent; no caching) */
     char *persona_prompt = NULL;
     size_t persona_prompt_len = 0;
@@ -1173,6 +1185,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
                 agent->alloc->free(agent->alloc->ctx, pref_ctx, pref_ctx_len + 1);
             if (memory_ctx)
                 agent->alloc->free(agent->alloc->ctx, memory_ctx, memory_ctx_len + 1);
+            if (awareness_ctx)
+                agent->alloc->free(agent->alloc->ctx, awareness_ctx, awareness_ctx_len + 1);
             sc_agent_clear_current_for_tools();
             return perr;
         }
@@ -1182,7 +1196,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
     /* Build system prompt using cached static portion when available */
     char *system_prompt = NULL;
     size_t system_prompt_len = 0;
-    if (agent->cached_static_prompt && !pref_ctx && !tone_hint && !persona_prompt) {
+    if (agent->cached_static_prompt && !pref_ctx && !tone_hint && !persona_prompt &&
+        !awareness_ctx) {
         err = sc_prompt_build_with_cache(agent->alloc, agent->cached_static_prompt,
                                          agent->cached_static_prompt_len, memory_ctx,
                                          memory_ctx_len, &system_prompt, &system_prompt_len);
@@ -1216,6 +1231,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
             .chain_of_thought = agent->chain_of_thought,
             .tone_hint = tone_hint,
             .tone_hint_len = tone_hint_len,
+            .awareness_context = awareness_ctx,
+            .awareness_context_len = awareness_ctx_len,
         };
         err = sc_prompt_build_system(agent->alloc, &cfg, &system_prompt, &system_prompt_len);
         if (persona_prompt)
@@ -1223,6 +1240,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
         persona_prompt = NULL;
         if (memory_ctx)
             agent->alloc->free(agent->alloc->ctx, memory_ctx, memory_ctx_len + 1);
+        if (awareness_ctx)
+            agent->alloc->free(agent->alloc->ctx, awareness_ctx, awareness_ctx_len + 1);
         if (err != SC_OK) {
             if (pref_ctx)
                 agent->alloc->free(agent->alloc->ctx, pref_ctx, pref_ctx_len + 1);
@@ -1845,6 +1864,12 @@ sc_error_t sc_agent_turn_stream(sc_agent_t *agent, const char *msg, size_t msg_l
         (void)sc_memory_loader_load(&loader, msg, msg_len, "", 0, &memory_ctx, &memory_ctx_len);
     }
 
+    /* Build situational awareness context */
+    char *awareness_ctx = NULL;
+    size_t awareness_ctx_len = 0;
+    if (agent->awareness)
+        awareness_ctx = sc_awareness_context(agent->awareness, agent->alloc, &awareness_ctx_len);
+
     /* Build persona prompt fresh each turn (channel-dependent; no caching) */
     char *persona_prompt = NULL;
     size_t persona_prompt_len = 0;
@@ -1857,6 +1882,8 @@ sc_error_t sc_agent_turn_stream(sc_agent_t *agent, const char *msg, size_t msg_l
         if (perr != SC_OK) {
             if (memory_ctx)
                 agent->alloc->free(agent->alloc->ctx, memory_ctx, memory_ctx_len + 1);
+            if (awareness_ctx)
+                agent->alloc->free(agent->alloc->ctx, awareness_ctx, awareness_ctx_len + 1);
             sc_agent_clear_current_for_tools();
             return perr;
         }
@@ -1865,7 +1892,7 @@ sc_error_t sc_agent_turn_stream(sc_agent_t *agent, const char *msg, size_t msg_l
 
     char *system_prompt = NULL;
     size_t system_prompt_len = 0;
-    if (agent->cached_static_prompt && !persona_prompt) {
+    if (agent->cached_static_prompt && !persona_prompt && !awareness_ctx) {
         err = sc_prompt_build_with_cache(agent->alloc, agent->cached_static_prompt,
                                          agent->cached_static_prompt_len, memory_ctx,
                                          memory_ctx_len, &system_prompt, &system_prompt_len);
@@ -1892,6 +1919,8 @@ sc_error_t sc_agent_turn_stream(sc_agent_t *agent, const char *msg, size_t msg_l
             .custom_instructions_len = agent->custom_instructions_len,
             .persona_prompt = persona_prompt,
             .persona_prompt_len = persona_prompt_len,
+            .awareness_context = awareness_ctx,
+            .awareness_context_len = awareness_ctx_len,
         };
         err = sc_prompt_build_system(agent->alloc, &cfg, &system_prompt, &system_prompt_len);
         if (persona_prompt)

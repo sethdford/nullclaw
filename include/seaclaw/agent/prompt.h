@@ -32,6 +32,8 @@ typedef struct sc_prompt_config {
     bool chain_of_thought; /* inject reasoning instructions */
     const char *tone_hint; /* adaptive tone directive */
     size_t tone_hint_len;
+    const char *awareness_context; /* situational awareness (channels, errors, health) */
+    size_t awareness_context_len;
 } sc_prompt_config_t;
 
 /* Build the full system prompt. Caller owns returned string; free with alloc. */

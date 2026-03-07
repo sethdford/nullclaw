@@ -18,6 +18,7 @@
 #ifdef SC_HAS_PERSONA
 #include "seaclaw/persona.h"
 #endif
+#include "seaclaw/agent/reflection.h"
 #include "seaclaw/provider.h"
 #include "seaclaw/security.h"
 #include "seaclaw/security/audit.h"
@@ -129,7 +130,10 @@ struct sc_agent {
     sc_audit_logger_t *audit_logger;
     struct sc_undo_stack *undo_stack;
 
-    /* Intelligence features */
+    /* Superhuman intelligence features */
+    struct sc_awareness *awareness; /* optional; bus-based situational awareness */
+    sc_reflection_config_t reflection;
+
     bool chain_of_thought; /* inject reasoning instructions into prompt */
     char *persona_prompt;  /* custom identity override; owned */
     size_t persona_prompt_len;
@@ -167,6 +171,10 @@ void sc_agent_set_task_list(sc_agent_t *agent, sc_task_list_t *task_list);
 
 /* Optional: set retrieval engine for semantic/hybrid recall. Caller owns engine lifecycle. */
 void sc_agent_set_retrieval_engine(sc_agent_t *agent, sc_retrieval_engine_t *engine);
+
+/* Optional: set awareness for situational context injection. Caller owns awareness lifecycle. */
+struct sc_awareness;
+void sc_agent_set_awareness(sc_agent_t *agent, struct sc_awareness *awareness);
 
 /* Run one conversation turn: send to provider, process tool calls, iterate. */
 sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, char **response_out,

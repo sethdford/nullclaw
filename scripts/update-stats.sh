@@ -137,9 +137,14 @@ if [ "$BINARY_KB" != "unknown" ]; then
         README.md && rm -f README.md.bak
 fi
 
-# Tools count in tagline and feature list (60+ → actual)
+# Tools count in tagline and feature list
 sed -i.bak -E \
     "s/[0-9]+ channels, [0-9]+\+ tools/${CHANNEL_COUNT} channels, ${TOOL_COUNT}+ tools/g" \
+    README.md && rm -f README.md.bak
+
+# Tools count in bullet-separated tagline (· separator)
+sed -i.bak -E \
+    "s/[0-9]+ channels · [0-9]+\+ tools/${CHANNEL_COUNT} channels · ${TOOL_COUNT}+ tools/g" \
     README.md && rm -f README.md.bak
 
 # Stats block: "Source files:", "Lines of code:", "Test files:", "Tests:"

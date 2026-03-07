@@ -54,6 +54,8 @@ static void mqtt_stop(void *ctx) {
 
 static sc_error_t mqtt_send(void *ctx, const char *target, size_t target_len, const char *message,
                             size_t message_len, const char *const *media, size_t media_count) {
+    (void)target;
+    (void)target_len;
     (void)media;
     (void)media_count;
 #if SC_IS_TEST
@@ -75,8 +77,6 @@ static sc_error_t mqtt_send(void *ctx, const char *target, size_t target_len, co
         return SC_ERR_NOT_SUPPORTED;
     if (!message || message_len > SC_MQTT_MAX_MSG)
         return SC_ERR_INVALID_ARGUMENT;
-    (void)target;
-    (void)target_len;
     return SC_ERR_NOT_SUPPORTED;
 #endif
 }
@@ -201,16 +201,26 @@ sc_error_t sc_mqtt_create(sc_allocator_t *alloc, const char *broker_url, size_t 
     out->vtable = &mqtt_vtable;
     return SC_OK;
 oom:
-    if (c->broker_url)
-        alloc->free(alloc->ctx, c->broker_url, broker_url_len + 1);
-    if (c->inbound_topic)
-        alloc->free(alloc->ctx, c->inbound_topic, inbound_topic_len + 1);
-    if (c->outbound_topic)
-        alloc->free(alloc->ctx, c->outbound_topic, outbound_topic_len + 1);
-    if (c->username)
-        alloc->free(alloc->ctx, c->username, username_len + 1);
-    if (c->password)
-        alloc->free(alloc->ctx, c->password, password_len + 1);
+    if (c->broker_url) {
+        size_t n = strlen(c->broker_url) + 1;
+        alloc->free(alloc->ctx, c->broker_url, n);
+    }
+    if (c->inbound_topic) {
+        size_t n = strlen(c->inbound_topic) + 1;
+        alloc->free(alloc->ctx, c->inbound_topic, n);
+    }
+    if (c->outbound_topic) {
+        size_t n = strlen(c->outbound_topic) + 1;
+        alloc->free(alloc->ctx, c->outbound_topic, n);
+    }
+    if (c->username) {
+        size_t n = strlen(c->username) + 1;
+        alloc->free(alloc->ctx, c->username, n);
+    }
+    if (c->password) {
+        size_t n = strlen(c->password) + 1;
+        alloc->free(alloc->ctx, c->password, n);
+    }
     free(c);
     return SC_ERR_OUT_OF_MEMORY;
 }
