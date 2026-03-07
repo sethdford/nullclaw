@@ -9,16 +9,14 @@ export class ScThinking extends LitElement {
   @property({ type: Number }) duration = 0;
 
   static override styles = css`
-    @keyframes sc-thinking-dots {
+    @keyframes sc-dot-bounce {
       0%,
-      20% {
-        opacity: 0.2;
-      }
-      50% {
-        opacity: 1;
-      }
+      80%,
       100% {
-        opacity: 0.2;
+        transform: translateY(0);
+      }
+      40% {
+        transform: translateY(-6px);
       }
     }
 
@@ -69,16 +67,26 @@ export class ScThinking extends LitElement {
       color: var(--sc-text-muted);
     }
 
-    .dots span {
-      animation: sc-thinking-dots var(--sc-duration-slow) ease-in-out infinite;
+    .dots {
+      display: flex;
+      align-items: center;
+      gap: var(--sc-space-xs);
     }
 
-    .dots span:nth-child(2) {
-      animation-delay: 0.2s;
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--sc-info, #3b82f6);
+      animation: sc-dot-bounce 1.2s ease-in-out infinite;
     }
 
-    .dots span:nth-child(3) {
-      animation-delay: 0.4s;
+    .dot:nth-child(2) {
+      animation-delay: 150ms;
+    }
+
+    .dot:nth-child(3) {
+      animation-delay: 300ms;
     }
 
     .summary {
@@ -113,9 +121,8 @@ export class ScThinking extends LitElement {
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .dots span {
+      .dot {
         animation: none;
-        opacity: 1;
       }
     }
   `;
@@ -146,7 +153,9 @@ export class ScThinking extends LitElement {
           ? html`
               <div class="header">
                 <span>Thinking</span>
-                <span class="dots"><span>.</span><span>.</span><span>.</span></span>
+                <span class="dots"
+                  ><span class="dot"></span><span class="dot"></span><span class="dot"></span
+                ></span>
               </div>
             `
           : this.expanded
