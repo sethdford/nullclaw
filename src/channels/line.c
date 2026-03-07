@@ -241,9 +241,10 @@ sc_error_t sc_line_create_ex(sc_allocator_t *alloc, const char *channel_token,
                              sc_channel_t *out) {
     if (!alloc || !out)
         return SC_ERR_INVALID_ARGUMENT;
-    sc_line_ctx_t *c = (sc_line_ctx_t *)calloc(1, sizeof(*c));
+    sc_line_ctx_t *c = (sc_line_ctx_t *)alloc->alloc(alloc->ctx, sizeof(*c));
     if (!c)
         return SC_ERR_OUT_OF_MEMORY;
+    memset(c, 0, sizeof(*c));
     c->alloc = alloc;
     if (channel_token && channel_token_len > 0) {
         c->channel_token = (char *)malloc(channel_token_len + 1);
@@ -260,7 +261,7 @@ sc_error_t sc_line_create_ex(sc_allocator_t *alloc, const char *channel_token,
         if (!c->user_id) {
             if (c->channel_token)
                 free(c->channel_token);
-            free(c);
+            alloc->free(alloc->ctx, c, sizeof(*c));
             return SC_ERR_OUT_OF_MEMORY;
         }
         memcpy(c->user_id, user_id, user_id_len);
@@ -283,11 +284,12 @@ bool sc_line_is_configured(sc_channel_t *ch) {
 void sc_line_destroy(sc_channel_t *ch) {
     if (ch && ch->ctx) {
         sc_line_ctx_t *c = (sc_line_ctx_t *)ch->ctx;
+        sc_allocator_t *a = c->alloc;
         if (c->channel_token)
             free(c->channel_token);
         if (c->user_id)
             free(c->user_id);
-        free(c);
+        a->free(a->ctx, c, sizeof(*c));
         ch->ctx = NULL;
         ch->vtable = NULL;
     }

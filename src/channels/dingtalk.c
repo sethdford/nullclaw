@@ -209,9 +209,10 @@ sc_error_t sc_dingtalk_create(sc_allocator_t *alloc, const char *webhook_or_toke
     (void)unused_secret_len;
     if (!alloc || !out)
         return SC_ERR_INVALID_ARGUMENT;
-    sc_dingtalk_ctx_t *c = (sc_dingtalk_ctx_t *)calloc(1, sizeof(*c));
+    sc_dingtalk_ctx_t *c = (sc_dingtalk_ctx_t *)alloc->alloc(alloc->ctx, sizeof(*c));
     if (!c)
         return SC_ERR_OUT_OF_MEMORY;
+    memset(c, 0, sizeof(*c));
     c->alloc = alloc;
     if (!webhook_or_token || webhook_or_token_len == 0) {
         out->ctx = c;
@@ -221,7 +222,7 @@ sc_error_t sc_dingtalk_create(sc_allocator_t *alloc, const char *webhook_or_toke
     if (webhook_or_token_len >= 8 && strncmp(webhook_or_token, "https://", 8) == 0) {
         c->webhook_url = (char *)malloc(webhook_or_token_len + 1);
         if (!c->webhook_url) {
-            free(c);
+            alloc->free(alloc->ctx, c, sizeof(*c));
             return SC_ERR_OUT_OF_MEMORY;
         }
         memcpy(c->webhook_url, webhook_or_token, webhook_or_token_len);
@@ -231,7 +232,7 @@ sc_error_t sc_dingtalk_create(sc_allocator_t *alloc, const char *webhook_or_toke
         size_t base_len = sizeof(DINGTALK_WEBHOOK_BASE) - 1;
         c->webhook_url = (char *)malloc(base_len + webhook_or_token_len + 1);
         if (!c->webhook_url) {
-            free(c);
+            alloc->free(alloc->ctx, c, sizeof(*c));
             return SC_ERR_OUT_OF_MEMORY;
         }
         memcpy(c->webhook_url, DINGTALK_WEBHOOK_BASE, base_len);
@@ -254,9 +255,10 @@ bool sc_dingtalk_is_configured(sc_channel_t *ch) {
 void sc_dingtalk_destroy(sc_channel_t *ch) {
     if (ch && ch->ctx) {
         sc_dingtalk_ctx_t *c = (sc_dingtalk_ctx_t *)ch->ctx;
+        sc_allocator_t *a = c->alloc;
         if (c->webhook_url)
             free(c->webhook_url);
-        free(c);
+        a->free(a->ctx, c, sizeof(*c));
         ch->ctx = NULL;
         ch->vtable = NULL;
     }

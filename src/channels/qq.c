@@ -219,15 +219,16 @@ sc_error_t sc_qq_create_ex(sc_allocator_t *alloc, const char *app_id, size_t app
                            size_t channel_id_len, bool sandbox, sc_channel_t *out) {
     if (!alloc || !out)
         return SC_ERR_INVALID_ARGUMENT;
-    sc_qq_ctx_t *c = (sc_qq_ctx_t *)calloc(1, sizeof(*c));
+    sc_qq_ctx_t *c = (sc_qq_ctx_t *)alloc->alloc(alloc->ctx, sizeof(*c));
     if (!c)
         return SC_ERR_OUT_OF_MEMORY;
+    memset(c, 0, sizeof(*c));
     c->alloc = alloc;
     c->sandbox = sandbox;
     if (app_id && app_id_len > 0) {
         c->app_id = (char *)malloc(app_id_len + 1);
         if (!c->app_id) {
-            free(c);
+            alloc->free(alloc->ctx, c, sizeof(*c));
             return SC_ERR_OUT_OF_MEMORY;
         }
         memcpy(c->app_id, app_id, app_id_len);
@@ -238,7 +239,7 @@ sc_error_t sc_qq_create_ex(sc_allocator_t *alloc, const char *app_id, size_t app
         if (!c->bot_token) {
             if (c->app_id)
                 free(c->app_id);
-            free(c);
+            alloc->free(alloc->ctx, c, sizeof(*c));
             return SC_ERR_OUT_OF_MEMORY;
         }
         memcpy(c->bot_token, bot_token, bot_token_len);
@@ -251,7 +252,7 @@ sc_error_t sc_qq_create_ex(sc_allocator_t *alloc, const char *app_id, size_t app
                 free(c->bot_token);
             if (c->app_id)
                 free(c->app_id);
-            free(c);
+            alloc->free(alloc->ctx, c, sizeof(*c));
             return SC_ERR_OUT_OF_MEMORY;
         }
         memcpy(c->channel_id, channel_id, channel_id_len);
@@ -273,13 +274,15 @@ bool sc_qq_is_configured(sc_channel_t *ch) {
 void sc_qq_destroy(sc_channel_t *ch) {
     if (ch && ch->ctx) {
         sc_qq_ctx_t *c = (sc_qq_ctx_t *)ch->ctx;
+        sc_allocator_t *a = c->alloc;
         if (c->app_id)
             free(c->app_id);
         if (c->bot_token)
             free(c->bot_token);
         if (c->channel_id)
             free(c->channel_id);
-        free(c);
+        if (a)
+            a->free(a->ctx, c, sizeof(*c));
         ch->ctx = NULL;
         ch->vtable = NULL;
     }
