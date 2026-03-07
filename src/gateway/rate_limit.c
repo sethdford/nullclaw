@@ -139,6 +139,9 @@ bool sc_rate_limiter_allow(sc_rate_limiter_t *lim, const char *ip) {
 void sc_rate_limiter_destroy(sc_rate_limiter_t *lim) {
     if (!lim)
         return;
+#ifdef SC_GATEWAY_POSIX
+    pthread_mutex_destroy(&lim->mutex);
+#endif
     for (size_t i = 0; i < lim->count; i++) {
         if (lim->entries[i].timestamps)
             lim->alloc->free(lim->alloc->ctx, lim->entries[i].timestamps,
