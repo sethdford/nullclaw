@@ -7,10 +7,10 @@ Last updated: 2026-03-07
 | Metric                         | Value                |
 | ------------------------------ | -------------------- |
 | Source files (src/ + include/) | **615**              |
-| Lines of C/H/ASM code          | **~109K**            |
+| Lines of C/H/ASM code          | **~111K**            |
 | Test files                     | 102                  |
-| Tests passing                  | **3207/3207 (100%)** |
-| Binary size (MinSizeRel+LTO)   | **~560 KB**          |
+| Tests passing                  | **3215/3215 (100%)** |
+| Binary size (MinSizeRel+LTO)   | **~561 KB**          |
 | Peak RSS (test suite)          | **~5.9 MB**          |
 
 ## Channels — Honest Status
