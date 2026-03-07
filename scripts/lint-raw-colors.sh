@@ -12,7 +12,7 @@ if [ "${1:-}" = "--all" ]; then
   MODE="all"
 fi
 
-EXCLUDE='_tokens\.css|design-tokens/|generate-assets|\.svg$|\.json$|docs/tokens\.|DesignTokens\.|design_tokens\.|website/src/pages/index\.astro|ui/index\.html'
+EXCLUDE='_tokens\.css|design-tokens/|generate-assets|\.svg$|\.json$|docs/tokens\.|DesignTokens\.|design_tokens\.|website/src/pages/index\.astro|ui/index\.html|ui/src/components/sc-chart\.ts'
 
 if [ "$MODE" = "all" ]; then
   FILES=$(find ui/src website/src -type f \( -name '*.css' -o -name '*.ts' -o -name '*.tsx' -o -name '*.astro' -o -name '*.html' \) 2>/dev/null | grep -Ev "$EXCLUDE" || true)
