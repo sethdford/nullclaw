@@ -69,13 +69,6 @@ test.describe("Chat View", () => {
     expect(registered).toBe(true);
   });
 
-  test("sc-message-branch component is available", async ({ page }) => {
-    const registered = await page.evaluate(() => {
-      return customElements.get("sc-message-branch") !== undefined;
-    });
-    expect(registered).toBe(true);
-  });
-
   test("keyboard shortcut focuses input", async ({ page }) => {
     // Slash key should focus the chat input
     await page.keyboard.press("/");

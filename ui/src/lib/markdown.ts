@@ -12,9 +12,6 @@ export interface RenderOptions {
   streaming?: boolean;
 }
 
-const LATEX_DISPLAY_RE = /\$\$[\s\S]*?\$\$/g;
-const LATEX_INLINE_RE = /\$[^$\n]+?\$/g;
-
 function renderTextWithLatex(text: string): TemplateResult {
   if (!/\$/.test(text)) return html`${text}`;
   const combined = /\$\$[\s\S]*?\$\$|\$[^$\n]+?\$/g;

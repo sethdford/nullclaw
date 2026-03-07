@@ -200,7 +200,7 @@ export class ScContextMenu extends LitElement {
 
     let actionIdx = 0;
     return html`
-      <div class="backdrop" @click=${this._close}></div>
+      <div class="backdrop" @click=${this._close} role="none" aria-hidden="true"></div>
       <div
         class="menu"
         role="menu"

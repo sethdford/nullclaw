@@ -73,7 +73,7 @@ export class ScButton extends LitElement {
         var(--sc-shadow-xs),
         inset 0 1px 0 rgba(255, 255, 255, 0.2),
         inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-      transition-duration: 80ms;
+      transition-duration: var(--sc-duration-fast);
     }
 
     /* Secondary — subtle gradient with inner depth */
@@ -101,7 +101,7 @@ export class ScButton extends LitElement {
       box-shadow:
         inset 0 1px 2px rgba(6, 18, 36, 0.06),
         inset 0 -1px 0 rgba(6, 18, 36, 0.04);
-      transition-duration: 80ms;
+      transition-duration: var(--sc-duration-fast);
     }
 
     button.variant-destructive {
@@ -122,7 +122,7 @@ export class ScButton extends LitElement {
     }
     button.variant-destructive:active:not(:disabled) {
       transform: translateY(0) scale(0.96);
-      transition-duration: 80ms;
+      transition-duration: var(--sc-duration-fast);
     }
 
     button.variant-ghost {
@@ -137,7 +137,7 @@ export class ScButton extends LitElement {
     button.variant-ghost:active:not(:disabled) {
       transform: translateY(0) scale(0.96);
       background: var(--sc-accent-subtle);
-      transition-duration: 80ms;
+      transition-duration: var(--sc-duration-fast);
     }
 
     /* Sizes */

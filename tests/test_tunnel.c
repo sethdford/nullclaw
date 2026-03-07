@@ -9,6 +9,8 @@ static void test_none_tunnel_create(void) {
     SC_ASSERT_NOT_NULL(t.ctx);
     SC_ASSERT_NOT_NULL(t.vtable);
     SC_ASSERT_STR_EQ(t.vtable->provider_name(t.ctx), "none");
+    if (t.vtable->deinit)
+        t.vtable->deinit(t.ctx, &alloc);
 }
 
 static void test_none_tunnel_start_returns_localhost(void) {
@@ -21,6 +23,8 @@ static void test_none_tunnel_start_returns_localhost(void) {
     SC_ASSERT_NOT_NULL(url);
     SC_ASSERT_TRUE(strstr(url, "localhost") != NULL);
     SC_ASSERT_TRUE(strstr(url, "8080") != NULL);
+    if (t.vtable->deinit)
+        t.vtable->deinit(t.ctx, &alloc);
 }
 
 static void test_tunnel_config_parsing(void) {
@@ -31,6 +35,8 @@ static void test_tunnel_config_parsing(void) {
     sc_tunnel_t t = sc_tunnel_create(&alloc, &config);
     SC_ASSERT_NOT_NULL(t.ctx);
     SC_ASSERT_STR_EQ(t.vtable->provider_name(t.ctx), "none");
+    if (t.vtable->deinit)
+        t.vtable->deinit(t.ctx, &alloc);
 }
 
 static void test_tunnel_create_null_config_uses_none(void) {
@@ -38,6 +44,8 @@ static void test_tunnel_create_null_config_uses_none(void) {
     sc_tunnel_t t = sc_tunnel_create(&alloc, NULL);
     SC_ASSERT_NOT_NULL(t.ctx);
     SC_ASSERT_STR_EQ(t.vtable->provider_name(t.ctx), "none");
+    if (t.vtable->deinit)
+        t.vtable->deinit(t.ctx, &alloc);
 }
 
 static void test_tunnel_error_string(void) {
@@ -51,6 +59,8 @@ static void test_tailscale_tunnel_create(void) {
     SC_ASSERT_NOT_NULL(t.ctx);
     SC_ASSERT_NOT_NULL(t.vtable);
     SC_ASSERT_STR_EQ(t.vtable->provider_name(t.ctx), "tailscale");
+    if (t.vtable->deinit)
+        t.vtable->deinit(t.ctx, &alloc);
 }
 
 static void test_tailscale_tunnel_start_test_mode(void) {
@@ -62,6 +72,8 @@ static void test_tailscale_tunnel_start_test_mode(void) {
     SC_ASSERT_EQ(err, SC_TUNNEL_ERR_OK);
     SC_ASSERT_NOT_NULL(url);
     SC_ASSERT_TRUE(strstr(url, "ts.net") != NULL);
+    if (t.vtable->deinit)
+        t.vtable->deinit(t.ctx, &alloc);
 }
 
 static void test_custom_tunnel_create(void) {
@@ -71,6 +83,8 @@ static void test_custom_tunnel_create(void) {
     SC_ASSERT_NOT_NULL(t.ctx);
     SC_ASSERT_NOT_NULL(t.vtable);
     SC_ASSERT_STR_EQ(t.vtable->provider_name(t.ctx), "custom");
+    if (t.vtable->deinit)
+        t.vtable->deinit(t.ctx, &alloc);
 }
 
 static void test_custom_tunnel_start_test_mode(void) {
@@ -83,6 +97,8 @@ static void test_custom_tunnel_start_test_mode(void) {
     SC_ASSERT_EQ(err, SC_TUNNEL_ERR_OK);
     SC_ASSERT_NOT_NULL(url);
     SC_ASSERT_TRUE(strstr(url, "custom-mock") != NULL);
+    if (t.vtable->deinit)
+        t.vtable->deinit(t.ctx, &alloc);
 }
 
 static void test_tunnel_factory_tailscale(void) {
@@ -93,6 +109,8 @@ static void test_tunnel_factory_tailscale(void) {
     sc_tunnel_t t = sc_tunnel_create(&alloc, &config);
     SC_ASSERT_NOT_NULL(t.ctx);
     SC_ASSERT_STR_EQ(t.vtable->provider_name(t.ctx), "tailscale");
+    if (t.vtable->deinit)
+        t.vtable->deinit(t.ctx, &alloc);
 }
 
 static void test_tunnel_factory_custom(void) {
@@ -106,6 +124,8 @@ static void test_tunnel_factory_custom(void) {
     sc_tunnel_t t = sc_tunnel_create(&alloc, &config);
     SC_ASSERT_NOT_NULL(t.ctx);
     SC_ASSERT_STR_EQ(t.vtable->provider_name(t.ctx), "custom");
+    if (t.vtable->deinit)
+        t.vtable->deinit(t.ctx, &alloc);
 }
 
 static void test_tunnel_factory_cloudflare(void) {

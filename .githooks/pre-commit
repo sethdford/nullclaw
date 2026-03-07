@@ -19,8 +19,7 @@ if [ -d "src" ] && [ -f "CMakeLists.txt" ]; then
         done
         echo "$staged_ch" | xargs "$CLANG_FMT" -i 2>/dev/null
         echo "$staged_ch" | xargs git add
-        echo "$staged_ch" | xargs "$CLANG_FMT" --dry-run -Werror
-        if [ $? -ne 0 ]; then
+        if ! echo "$staged_ch" | xargs "$CLANG_FMT" --dry-run -Werror 2>/dev/null; then
             echo "clang-format failed even after auto-format. Check .clang-format config."
             exit 1
         fi

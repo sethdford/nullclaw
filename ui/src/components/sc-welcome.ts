@@ -316,18 +316,7 @@ export class ScWelcome extends LitElement {
                 hoverable
                 accent
                 class="step-card"
-                role="button"
-                tabindex="0"
-                aria-label="${step.done
-                  ? `${step.title} — complete`
-                  : step.title}: ${step.description}"
                 @click=${() => this._navigate(step.action)}
-                @keydown=${(e: KeyboardEvent) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    this._navigate(step.action);
-                  }
-                }}
               >
                 <div class="step-icon-wrap ${step.done ? "done" : ""}">
                   <div class="step-icon ${step.done ? "done" : ""}">

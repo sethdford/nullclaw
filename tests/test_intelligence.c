@@ -186,6 +186,7 @@ static void test_episodic_load_null_out(void) {
     size_t out_len = 0;
     sc_error_t err = sc_episodic_load(&mem, &alloc, NULL, &out_len);
     SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+    mem.vtable->deinit(mem.ctx);
 }
 
 static void test_episodic_load_null_alloc(void) {
@@ -195,6 +196,7 @@ static void test_episodic_load_null_alloc(void) {
     size_t out_len = 0;
     sc_error_t err = sc_episodic_load(&mem, NULL, &out, &out_len);
     SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+    mem.vtable->deinit(mem.ctx);
 }
 
 static void test_episodic_store_null_memory(void) {
@@ -208,6 +210,7 @@ static void test_episodic_store_null_summary(void) {
     sc_memory_t mem = sc_none_memory_create(&alloc);
     sc_error_t err = sc_episodic_store(&mem, &alloc, "s", 1, NULL, 0);
     SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+    mem.vtable->deinit(mem.ctx);
 }
 
 static void test_episodic_summarize_null_messages(void) {

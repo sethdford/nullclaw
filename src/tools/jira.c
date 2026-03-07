@@ -88,10 +88,15 @@ static sc_error_t jira_execute(void *ctx, sc_allocator_t *alloc, const sc_json_v
         return SC_OK;
     }
     char auth[512];
+    int auth_n;
     if (email)
-        snprintf(auth, sizeof(auth), "Basic %s:%s", email, api_token);
+        auth_n = snprintf(auth, sizeof(auth), "Basic %s:%s", email, api_token);
     else
-        snprintf(auth, sizeof(auth), "Bearer %s", api_token);
+        auth_n = snprintf(auth, sizeof(auth), "Bearer %s", api_token);
+    if (auth_n < 0 || (size_t)auth_n >= sizeof(auth)) {
+        *out = sc_tool_result_fail("auth header too long", 20);
+        return SC_OK;
+    }
 
     if (strcmp(action, "list") == 0) {
         const char *jql = sc_json_get_string(args, "jql");
@@ -138,7 +143,13 @@ static sc_error_t jira_execute(void *ctx, sc_allocator_t *alloc, const sc_json_v
                  : "",
             desc ? desc : "", desc ? "\"}]}]}" : "");
         char url[256];
-        snprintf(url, sizeof(url), "%s/rest/api/3/issue", base_url);
+        int url_n = snprintf(url, sizeof(url), "%s/rest/api/3/issue", base_url);
+        if (url_n < 0 || (size_t)url_n >= sizeof(url)) {
+            if (body)
+                alloc->free(alloc->ctx, body, strlen(body) + 1);
+            *out = sc_tool_result_fail("URL too long", 12);
+            return SC_OK;
+        }
         sc_http_response_t resp = {0};
         sc_error_t err = sc_http_post_json(alloc, url, auth, body, body ? strlen(body) : 0, &resp);
         alloc->free(alloc->ctx, body, body ? strlen(body) + 1 : 0);
@@ -158,7 +169,11 @@ static sc_error_t jira_execute(void *ctx, sc_allocator_t *alloc, const sc_json_v
             return SC_OK;
         }
         char url[512];
-        snprintf(url, sizeof(url), "%s/rest/api/3/issue/%s", base_url, issue_key);
+        int url_n = snprintf(url, sizeof(url), "%s/rest/api/3/issue/%s", base_url, issue_key);
+        if (url_n < 0 || (size_t)url_n >= sizeof(url)) {
+            *out = sc_tool_result_fail("URL too long", 12);
+            return SC_OK;
+        }
         sc_http_response_t resp = {0};
         sc_error_t err = sc_http_get(alloc, url, auth, &resp);
         if (err != SC_OK || resp.status_code != 200) {
@@ -178,7 +193,12 @@ static sc_error_t jira_execute(void *ctx, sc_allocator_t *alloc, const sc_json_v
             return SC_OK;
         }
         char url[512];
-        snprintf(url, sizeof(url), "%s/rest/api/3/issue/%s/comment", base_url, issue_key);
+        int url_n =
+            snprintf(url, sizeof(url), "%s/rest/api/3/issue/%s/comment", base_url, issue_key);
+        if (url_n < 0 || (size_t)url_n >= sizeof(url)) {
+            *out = sc_tool_result_fail("URL too long", 12);
+            return SC_OK;
+        }
         char *body = sc_sprintf(
             alloc,
             "{\"body\":{\"type\":\"doc\",\"version\":1,\"content\":[{\"type\":\"paragraph\","
@@ -219,7 +239,12 @@ static sc_error_t jira_execute(void *ctx, sc_allocator_t *alloc, const sc_json_v
             return SC_OK;
         }
         char url[512];
-        snprintf(url, sizeof(url), "%s/rest/api/3/issue/%s", base_url, issue_key);
+        int url_n = snprintf(url, sizeof(url), "%s/rest/api/3/issue/%s", base_url, issue_key);
+        if (url_n < 0 || (size_t)url_n >= sizeof(url)) {
+            alloc->free(alloc->ctx, body, strlen(body) + 1);
+            *out = sc_tool_result_fail("URL too long", 12);
+            return SC_OK;
+        }
         sc_http_response_t resp = {0};
         sc_error_t err = sc_http_post_json(alloc, url, auth, body, strlen(body), &resp);
         alloc->free(alloc->ctx, body, strlen(body) + 1);

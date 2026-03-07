@@ -499,11 +499,20 @@ export class ScConfigView extends GatewayAwareLitElement {
                     const inputType =
                       prop?.type === "integer" || prop?.type === "number" ? "number" : "text";
 
+                    const ariaLabels: Record<string, string> = {
+                      workspace_dir: "Workspace directory",
+                      default_provider: "Provider",
+                      default_model: "Model",
+                      max_tokens: "Max tokens",
+                      temperature: "Temperature",
+                    };
+                    const ariaLabel = ariaLabels[key] ?? key.replace(/_/g, " ");
                     return html`
                       <div class="field">
                         <label for="${key}">${key.replace(/_/g, " ")}</label>
                         ${desc ? html`<div class="description">${desc}</div>` : nothing}
                         <sc-input
+                          aria-label=${ariaLabel}
                           type="${inputType}"
                           .min=${inputType === "number" ? 0 : undefined}
                           .max=${key === "temperature" ? 2 : undefined}

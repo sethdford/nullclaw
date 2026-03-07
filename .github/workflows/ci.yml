@@ -36,8 +36,8 @@ jobs:
         run: |
           COUNT=$(./build/seaclaw_tests 2>&1 | grep -oE '[0-9]+/[0-9]+ passed' | head -1 | cut -d/ -f1)
           echo "Test count: $COUNT"
-          if [ "$COUNT" -lt 3125 ]; then
-            echo "Test count regression: $COUNT < 3125 baseline"
+          if [ "$COUNT" -lt 3127 ]; then
+            echo "Test count regression: $COUNT < 3127 baseline"
             exit 1
           fi
       - name: Check for untested modules
@@ -162,7 +162,7 @@ jobs:
       - name: Build
         run: cd ui && npm run build
       - name: E2E tests
-        run: cd ui && npx playwright test --update-snapshots || true
+        run: cd ui && npx playwright test --update-snapshots
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -184,7 +184,7 @@ jobs:
       - name: Install Playwright browsers
         run: cd ui && npx playwright install --with-deps chromium
       - name: Visual regression tests
-        run: cd ui && npx playwright test visual --update-snapshots || true
+        run: cd ui && npx playwright test visual --update-snapshots
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
