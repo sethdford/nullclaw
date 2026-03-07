@@ -61,7 +61,8 @@ cat > "$E2E_CONFIG_DIR/config.json" <<CONF
     "enabled": true,
     "port": 3000,
     "host": "127.0.0.1",
-    "control_ui_dir": "$UI_DIST"
+    "control_ui_dir": "$UI_DIST",
+    "require_pairing": false
   }
 }
 CONF

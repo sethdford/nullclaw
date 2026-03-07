@@ -37,7 +37,11 @@ test.describe("Live Gateway E2E", () => {
     const assistantMsg = chatView.locator(".message.assistant").first();
     await expect(assistantMsg).toBeVisible({ timeout: 30000 });
 
-    const content = await assistantMsg.textContent();
+    const content = await assistantMsg.evaluate((el) => {
+      const stream = el.querySelector("sc-message-stream");
+      const shadowText = stream?.shadowRoot?.querySelector(".content")?.textContent ?? "";
+      return shadowText || el.textContent || "";
+    });
     expect(content).toContain("4");
   });
 
@@ -68,20 +72,27 @@ test.describe("Live Gateway E2E", () => {
     const textarea = chatView.locator("textarea");
     const sendBtn = chatView.locator(".send-btn");
 
-    await textarea.fill("Remember this number: 42. Reply OK.");
+    await textarea.fill("Remember this number: 42. Reply with just OK.");
     await sendBtn.click();
     const firstReply = chatView.locator(".message.assistant").first();
     await expect(firstReply).toBeVisible({ timeout: 30000 });
+    await page.waitForTimeout(3000);
 
-    await textarea.fill("What number did I ask you to remember?");
+    await textarea.fill("What was the number I just told you? Reply with just the number.");
     await sendBtn.click();
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(5000);
     const replies = chatView.locator(".message.assistant");
-    const lastReply = replies.last();
+    const count = await replies.count();
+    expect(count).toBeGreaterThanOrEqual(2);
+    const lastReply = replies.nth(count - 1);
     await expect(lastReply).toBeVisible({ timeout: 30000 });
 
-    const content = await lastReply.textContent();
+    const content = await lastReply.evaluate((el) => {
+      const stream = el.querySelector("sc-message-stream");
+      const shadowText = stream?.shadowRoot?.querySelector(".content")?.textContent ?? "";
+      return shadowText || el.textContent || "";
+    });
     expect(content).toContain("42");
   });
 
