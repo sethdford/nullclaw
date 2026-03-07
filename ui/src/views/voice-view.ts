@@ -11,6 +11,7 @@ import { ScToast } from "../components/sc-toast.js";
 import "../components/sc-button.js";
 import "../components/sc-skeleton.js";
 import "../components/sc-message-thread.js";
+import "../components/sc-stat-card.js";
 
 type VoiceStatus = "idle" | "listening" | "processing" | "unsupported";
 
@@ -895,6 +896,11 @@ export class ScVoiceView extends GatewayAwareLitElement {
         : this._connectionStatus === "connecting"
           ? "Reconnecting\u2026"
           : "Disconnected";
+    const durationLabel =
+      this._sessionStartTs != null
+        ? this._formatDuration(this._sessionDurationSec)
+        : "0:00";
+    const subtitle = `${statusLabel} · ${durationLabel} · Session ${this._sessionCount}`;
     return html`
       <div class="hero">
         <div class="hero-left">
@@ -902,12 +908,29 @@ export class ScVoiceView extends GatewayAwareLitElement {
           <div>
             <h2 class="hero-title">Voice Assistant</h2>
             <div class="hero-meta">
-              <span>${statusLabel}</span>
+              <span>${subtitle}</span>
             </div>
           </div>
         </div>
         <div class="hero-actions">
           <span class="staleness">${this.stalenessLabel}</span>
+          <sc-button
+            variant="ghost"
+            size="sm"
+            ?disabled=${this._messages.length === 0}
+            @click=${this._exportConversation}
+            aria-label="Export conversation"
+          >
+            Export
+          </sc-button>
+          <sc-button
+            variant="ghost"
+            size="sm"
+            @click=${this._newSession}
+            aria-label="Start new session"
+          >
+            New Session
+          </sc-button>
           <sc-button size="sm" @click=${() => this.load()} aria-label="Refresh data">
             Refresh
           </sc-button>
@@ -969,7 +992,7 @@ export class ScVoiceView extends GatewayAwareLitElement {
   private _renderConversation() {
     if (this._messages.length === 0 && this.voiceStatus !== "processing") {
       return html`
-        <div class="conversation">
+        <div class="conversation conversation-empty">
           <div class="empty-conversation">
             <div class="empty-icon">${icons.mic}</div>
             <div class="empty-text">
@@ -981,39 +1004,13 @@ export class ScVoiceView extends GatewayAwareLitElement {
       `;
     }
 
-    const lastAssistantIdx = this._findLastAssistantIdx();
-
     return html`
-      <div class="conversation" role="log" aria-live="polite" aria-label="Voice conversation">
-        ${this._messages.map((msg, idx) => {
-          if (msg.role === "user") {
-            return html`
-              <div class="msg user">
-                <span>${msg.content}</span>
-                <span class="msg-meta">${formatRelative(msg.ts)}</span>
-              </div>
-            `;
-          }
-          const isStreaming = this.voiceStatus === "processing" && idx === lastAssistantIdx;
-          return html`
-            <div class="msg assistant">
-              <sc-message-stream
-                .content=${msg.content}
-                .streaming=${isStreaming}
-                .role=${"assistant"}
-              ></sc-message-stream>
-              <span class="msg-meta">${formatRelative(msg.ts)}</span>
-            </div>
-          `;
-        })}
-        ${this.voiceStatus === "processing" &&
-        (this._messages.length === 0 || this._messages[this._messages.length - 1]?.role === "user")
-          ? html`
-              <div class="thinking-row">
-                <sc-thinking .active=${true} .steps=${[]}></sc-thinking>
-              </div>
-            `
-          : nothing}
+      <div class="conversation conversation-thread">
+        <sc-message-thread
+          .items=${this._chatItems}
+          .isWaiting=${this.voiceStatus === "processing"}
+          .streamElapsed=${""}
+        ></sc-message-thread>
       </div>
     `;
   }

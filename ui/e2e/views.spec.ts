@@ -28,13 +28,13 @@ test.describe("Secondary Views", () => {
     await expect(toolsView).toBeAttached({ timeout: 5000 });
   });
 
-  test("sessions view renders", async ({ page }) => {
-    await page.goto("/#sessions");
+  test("sessions view redirects to chat", async ({ page }) => {
+    await page.goto("/?demo#sessions");
     await page.waitForTimeout(1500);
     await expect(async () => {
       const exists = await page.evaluate(() => {
         const app = document.querySelector("sc-app");
-        return !!app?.shadowRoot?.querySelector("sc-sessions-view");
+        return !!app?.shadowRoot?.querySelector("sc-chat-view");
       });
       expect(exists).toBe(true);
     }).toPass({ timeout: 10000 });

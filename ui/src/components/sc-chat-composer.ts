@@ -41,16 +41,18 @@ export class ScChatComposer extends LitElement {
       flex-direction: column;
       gap: var(--sc-space-xs);
       padding: var(--sc-space-sm) var(--sc-space-md);
-      background: var(--sc-bg-surface);
+      background: color-mix(in srgb, var(--sc-bg-surface) 65%, transparent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--sc-border-subtle);
-      border-radius: var(--sc-radius-2xl, 24px);
+      border-radius: var(--sc-radius-xl);
       transition:
         border-color var(--sc-duration-fast),
         box-shadow var(--sc-duration-fast);
     }
     .composer:focus-within {
       border-color: var(--sc-accent);
-      box-shadow: 0 0 0 3px var(--sc-accent-subtle);
+      box-shadow: 0 0 0 2px var(--sc-accent-subtle);
     }
     .composer.drag-over {
       outline: 2px dashed var(--sc-accent);
@@ -182,7 +184,7 @@ export class ScChatComposer extends LitElement {
     }
     .send-btn.send {
       background: var(--sc-accent);
-      color: var(--sc-bg);
+      color: var(--sc-on-accent);
     }
     .send-btn.stop {
       background: var(--sc-error);
@@ -196,7 +198,7 @@ export class ScChatComposer extends LitElement {
       filter: brightness(1.1);
     }
     .send-btn:active:not(:disabled) {
-      transform: scale(0.92);
+      transform: scale(var(--sc-glass-interactive-press-scale, 0.97));
     }
     .send-btn:disabled {
       opacity: 0.4;
@@ -205,12 +207,6 @@ export class ScChatComposer extends LitElement {
     .send-btn:focus-visible {
       outline: 2px solid var(--sc-accent);
       outline-offset: 2px;
-    }
-    .token-count {
-      font-size: var(--sc-text-2xs, 10px);
-      color: var(--sc-text-faint);
-      font-family: var(--sc-font);
-      font-variant-numeric: tabular-nums;
     }
     .elapsed {
       font-size: var(--sc-text-xs);
@@ -424,7 +420,6 @@ export class ScChatComposer extends LitElement {
 
   override render() {
     const canSend = this.value.trim().length > 0 && !this.waiting && !this.disabled;
-    const tokenEstimate = this.value.length > 500 ? Math.ceil(this.value.length / 4) : 0;
     return html`
       <div style="position:relative;">
         ${this._slashOpen

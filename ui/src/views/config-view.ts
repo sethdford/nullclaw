@@ -85,10 +85,6 @@ export class ScConfigView extends GatewayAwareLitElement {
       display: flex;
       flex-direction: column;
       gap: var(--sc-space-xl);
-      padding: var(--sc-space-lg);
-      background: var(--sc-bg-surface);
-      border: 1px solid var(--sc-border);
-      border-radius: var(--sc-radius-lg);
     }
     .section {
       border: 1px solid var(--sc-border);
@@ -578,8 +574,8 @@ export class ScConfigView extends GatewayAwareLitElement {
           </div>
         </sc-section-header>
       </sc-page-hero>
-      <sc-card glass>
-        <div class="form">
+      <div class="form">
+        <sc-card glass>
           <sc-form-group title="Provider Settings" description="Default AI provider and model">
             <sc-combobox
               label="Provider"
@@ -604,7 +600,9 @@ export class ScConfigView extends GatewayAwareLitElement {
               }}
             ></sc-combobox>
           </sc-form-group>
+        </sc-card>
 
+        <sc-card glass>
           <sc-form-group title="Model Settings" description="Token and temperature limits">
             <div class="field">
               <label for="max_tokens">Max tokens</label>
@@ -644,7 +642,9 @@ export class ScConfigView extends GatewayAwareLitElement {
                 : nothing}
             </div>
           </sc-form-group>
+        </sc-card>
 
+        <sc-card glass>
           <sc-form-group title="Agent Settings" description="Workspace and paths">
             <div class="field">
               <label for="workspace_dir">Workspace directory</label>
@@ -660,8 +660,8 @@ export class ScConfigView extends GatewayAwareLitElement {
               ></sc-input>
             </div>
           </sc-form-group>
-        </div>
-      </sc-card>
+        </sc-card>
+      </div>
       ${this.hasChanges()
         ? html`
             <div class="unsaved-banner">
