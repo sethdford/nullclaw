@@ -1935,12 +1935,12 @@ describe("sc-tapback-menu", () => {
     el.messageIndex = 3;
     document.body.appendChild(el);
     await el.updateComplete;
-    let detail: { emoji: string; index: number } | null = null;
+    let detail: Record<string, unknown> | null = null;
     el.addEventListener("sc-react", ((e: CustomEvent) => {
       detail = e.detail;
     }) as EventListener);
     (el.shadowRoot?.querySelector("[role='menuitem']") as HTMLElement)?.click();
-    expect(detail?.index).toBe(3);
+    expect(detail?.["index"]).toBe(3);
     el.remove();
   });
   it("fires sc-tapback-close on Escape", async () => {

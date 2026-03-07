@@ -1,6 +1,13 @@
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 import { EVENT_NAMES } from "../utils.js";
 
+export type MessageStatus = "sending" | "sent" | "streaming" | "complete" | "failed";
+export interface Reaction {
+  emoji: string;
+  count: number;
+  mine: boolean;
+}
+
 export type ChatItem =
   | {
       type: "message";
@@ -8,6 +15,11 @@ export type ChatItem =
       content: string;
       id?: string;
       ts?: number;
+      status?: MessageStatus;
+      editedFrom?: string;
+      branchIndex?: number;
+      branchCount?: number;
+      reactions?: Reaction[];
     }
   | {
       type: "tool_call";
