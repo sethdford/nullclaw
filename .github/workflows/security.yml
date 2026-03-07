@@ -111,6 +111,24 @@ jobs:
       - uses: ./.github/actions/setup-build
       - uses: ./.github/actions/run-tests
 
+  npm-audit:
+    name: JS Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Audit UI dependencies
+        run: cd ui && npm ci && npm audit --audit-level=high
+        continue-on-error: true
+      - name: Audit website dependencies
+        run: cd website && npm ci && npm audit --audit-level=high
+        continue-on-error: true
+      - name: Audit design-tokens dependencies
+        run: cd design-tokens && npm ci && npm audit --audit-level=high
+        continue-on-error: true
+
   fips-build:
     name: FIPS Crypto Build
     runs-on: ubuntu-latest

@@ -146,6 +146,16 @@ jobs:
       - run: npm run format:check
       - name: Test with coverage
         run: npm run test:coverage
+      - name: Token lint (raw hex, rgba, breakpoints)
+        run: npm run lint:tokens
+      - name: Color lint (full repo)
+        run: bash ../scripts/lint-raw-colors.sh --all
+      - name: Component quality checklist
+        run: npm run check:components
+        continue-on-error: true
+      - name: Unused token audit
+        run: bash scripts/check-unused-tokens.sh
+        continue-on-error: true
       - run: npm run build
       - name: Enforce bundle size budget (350KB)
         run: bash scripts/check-bundle-size.sh
@@ -440,6 +450,17 @@ jobs:
           if [ -n "$MISSING" ]; then
             echo "Docs missing frontmatter:$MISSING"
             exit 1
+          fi
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Check generated docs are up to date
+        run: |
+          cd ui && npm ci --ignore-scripts
+          npm run docs 2>/dev/null || true
+          cd ..
+          if ! git diff --exit-code docs/icon-inventory.md docs/components.md 2>/dev/null; then
+            echo "::warning::Generated docs are stale. Run 'cd ui && npm run docs' to update."
           fi
 
   fuzz:

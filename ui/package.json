@@ -6,6 +6,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "cd ../design-tokens && npm run build 2>/dev/null || true",
     "dev": "vite",
     "prebuild": "cd ../design-tokens && npm run build 2>/dev/null || true",
     "build": "vite build",
@@ -27,7 +28,7 @@
     "docs": "(cd ../design-tokens && npm run docs) && bash scripts/icon-inventory.sh && bash scripts/component-docs.sh",
     "docs:icons": "bash scripts/icon-inventory.sh",
     "docs:components": "bash scripts/component-docs.sh",
-    "lint:tokens": "bash scripts/lint-raw-values.sh || true",
+    "lint:tokens": "bash scripts/lint-raw-values.sh",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run lint:tokens && npm run test"
   },
   "dependencies": {

@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
+# DEPRECATED: Use Playwright visual tests instead: npx playwright test visual
+# CI uses ui/e2e/visual.spec.ts for visual regression (Playwright snapshots).
+# This ImageMagick-based script is kept for local ad-hoc comparison only.
+#
 # Visual regression: capture screenshots of the component catalog and key views
 # Usage: bash scripts/visual-regression.sh [--update]
 set -euo pipefail
+echo "⚠ DEPRECATED: Prefer 'npx playwright test visual' for visual regression." >&2
 
 cd "$(dirname "$0")/.."
 
