@@ -551,16 +551,6 @@ export class ScConfigView extends GatewayAwareLitElement {
   }
 
   private _renderForm(): TemplateResult {
-    const props = this.schema?.properties ?? {};
-    const orderedKeys = [
-      "workspace_dir",
-      "default_provider",
-      "default_model",
-      "max_tokens",
-      "temperature",
-    ];
-    const fieldKeys = orderedKeys.filter((k) => k in props);
-
     return html`
       <sc-page-hero>
         <sc-section-header

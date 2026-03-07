@@ -150,42 +150,20 @@ test.describe("Agents (Demo)", () => {
     }).toPass({ timeout: POLL });
   });
 
-  test("shows session rows", async ({ page }) => {
+  test("shows sessions data table", async ({ page }) => {
     await expect(async () => {
-      const count = await page.evaluate(shadowCount("sc-agents-view", ".session-row"));
-      expect(count).toBeGreaterThanOrEqual(3);
+      expect(await page.evaluate(shadowExists("sc-agents-view", "sc-data-table-v2"))).toBe(true);
     }).toPass({ timeout: POLL });
   });
 
   test("has New Chat button", async ({ page }) => {
     await expect(async () => {
-      const text = await page.evaluate(`
-        (() => {
-          const app = document.querySelector("sc-app");
-          const view = app?.shadowRoot?.querySelector("sc-agents-view");
-          const btns = [...(view?.shadowRoot?.querySelectorAll("sc-button") ?? [])];
-          return btns.map(b => b.textContent?.trim()).join("|");
-        })()
-      `);
+      const text = await page.evaluate(shadowText("sc-agents-view"));
       expect(text).toContain("New Chat");
     }).toPass({ timeout: POLL });
   });
 
-  test("has Resume buttons on session rows", async ({ page }) => {
-    await expect(async () => {
-      const count = await page.evaluate(`
-        (() => {
-          const app = document.querySelector("sc-app");
-          const view = app?.shadowRoot?.querySelector("sc-agents-view");
-          const btns = [...(view?.shadowRoot?.querySelectorAll(".session-row sc-button") ?? [])];
-          return btns.filter(b => b.textContent?.trim() === "Resume").length;
-        })()
-      `);
-      expect(count).toBeGreaterThanOrEqual(3);
-    }).toPass({ timeout: POLL });
-  });
-
-  test("shows agent profile section", async ({ page }) => {
+  test("shows agent config section", async ({ page }) => {
     await expect(async () => {
       expect(await page.evaluate(shadowExists("sc-agents-view", ".profile-grid"))).toBe(true);
     }).toPass({ timeout: POLL });
@@ -286,31 +264,9 @@ test.describe("Tools (Demo)", () => {
     }).toPass({ timeout: POLL });
   });
 
-  test("shows 2 stat cards", async ({ page }) => {
+  test("shows data table with tools", async ({ page }) => {
     await expect(async () => {
-      expect(await page.evaluate(shadowCount("sc-tools-view", "sc-stat-card"))).toBe(2);
-    }).toPass({ timeout: POLL });
-  });
-
-  test("shows tool cards in grid", async ({ page }) => {
-    await expect(async () => {
-      const count = await page.evaluate(shadowCount("sc-tools-view", ".grid sc-card"));
-      expect(count).toBeGreaterThanOrEqual(6);
-    }).toPass({ timeout: POLL });
-  });
-
-  test("each tool card has name and description", async ({ page }) => {
-    await expect(async () => {
-      const names = await page.evaluate(shadowCount("sc-tools-view", ".card-name"));
-      const descs = await page.evaluate(shadowCount("sc-tools-view", ".card-desc"));
-      expect(names).toBeGreaterThanOrEqual(6);
-      expect(descs).toBeGreaterThanOrEqual(6);
-    }).toPass({ timeout: POLL });
-  });
-
-  test("search input exists", async ({ page }) => {
-    await expect(async () => {
-      expect(await page.evaluate(shadowExists("sc-tools-view", ".search sc-input"))).toBe(true);
+      expect(await page.evaluate(shadowExists("sc-tools-view", "sc-data-table-v2"))).toBe(true);
     }).toPass({ timeout: POLL });
   });
 });
@@ -324,49 +280,23 @@ test.describe("Channels (Demo)", () => {
     await page.waitForTimeout(WAIT);
   });
 
-  test("shows 3 stat cards", async ({ page }) => {
+  test("shows data table with channels", async ({ page }) => {
     await expect(async () => {
-      expect(await page.evaluate(shadowCount("sc-channels-view", "sc-stat-card"))).toBe(3);
+      expect(await page.evaluate(shadowExists("sc-channels-view", "sc-data-table-v2"))).toBe(true);
     }).toPass({ timeout: POLL });
   });
 
-  test("shows channel cards", async ({ page }) => {
+  test("shows segmented control filter", async ({ page }) => {
     await expect(async () => {
-      const count = await page.evaluate(shadowCount("sc-channels-view", ".channel-card"));
-      expect(count).toBe(8);
+      expect(await page.evaluate(shadowExists("sc-channels-view", "sc-segmented-control"))).toBe(
+        true,
+      );
     }).toPass({ timeout: POLL });
   });
 
-  test("channel cards show status badges", async ({ page }) => {
+  test("shows page hero", async ({ page }) => {
     await expect(async () => {
-      const count = await page.evaluate(shadowCount("sc-channels-view", ".channel-card sc-badge"));
-      expect(count).toBeGreaterThanOrEqual(6);
-    }).toPass({ timeout: POLL });
-  });
-
-  test("search filters channels", async ({ page }) => {
-    await expect(async () => {
-      expect(await page.evaluate(shadowCount("sc-channels-view", ".channel-card"))).toBe(8);
-    }).toPass({ timeout: POLL });
-
-    await page.evaluate(`
-      (() => {
-        const app = document.querySelector("sc-app");
-        const view = app?.shadowRoot?.querySelector("sc-channels-view");
-        const search = view?.shadowRoot?.querySelector("sc-search");
-        search?.dispatchEvent(new CustomEvent("sc-search", { detail: { value: "telegram" } }));
-      })()
-    `);
-    await page.waitForTimeout(500);
-
-    const count = await page.evaluate(shadowCount("sc-channels-view", ".channel-card"));
-    expect(count).toBe(1);
-  });
-
-  test("shows status indicators", async ({ page }) => {
-    await expect(async () => {
-      const count = await page.evaluate(shadowCount("sc-channels-view", ".status-indicator"));
-      expect(count).toBeGreaterThanOrEqual(6);
+      expect(await page.evaluate(shadowExists("sc-channels-view", "sc-page-hero"))).toBe(true);
     }).toPass({ timeout: POLL });
   });
 });
@@ -518,34 +448,24 @@ test.describe("Usage (Demo)", () => {
     }).toPass({ timeout: POLL });
   });
 
-  test("shows cost cards with dollar values", async ({ page }) => {
+  test("shows token chart", async ({ page }) => {
     await expect(async () => {
-      const text = await page.evaluate(`
-        (() => {
-          const app = document.querySelector("sc-app");
-          const view = app?.shadowRoot?.querySelector("sc-usage-view");
-          return view?.shadowRoot?.textContent ?? "";
-        })()
-      `);
-      expect(text).toContain("$0.42");
-      expect(text).toContain("$3.87");
-      expect(text).toContain("$18.42");
+      expect(await page.evaluate(shadowExists("sc-usage-view", "sc-chart"))).toBe(true);
     }).toPass({ timeout: POLL });
   });
 
-  test("shows token sparkline chart", async ({ page }) => {
+  test("shows cost by provider with 3 rows", async ({ page }) => {
     await expect(async () => {
-      expect(await page.evaluate(shadowExists("sc-usage-view", "sc-sparkline-enhanced"))).toBe(
-        true,
-      );
+      const text = await page.evaluate(shadowText("sc-usage-view"));
+      expect(text).toContain("Cost by Provider");
+      expect(await page.evaluate(shadowCount("sc-usage-view", ".provider-row"))).toBe(3);
     }).toPass({ timeout: POLL });
   });
 
-  test("shows provider bar chart", async ({ page }) => {
+  test("shows export button", async ({ page }) => {
     await expect(async () => {
-      expect(await page.evaluate(shadowExists("sc-usage-view", ".bar-chart"))).toBe(true);
-      const barCount = await page.evaluate(shadowCount("sc-usage-view", ".bar-row"));
-      expect(barCount).toBe(3);
+      const text = await page.evaluate(shadowText("sc-usage-view"));
+      expect(text).toContain("Export");
     }).toPass({ timeout: POLL });
   });
 });
@@ -637,49 +557,40 @@ test.describe("Nodes (Demo)", () => {
     await page.waitForTimeout(WAIT);
   });
 
-  test("shows 4 stat cards", async ({ page }) => {
+  test("shows page hero", async ({ page }) => {
     await expect(async () => {
-      expect(await page.evaluate(shadowCount("sc-nodes-view", "sc-stat-card"))).toBe(4);
+      expect(await page.evaluate(shadowExists("sc-nodes-view", "sc-page-hero"))).toBe(true);
     }).toPass({ timeout: POLL });
   });
 
-  test("shows 4 node cards", async ({ page }) => {
+  test("shows data table with nodes", async ({ page }) => {
     await expect(async () => {
-      expect(await page.evaluate(shadowCount("sc-nodes-view", ".node-card"))).toBe(4);
+      expect(await page.evaluate(shadowExists("sc-nodes-view", "sc-data-table-v2"))).toBe(true);
     }).toPass({ timeout: POLL });
   });
 
-  test("search filters nodes", async ({ page }) => {
+  test("shows refresh button and staleness label", async ({ page }) => {
     await expect(async () => {
-      expect(await page.evaluate(shadowCount("sc-nodes-view", ".node-card"))).toBe(4);
+      const text = await page.evaluate(shadowText("sc-nodes-view"));
+      expect(text).toContain("Refresh");
+      expect(text).toContain("Last updated");
     }).toPass({ timeout: POLL });
+  });
 
-    const input = page.locator("sc-app >> sc-nodes-view").locator("sc-input");
-    await input.locator("input").fill("rpi");
+  test("detail sheet opens on row click", async ({ page }) => {
+    await expect(async () => {
+      expect(await page.evaluate(shadowExists("sc-nodes-view", "sc-data-table-v2"))).toBe(true);
+    }).toPass({ timeout: POLL });
+    await page.evaluate(`(() => {
+      const app = document.querySelector("sc-app");
+      const view = app?.shadowRoot?.querySelector("sc-nodes-view");
+      const table = view?.shadowRoot?.querySelector("sc-data-table-v2");
+      const row = table?.shadowRoot?.querySelector("tbody tr");
+      row?.click();
+    })()`);
     await page.waitForTimeout(500);
-    expect(await page.evaluate(shadowCount("sc-nodes-view", ".node-card"))).toBe(1);
-  });
-
-  test("detail sheet opens on card click", async ({ page }) => {
-    await expect(async () => {
-      expect(await page.evaluate(shadowCount("sc-nodes-view", ".node-card"))).toBe(4);
-    }).toPass({ timeout: POLL });
-
-    await page.evaluate(shadowClick("sc-nodes-view", ".node-card"));
-    await page.waitForTimeout(500);
-    expect(await page.evaluate(shadowExists("sc-nodes-view", "sc-sheet"))).toBe(true);
-    expect(await page.evaluate(shadowExists("sc-nodes-view", ".detail-name"))).toBe(true);
-  });
-
-  test("detail sheet has action buttons", async ({ page }) => {
-    await expect(async () => {
-      expect(await page.evaluate(shadowCount("sc-nodes-view", ".node-card"))).toBe(4);
-    }).toPass({ timeout: POLL });
-
-    await page.evaluate(shadowClick("sc-nodes-view", ".node-card"));
-    await page.waitForTimeout(500);
-    const btnCount = await page.evaluate(shadowCount("sc-nodes-view", ".detail-actions sc-button"));
-    expect(btnCount).toBe(2);
+    const hasSheet = await page.evaluate(shadowExists("sc-nodes-view", "sc-sheet[open]"));
+    expect(hasSheet).toBe(true);
   });
 });
 
