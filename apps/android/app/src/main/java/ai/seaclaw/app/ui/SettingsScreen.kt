@@ -1,30 +1,63 @@
 package ai.seaclaw.app.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import ai.seaclaw.app.GatewayManager
 
 @Composable
 fun SettingsScreen(gatewayManager: GatewayManager) {
     var url by remember { mutableStateOf(gatewayManager.gatewayUrl) }
+    val isConnected by gatewayManager.isConnected.collectAsState()
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(SCTokens.spaceMd)
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = SCTokens.spaceMd),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(SCTokens.spaceSm)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(
+                        color = if (isConnected) androidx.compose.material3.MaterialTheme.colorScheme.primary
+                        else androidx.compose.material3.MaterialTheme.colorScheme.error
+                    )
+            )
+            Text(
+                text = if (isConnected) "Connected" else "Disconnected",
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+            )
+        }
         OutlinedTextField(
             value = url,
             onValueChange = { url = it; gatewayManager.gatewayUrl = it },
@@ -40,10 +73,13 @@ fun SettingsScreen(gatewayManager: GatewayManager) {
             color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
         )
         Button(
-            onClick = { gatewayManager.reconnect() },
+            onClick = {
+                if (isConnected) gatewayManager.disconnect()
+                else gatewayManager.connect()
+            },
             modifier = Modifier.padding(top = SCTokens.spaceMd)
         ) {
-            Text("Reconnect")
+            Text(if (isConnected) "Disconnect" else "Connect")
         }
     }
 }

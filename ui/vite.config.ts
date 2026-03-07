@@ -4,6 +4,20 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: [
+            "lit",
+            "lit/decorators.js",
+            "lit/directives/class-map.js",
+            "lit/directives/style-map.js",
+          ],
+          markdown: ["marked", "dompurify"],
+        },
+      },
+    },
   },
   server: {
     proxy: {

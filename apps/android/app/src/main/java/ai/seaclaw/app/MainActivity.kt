@@ -17,7 +17,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val gatewayManager = remember { GatewayManager() }
+            val gatewayManager = remember { GatewayManager(this@MainActivity) }
             SeaClawTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
