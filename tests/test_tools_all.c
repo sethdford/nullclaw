@@ -10,6 +10,7 @@
 #include "seaclaw/tools/browser_open.h"
 #include "seaclaw/tools/calendar_tool.h"
 #include "seaclaw/tools/claude_code.h"
+#include "seaclaw/tools/cli_wrapper_common.h"
 #include "seaclaw/tools/composio.h"
 #include "seaclaw/tools/crm.h"
 #include "seaclaw/tools/cron_add.h"
@@ -2357,6 +2358,54 @@ static void test_twitter_tool_execute_missing_required(void) {
         tool.vtable->deinit(tool.ctx, &alloc);
 }
 
+/* ─── cli_wrapper_common (shared by gcloud, firebase, etc.) ────────────────── */
+static void test_cli_sanitize_safe_command(void) {
+    SC_ASSERT_TRUE(sc_cli_sanitize_command("compute instances list"));
+}
+
+static void test_cli_sanitize_dollar_parens(void) {
+    SC_ASSERT_FALSE(sc_cli_sanitize_command("$(rm -rf /)"));
+}
+
+static void test_cli_sanitize_backticks(void) {
+    SC_ASSERT_FALSE(sc_cli_sanitize_command("`rm -rf /`"));
+}
+
+static void test_cli_sanitize_pipe(void) {
+    SC_ASSERT_FALSE(sc_cli_sanitize_command("ls | rm"));
+}
+
+static void test_cli_sanitize_semicolon(void) {
+    SC_ASSERT_FALSE(sc_cli_sanitize_command("ls; rm"));
+}
+
+static void test_cli_split_basic(void) {
+    char buf[64];
+    strcpy(buf, "compute instances list");
+    const char *argv[8];
+    size_t n = sc_cli_split_args(buf, argv, 8);
+    SC_ASSERT_EQ(n, 3);
+    SC_ASSERT_STR_EQ(argv[0], "compute");
+    SC_ASSERT_STR_EQ(argv[1], "instances");
+    SC_ASSERT_STR_EQ(argv[2], "list");
+}
+
+static void test_cli_split_empty(void) {
+    char buf[1] = "";
+    const char *argv[8];
+    size_t n = sc_cli_split_args(buf, argv, 8);
+    SC_ASSERT_EQ(n, 0);
+}
+
+static void test_cli_split_single(void) {
+    char buf[16];
+    strcpy(buf, "deploy");
+    const char *argv[8];
+    size_t n = sc_cli_split_args(buf, argv, 8);
+    SC_ASSERT_EQ(n, 1);
+    SC_ASSERT_STR_EQ(argv[0], "deploy");
+}
+
 /* ─── gcloud tool ──────────────────────────────────────────────────────────── */
 static void test_gcloud_tool_create(void) {
     sc_allocator_t alloc = sc_system_allocator();
@@ -2720,6 +2769,14 @@ void run_tools_all_tests(void) {
     SC_RUN_TEST(test_twitter_tool_execute_empty);
     SC_RUN_TEST(test_twitter_tool_execute_with_args);
     SC_RUN_TEST(test_twitter_tool_execute_missing_required);
+    SC_RUN_TEST(test_cli_sanitize_safe_command);
+    SC_RUN_TEST(test_cli_sanitize_dollar_parens);
+    SC_RUN_TEST(test_cli_sanitize_backticks);
+    SC_RUN_TEST(test_cli_sanitize_pipe);
+    SC_RUN_TEST(test_cli_sanitize_semicolon);
+    SC_RUN_TEST(test_cli_split_basic);
+    SC_RUN_TEST(test_cli_split_empty);
+    SC_RUN_TEST(test_cli_split_single);
     SC_RUN_TEST(test_gcloud_tool_create);
     SC_RUN_TEST(test_gcloud_tool_execute_empty);
     SC_RUN_TEST(test_gcloud_tool_execute_with_args);

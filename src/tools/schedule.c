@@ -13,7 +13,9 @@
     "{\"type\":\"object\",\"properties\":{\"action\":{\"type\":\"string\",\"enum\":[\"create\"," \
     "\"list\",\"get\",\"cancel\",\"pause\",\"resume\"]},\"expression\":{\"type\":\"string\"},"   \
     "\"command\":{\"type\":\"string\"},\"delay\":{\"type\":\"string\"},\"id\":{\"type\":"        \
-    "\"string\"}},\"required\":[\"action\"]}"
+    "\"string\"},\"type\":{\"type\":\"string\",\"enum\":[\"shell\",\"agent\"]},"                 \
+    "\"prompt\":{\"type\":\"string\"},\"channel\":{\"type\":\"string\"}"                         \
+    "},\"required\":[\"action\"]}"
 
 typedef struct {
     sc_cron_scheduler_t *sched;
@@ -90,18 +92,32 @@ static sc_error_t schedule_execute(void *ctx, sc_allocator_t *alloc, const sc_js
 
     if (strcmp(action, "create") == 0) {
         const char *expression = sc_json_get_string(args, "expression");
-        const char *command = sc_json_get_string(args, "command");
         const char *name = sc_json_get_string(args, "name");
+        const char *type_str = sc_json_get_string(args, "type");
         const char *expr = expression && expression[0] ? expression : "* * * * *";
-        const char *cmd = command && command[0] ? command : "";
         uint64_t id = 0;
-        sc_error_t err = sc_cron_add_job(sched, alloc, expr, cmd, name, &id);
+        sc_error_t err;
+
+        if (type_str && strcmp(type_str, "agent") == 0) {
+            const char *prompt = sc_json_get_string(args, "prompt");
+            const char *channel = sc_json_get_string(args, "channel");
+            if (!prompt || !prompt[0]) {
+                *out = sc_tool_result_fail("agent job requires 'prompt'", 27);
+                return SC_OK;
+            }
+            err = sc_cron_add_agent_job(sched, alloc, expr, prompt, channel, name, &id);
+        } else {
+            const char *command = sc_json_get_string(args, "command");
+            const char *cmd = command && command[0] ? command : "";
+            err = sc_cron_add_job(sched, alloc, expr, cmd, name, &id);
+        }
         if (err != SC_OK) {
             *out = sc_tool_result_fail("failed to add job", 18);
             return err;
         }
-        char *msg = sc_sprintf(alloc, "{\"id\":\"%llu\",\"expression\":\"%s\",\"command\":\"%s\"}",
-                               (unsigned long long)id, expr, cmd);
+        char *msg = sc_sprintf(alloc, "{\"id\":\"%llu\",\"expression\":\"%s\",\"type\":\"%s\"}",
+                               (unsigned long long)id, expr,
+                               (type_str && strcmp(type_str, "agent") == 0) ? "agent" : "shell");
         if (!msg) {
             *out = sc_tool_result_fail("out of memory", 12);
             return SC_ERR_OUT_OF_MEMORY;

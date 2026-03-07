@@ -41,6 +41,9 @@ static uint64_t clock_diff_ms(clock_t start, clock_t end) {
     return (uint64_t)((end - start) * 1000 / CLOCKS_PER_SEC);
 }
 
+static sc_error_t execute_plan_steps(sc_agent_t *agent, sc_plan_t *plan, char **summary_out,
+                                     size_t *summary_len_out);
+
 static _Thread_local sc_agent_t *sc__current_agent_for_tools;
 
 void sc_agent_set_current_for_tools(sc_agent_t *agent) {
@@ -842,19 +845,19 @@ char *sc_agent_handle_slash_command(sc_agent_t *agent, const char *message, size
 
     if (sc_strncasecmp(cmd_buf, "goal", 4) == 0) {
         if (arg_len == 0) {
-            return sc_strndup(agent->alloc,
-                              "Usage: /goal <describe what you want to accomplish>", 51);
+            return sc_strndup(agent->alloc, "Usage: /goal <describe what you want to accomplish>",
+                              51);
         }
         const char **tool_names = NULL;
         size_t tn_count = 0;
         if (agent->tools_count > 0) {
-            tool_names =
-                (const char **)agent->alloc->alloc(agent->alloc->ctx,
-                                                   agent->tools_count * sizeof(const char *));
+            tool_names = (const char **)agent->alloc->alloc(
+                agent->alloc->ctx, agent->tools_count * sizeof(const char *));
             if (tool_names) {
                 for (size_t i = 0; i < agent->tools_count; i++) {
-                    const char *tn =
-                        agent->tools[i].vtable->name ? agent->tools[i].vtable->name(agent->tools[i].ctx) : NULL;
+                    const char *tn = agent->tools[i].vtable->name
+                                         ? agent->tools[i].vtable->name(agent->tools[i].ctx)
+                                         : NULL;
                     if (tn)
                         tool_names[tn_count++] = tn;
                 }
@@ -870,9 +873,12 @@ char *sc_agent_handle_slash_command(sc_agent_t *agent, const char *message, size
         if (err != SC_OK || !plan) {
             return sc_sprintf(agent->alloc, "Goal planning failed: %s", sc_error_string(err));
         }
-        char *summary = sc_sprintf(agent->alloc, "Plan generated with %zu steps.",
-                                    plan->steps_count);
+        char *summary = NULL;
+        size_t summary_len = 0;
+        err = execute_plan_steps(agent, plan, &summary, &summary_len);
         sc_plan_free(agent->alloc, plan);
+        if (err != SC_OK)
+            return sc_sprintf(agent->alloc, "Plan execution failed: %s", sc_error_string(err));
         return summary;
     }
 

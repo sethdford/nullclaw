@@ -34,6 +34,8 @@ typedef struct sc_prompt_config {
     size_t tone_hint_len;
     const char *awareness_context; /* situational awareness (channels, errors, health) */
     size_t awareness_context_len;
+    const char *outcome_context; /* outcome tracker summary (tool success rates, corrections) */
+    size_t outcome_context_len;
 } sc_prompt_config_t;
 
 /* Build the full system prompt. Caller owns returned string; free with alloc. */
