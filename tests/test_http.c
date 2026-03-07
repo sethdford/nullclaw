@@ -90,6 +90,35 @@ static void test_http_request_get_mock(void) {
 #endif
 }
 
+static size_t test_http_stream_cb_noop(const char *chunk, size_t chunk_len, void *userdata) {
+    (void)chunk;
+    (void)userdata;
+    return chunk_len;
+}
+
+static void test_http_post_json_stream_null_alloc(void) {
+    const char *body = "{}";
+    sc_error_t err = sc_http_post_json_stream(NULL, "https://example.com/", NULL, NULL, body,
+                                              strlen(body), test_http_stream_cb_noop, NULL);
+    SC_ASSERT_NEQ(err, SC_OK);
+}
+
+static void test_http_post_json_stream_null_url(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    const char *body = "{}";
+    sc_error_t err = sc_http_post_json_stream(&alloc, NULL, NULL, NULL, body, strlen(body),
+                                              test_http_stream_cb_noop, NULL);
+    SC_ASSERT_NEQ(err, SC_OK);
+}
+
+static void test_http_post_json_stream_null_callback(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    const char *body = "{}";
+    sc_error_t err = sc_http_post_json_stream(&alloc, "https://example.com/", NULL, NULL, body,
+                                              strlen(body), NULL, NULL);
+    SC_ASSERT_NEQ(err, SC_OK);
+}
+
 #if SC_IS_TEST
 static void test_http_post_json_mock(void) {
     sc_allocator_t alloc = sc_system_allocator();
@@ -107,6 +136,9 @@ void run_http_tests(void) {
     SC_TEST_SUITE("HTTP GET");
     SC_RUN_TEST(test_http_get_mock);
     SC_RUN_TEST(test_http_get_null_args);
+    SC_RUN_TEST(test_http_post_json_stream_null_alloc);
+    SC_RUN_TEST(test_http_post_json_stream_null_url);
+    SC_RUN_TEST(test_http_post_json_stream_null_callback);
     SC_RUN_TEST(test_http_response_free_null_body);
     SC_RUN_TEST(test_http_response_status_code);
     SC_RUN_TEST(test_http_response_body_extraction);

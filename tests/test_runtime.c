@@ -331,6 +331,42 @@ static void test_docker_runtime_wrap_command_no_image_returns_not_supported(void
     SC_ASSERT_EQ(err, SC_ERR_NOT_SUPPORTED);
 }
 
+static void test_docker_runtime_workspace_with_colon_returns_invalid_argument(void) {
+    sc_runtime_t r = sc_runtime_docker(true, 64, "alpine:latest", "/path/with:colon");
+    SC_ASSERT_NOT_NULL(r.vtable->wrap_command);
+
+    const char *argv_in[] = {"echo", "hello"};
+    const char *argv_out[32];
+    size_t argc_out = 0;
+    sc_error_t err = r.vtable->wrap_command(r.ctx, argv_in, 2, argv_out, 32, &argc_out);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void test_docker_runtime_workspace_null_with_mount(void) {
+    sc_runtime_t r = sc_runtime_docker(true, 64, "alpine:latest", NULL);
+    SC_ASSERT_NOT_NULL(r.vtable->wrap_command);
+    /* NULL workspace with mount_workspace: no -v flag, wrap_command should succeed */
+    const char *argv_in[] = {"echo", "x"};
+    const char *argv_out[32];
+    size_t argc_out = 0;
+    sc_error_t err = r.vtable->wrap_command(r.ctx, argv_in, 2, argv_out, 32, &argc_out);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_STR_EQ(argv_out[0], "docker");
+}
+
+static void test_docker_runtime_init_deinit_lifecycle(void) {
+    sc_runtime_t r = sc_runtime_docker(false, 128, "alpine:3", ".");
+    SC_ASSERT_NOT_NULL(r.ctx);
+    SC_ASSERT_NOT_NULL(r.vtable);
+    SC_ASSERT_STR_EQ(r.vtable->name(r.ctx), "docker");
+    SC_ASSERT_EQ(r.vtable->memory_budget(r.ctx), 128u * 1024 * 1024);
+    SC_ASSERT_FALSE(r.vtable->has_filesystem_access(r.ctx));
+    /* No explicit deinit; vtable uses static ctx. Second create overwrites. */
+    sc_runtime_t r2 = sc_runtime_docker(true, 0, "busybox:1", "/tmp");
+    SC_ASSERT_STR_EQ(r2.vtable->name(r2.ctx), "docker");
+    SC_ASSERT_TRUE(r2.vtable->has_filesystem_access(r2.ctx));
+}
+
 static void test_native_runtime_no_wrap(void) {
     sc_runtime_t r = sc_runtime_native();
     SC_ASSERT_EQ(r.vtable->wrap_command, (void *)NULL);
@@ -466,6 +502,9 @@ void run_runtime_tests(void) {
     SC_RUN_TEST(test_runtime_from_config_null_out_returns_error);
     SC_RUN_TEST(test_docker_runtime_wrap_command);
     SC_RUN_TEST(test_docker_runtime_wrap_command_no_image_returns_not_supported);
+    SC_RUN_TEST(test_docker_runtime_workspace_with_colon_returns_invalid_argument);
+    SC_RUN_TEST(test_docker_runtime_workspace_null_with_mount);
+    SC_RUN_TEST(test_docker_runtime_init_deinit_lifecycle);
     SC_RUN_TEST(test_native_runtime_no_wrap);
     SC_RUN_TEST(test_wasm_runtime_wrap_not_supported);
     SC_RUN_TEST(test_runtime_gce_create);

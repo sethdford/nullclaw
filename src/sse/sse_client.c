@@ -15,7 +15,7 @@ static sc_error_t sc_sse_connect_impl(sc_allocator_t *alloc, const char *url,
     (void)auth_header;
     (void)extra_headers;
 
-    if (!alloc || !callback)
+    if (!alloc || !url || !callback)
         return SC_ERR_INVALID_ARGUMENT;
 
     /* Emit one mock event */

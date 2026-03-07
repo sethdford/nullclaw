@@ -46,16 +46,49 @@ static void test_sse_connect_mock(void) {
 #endif
 }
 
-static void test_sse_connect_null_args(void) {
-    sc_allocator_t alloc = sc_system_allocator();
+static void test_sse_connect_null_alloc(void) {
     sc_error_t err = sc_sse_connect(NULL, "https://x.com", NULL, NULL, sse_callback, NULL);
     SC_ASSERT_NEQ(err, SC_OK);
-    err = sc_sse_connect(&alloc, "https://x.com", NULL, NULL, NULL, NULL);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void test_sse_connect_null_url(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_error_t err = sc_sse_connect(&alloc, NULL, NULL, NULL, sse_callback, NULL);
     SC_ASSERT_NEQ(err, SC_OK);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void test_sse_connect_null_callback(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_error_t err = sc_sse_connect(&alloc, "https://x.com", NULL, NULL, NULL, NULL);
+    SC_ASSERT_NEQ(err, SC_OK);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void test_sse_connect_mock_event_structure(void) {
+#if SC_IS_TEST
+    sse_cb_count = 0;
+    sse_last_event_type[0] = '\0';
+    sse_last_data[0] = '\0';
+
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_error_t err =
+        sc_sse_connect(&alloc, "https://example.com/sse", NULL, NULL, sse_callback, NULL);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(sse_cb_count, 1);
+    SC_ASSERT_STR_EQ(sse_last_event_type, "message");
+    SC_ASSERT_TRUE(strstr(sse_last_data, "sse_connect") != NULL);
+    SC_ASSERT_TRUE(strlen(sse_last_event_type) == 7);
+    SC_ASSERT_TRUE(strlen(sse_last_data) > 0);
+#endif
 }
 
 void run_sse_tests(void) {
     SC_TEST_SUITE("SSE client");
     SC_RUN_TEST(test_sse_connect_mock);
-    SC_RUN_TEST(test_sse_connect_null_args);
+    SC_RUN_TEST(test_sse_connect_null_alloc);
+    SC_RUN_TEST(test_sse_connect_null_url);
+    SC_RUN_TEST(test_sse_connect_null_callback);
+    SC_RUN_TEST(test_sse_connect_mock_event_structure);
 }

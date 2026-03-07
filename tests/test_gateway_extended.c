@@ -149,6 +149,44 @@ static void test_gateway_config_zeroed(void) {
     SC_ASSERT_NULL(cfg.hmac_secret);
 }
 
+static void test_gateway_config_from_cfg_null_cfg(void) {
+    sc_gateway_config_t out = {0};
+    out.port = 9999;
+    sc_gateway_config_from_cfg(NULL, &out);
+    /* NULL cfg returns early without modifying out */
+    SC_ASSERT_EQ(out.port, 9999);
+}
+
+static void test_gateway_config_from_cfg_null_out(void) {
+    sc_config_gateway_t cfg = {0};
+    cfg.port = 8080;
+    cfg.host = "127.0.0.1";
+    sc_gateway_config_from_cfg(&cfg, NULL);
+    /* NULL out returns early without crashing */
+}
+
+static void test_gateway_config_from_cfg_valid(void) {
+    sc_config_gateway_t cfg = {0};
+    cfg.port = 8080;
+    cfg.host = "127.0.0.1";
+    sc_gateway_config_t out = {0};
+    sc_gateway_config_from_cfg(&cfg, &out);
+    SC_ASSERT_EQ(out.port, 8080);
+    SC_ASSERT_NOT_NULL(out.host);
+    SC_ASSERT_TRUE(strcmp(out.host, "127.0.0.1") == 0);
+    SC_ASSERT_EQ(out.max_body_size, SC_GATEWAY_MAX_BODY_SIZE);
+}
+
+static void test_gateway_config_from_cfg_defaults(void) {
+    sc_config_gateway_t cfg = {0};
+    /* Zeroed cfg: host/port use defaults */
+    sc_gateway_config_t out = {0};
+    sc_gateway_config_from_cfg(&cfg, &out);
+    SC_ASSERT_NOT_NULL(out.host);
+    SC_ASSERT_TRUE(strcmp(out.host, "0.0.0.0") == 0);
+    SC_ASSERT_EQ(out.port, 3000); /* SC_GATEWAY_DEFAULT_PORT */
+}
+
 static void test_readiness_status_values(void) {
     SC_ASSERT_TRUE(SC_READINESS_READY != SC_READINESS_NOT_READY);
 }
@@ -1032,6 +1070,10 @@ void run_gateway_extended_tests(void) {
     SC_RUN_TEST(test_health_all_ok);
     SC_RUN_TEST(test_health_reset_clears);
     SC_RUN_TEST(test_gateway_config_zeroed);
+    SC_RUN_TEST(test_gateway_config_from_cfg_null_cfg);
+    SC_RUN_TEST(test_gateway_config_from_cfg_null_out);
+    SC_RUN_TEST(test_gateway_config_from_cfg_valid);
+    SC_RUN_TEST(test_gateway_config_from_cfg_defaults);
     SC_RUN_TEST(test_readiness_status_values);
     SC_RUN_TEST(test_gateway_rate_limit_constant);
     SC_RUN_TEST(test_health_check_null_alloc);

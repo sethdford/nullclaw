@@ -358,6 +358,53 @@ static void test_web_search_firecrawl_count_over_ten(void) {
     SC_ASSERT_NEQ(err, SC_OK);
 }
 
+static void test_web_search_tavily_null_alloc(void) {
+    sc_tool_result_t result = {0};
+    sc_error_t err = sc_web_search_tavily(NULL, "q", 1, 1, "key", &result);
+    SC_ASSERT_NEQ(err, SC_OK);
+}
+
+static void test_web_search_tavily_null_query(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_result_t result = {0};
+    sc_error_t err = sc_web_search_tavily(&alloc, NULL, 0, 1, "key", &result);
+    SC_ASSERT_NEQ(err, SC_OK);
+}
+
+static void test_web_search_tavily_null_api_key(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_result_t result = {0};
+    sc_error_t err = sc_web_search_tavily(&alloc, "q", 1, 1, NULL, &result);
+    SC_ASSERT_NEQ(err, SC_OK);
+}
+
+static void test_web_search_tavily_null_out(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_error_t err = sc_web_search_tavily(&alloc, "q", 1, 1, "key", NULL);
+    SC_ASSERT_NEQ(err, SC_OK);
+}
+
+static void test_web_search_tavily_zero_query_len(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_result_t result = {0};
+    sc_error_t err = sc_web_search_tavily(&alloc, "q", 0, 1, "key", &result);
+    SC_ASSERT_NEQ(err, SC_OK);
+}
+
+static void test_web_search_tavily_count_zero(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_result_t result = {0};
+    sc_error_t err = sc_web_search_tavily(&alloc, "q", 1, 0, "key", &result);
+    SC_ASSERT_NEQ(err, SC_OK);
+}
+
+static void test_web_search_tavily_count_over_ten(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_result_t result = {0};
+    sc_error_t err = sc_web_search_tavily(&alloc, "q", 1, 11, "key", &result);
+    SC_ASSERT_NEQ(err, SC_OK);
+}
+
 static void test_web_search_jina_null_alloc(void) {
     sc_tool_result_t result = {0};
     sc_error_t err = sc_web_search_jina(NULL, "q", 1, 1, "key", &result);
@@ -515,6 +562,14 @@ void run_coverage_new_tests(void) {
     SC_RUN_TEST(test_web_search_firecrawl_zero_query_len);
     SC_RUN_TEST(test_web_search_firecrawl_count_zero);
     SC_RUN_TEST(test_web_search_firecrawl_count_over_ten);
+
+    SC_RUN_TEST(test_web_search_tavily_null_alloc);
+    SC_RUN_TEST(test_web_search_tavily_null_query);
+    SC_RUN_TEST(test_web_search_tavily_null_api_key);
+    SC_RUN_TEST(test_web_search_tavily_null_out);
+    SC_RUN_TEST(test_web_search_tavily_zero_query_len);
+    SC_RUN_TEST(test_web_search_tavily_count_zero);
+    SC_RUN_TEST(test_web_search_tavily_count_over_ten);
 
     SC_RUN_TEST(test_web_search_jina_null_alloc);
     SC_RUN_TEST(test_web_search_jina_null_query);
