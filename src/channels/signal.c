@@ -327,7 +327,11 @@ static sc_error_t signal_start_typing(void *ctx, const char *recipient, size_t r
     (void)recipient_len;
     return SC_OK;
 #else
-#if defined(SC_HTTP_CURL)
+#if !defined(SC_HTTP_CURL)
+    (void)ctx;
+    (void)recipient;
+    (void)recipient_len;
+#else
     sc_signal_ctx_t *c = (sc_signal_ctx_t *)ctx;
     if (!c || recipient_len == 0)
         return SC_OK;
@@ -363,7 +367,11 @@ static sc_error_t signal_stop_typing(void *ctx, const char *recipient, size_t re
     (void)recipient_len;
     return SC_OK;
 #else
-#if defined(SC_HTTP_CURL)
+#if !defined(SC_HTTP_CURL)
+    (void)ctx;
+    (void)recipient;
+    (void)recipient_len;
+#else
     sc_signal_ctx_t *c = (sc_signal_ctx_t *)ctx;
     if (!c)
         return SC_OK;

@@ -62,6 +62,7 @@ static const sc_backend_descriptor_t desc_memory = {
     .needs_workspace = false,
 };
 
+#ifdef SC_ENABLE_SQLITE
 static const sc_backend_descriptor_t desc_sqlite = {
     .name = "sqlite",
     .label = "SQLite with FTS5 search (recommended)",
@@ -76,6 +77,7 @@ static const sc_backend_descriptor_t desc_sqlite = {
     .needs_db_path = true,
     .needs_workspace = false,
 };
+#endif
 
 #ifdef SC_ENABLE_POSTGRES
 static const sc_backend_descriptor_t desc_postgres = {
