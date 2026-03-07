@@ -24,8 +24,8 @@ export class ScCard extends LitElement {
       padding: var(--sc-space-xl);
       box-shadow:
         var(--sc-shadow-card),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9),
-        inset 0 -1px 0 rgba(6, 18, 36, 0.04);
+        inset 0 1px 0 color-mix(in srgb, white 90%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, var(--sc-text) 4%, transparent);
       overflow: hidden;
     }
 
@@ -37,8 +37,8 @@ export class ScCard extends LitElement {
       border-radius: inherit;
       background: linear-gradient(
         180deg,
-        rgba(255, 255, 255, 0.7),
-        rgba(255, 255, 255, 0.1) 30%,
+        color-mix(in srgb, white 70%, transparent),
+        color-mix(in srgb, white 10%, transparent) 30%,
         transparent 60%
       );
       mask:
@@ -81,8 +81,8 @@ export class ScCard extends LitElement {
     .card.elevated {
       box-shadow:
         var(--sc-shadow-md),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9),
-        inset 0 -1px 0 rgba(6, 18, 36, 0.04);
+        inset 0 1px 0 color-mix(in srgb, white 90%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, var(--sc-text) 4%, transparent);
     }
 
     /* Accent top-band — teal gradient bar + tinted wash below */
@@ -119,13 +119,13 @@ export class ScCard extends LitElement {
       border: 1px solid color-mix(in srgb, var(--sc-border-subtle) 40%, transparent);
       box-shadow:
         var(--sc-shadow-card),
-        inset 0 1px 0 rgba(255, 255, 255, 0.6),
-        inset 0 -1px 0 rgba(6, 18, 36, 0.03);
+        inset 0 1px 0 color-mix(in srgb, white 60%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, var(--sc-text) 3%, transparent);
     }
     .card.glass::before {
       background: radial-gradient(
         ellipse 60% 40% at 25% 0%,
-        rgba(255, 255, 255, 0.15),
+        color-mix(in srgb, white 15%, transparent),
         transparent 70%
       );
       mask: none;

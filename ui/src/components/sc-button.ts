@@ -51,56 +51,55 @@ export class ScButton extends LitElement {
       background: var(--sc-accent);
       background-image: var(--sc-button-gradient-primary);
       color: var(--sc-on-accent);
-      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+      text-shadow: 0 1px 1px color-mix(in srgb, var(--sc-text) 20%, transparent);
       box-shadow:
         var(--sc-shadow-sm),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+        inset 0 1px 0 color-mix(in srgb, white 30%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, black 15%, transparent);
     }
     button.variant-primary:hover:not(:disabled) {
       background: var(--sc-accent-hover);
       background-image: var(--sc-button-gradient-primary);
       transform: translateY(var(--sc-physics-card-hover-translateY, -2px)) scale(1.02);
       box-shadow:
-        0 4px 16px rgba(90, 154, 48, 0.25),
-        0 2px 6px rgba(6, 18, 36, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.35),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+        var(--sc-shadow-glow-accent),
+        inset 0 1px 0 color-mix(in srgb, white 35%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, black 15%, transparent);
     }
     button.variant-primary:active:not(:disabled) {
       transform: translateY(0) scale(0.96);
       box-shadow:
         var(--sc-shadow-xs),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+        inset 0 1px 0 color-mix(in srgb, white 20%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, black 10%, transparent);
       transition-duration: var(--sc-duration-fast);
     }
 
     /* Secondary — subtle gradient with inner depth */
     button.variant-secondary {
       background: var(--sc-bg-elevated);
-      background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(0, 0, 0, 0.02));
+      background-image: var(--sc-surface-gradient);
       color: var(--sc-text);
       border: 1px solid var(--sc-border);
       box-shadow:
         var(--sc-shadow-xs),
-        inset 0 1px 0 rgba(255, 255, 255, 0.8),
-        inset 0 -1px 0 rgba(6, 18, 36, 0.04);
+        inset 0 1px 0 color-mix(in srgb, white 80%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, var(--sc-text) 4%, transparent);
     }
     button.variant-secondary:hover:not(:disabled) {
       background: var(--sc-bg-overlay);
-      background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(0, 0, 0, 0.02));
+      background-image: var(--sc-surface-gradient);
       transform: translateY(var(--sc-physics-card-hover-translateY, -2px)) scale(1.02);
       box-shadow:
         var(--sc-shadow-sm),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9),
-        inset 0 -1px 0 rgba(6, 18, 36, 0.04);
+        inset 0 1px 0 color-mix(in srgb, white 90%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, var(--sc-text) 4%, transparent);
     }
     button.variant-secondary:active:not(:disabled) {
       transform: translateY(0) scale(0.96);
       box-shadow:
-        inset 0 1px 2px rgba(6, 18, 36, 0.06),
-        inset 0 -1px 0 rgba(6, 18, 36, 0.04);
+        inset 0 1px 2px color-mix(in srgb, var(--sc-text) 6%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, var(--sc-text) 4%, transparent);
       transition-duration: var(--sc-duration-fast);
     }
 
@@ -109,16 +108,16 @@ export class ScButton extends LitElement {
       color: var(--sc-error);
       box-shadow:
         var(--sc-shadow-xs),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+        inset 0 1px 0 color-mix(in srgb, white 30%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, black 8%, transparent);
     }
     button.variant-destructive:hover:not(:disabled) {
       transform: translateY(var(--sc-physics-card-hover-translateY, -2px)) scale(1.02);
       box-shadow:
-        0 4px 16px rgba(249, 112, 102, 0.2),
-        0 2px 6px rgba(6, 18, 36, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+        0 4px 16px color-mix(in srgb, var(--sc-error) 20%, transparent),
+        0 2px 6px color-mix(in srgb, var(--sc-text) 8%, transparent),
+        inset 0 1px 0 color-mix(in srgb, white 30%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, black 8%, transparent);
     }
     button.variant-destructive:active:not(:disabled) {
       transform: translateY(0) scale(0.96);
@@ -166,7 +165,7 @@ export class ScButton extends LitElement {
     }
 
     button:disabled {
-      opacity: 0.5;
+      opacity: var(--sc-opacity-disabled, 0.5);
       pointer-events: none;
     }
 

@@ -59,7 +59,7 @@ export class ScFilePreview extends LitElement {
       height: 80px;
       object-fit: cover;
       border-radius: var(--sc-radius-sm);
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
+      box-shadow: inset 0 1px 3px color-mix(in srgb, var(--sc-text) 15%, transparent);
     }
 
     .card-icon {
