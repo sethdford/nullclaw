@@ -36,8 +36,10 @@ jobs:
         run: |
           COUNT=$(./build/seaclaw_tests 2>&1 | grep -oE '[0-9]+/[0-9]+ passed' | head -1 | cut -d/ -f1)
           echo "Test count: $COUNT"
-          if [ "$COUNT" -lt 3199 ]; then
-            echo "Test count regression: $COUNT < 3199 baseline"
+          # macOS has 2 more platform-specific tests than Linux (3199 vs 3197)
+          BASELINE=3197
+          if [ "$COUNT" -lt "$BASELINE" ]; then
+            echo "Test count regression: $COUNT < $BASELINE baseline"
             exit 1
           fi
       - name: Check for untested modules
