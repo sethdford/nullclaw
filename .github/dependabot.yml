@@ -56,3 +56,19 @@ updates:
     groups:
       macos-deps:
         patterns: ["*"]
+
+  - package-ecosystem: gradle
+    directory: /apps/android
+    schedule:
+      interval: weekly
+    groups:
+      android-deps:
+        patterns: ["*"]
+
+  - package-ecosystem: pub
+    directory: /apps/flutter
+    schedule:
+      interval: weekly
+    groups:
+      flutter-deps:
+        patterns: ["*"]
