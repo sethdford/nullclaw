@@ -33,8 +33,8 @@ export function rippleEffect(element: HTMLElement, event: PointerEvent): void {
     top: ${y}px;
     width: 20px;
     height: 20px;
-    margin-left: -10px;
-    margin-top: -10px;
+    margin-left: calc(-1 * var(--sc-space-md));
+    margin-top: calc(-1 * var(--sc-space-md));
     border-radius: 50%;
     background: currentColor;
     opacity: 0.4;

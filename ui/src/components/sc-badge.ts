@@ -20,7 +20,7 @@ export class ScBadge extends LitElement {
       font-size: var(--sc-text-xs);
       font-weight: var(--sc-weight-medium);
       padding: var(--sc-space-2xs) var(--sc-space-sm);
-      border-radius: 9999px;
+      border-radius: var(--sc-radius-full);
       font-family: var(--sc-font);
     }
 

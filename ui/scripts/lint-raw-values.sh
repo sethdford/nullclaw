@@ -140,8 +140,8 @@ while IFS= read -r match; do
   if echo "$match" | grep -qE 'animation-delay'; then
     continue
   fi
-  # Allow explicit lint overrides via /* sc-lint-ok */ comment
-  if echo "$match" | grep -qF 'sc-lint-ok'; then
+  # Allow explicit lint overrides via /* sc-lint-ok */ or /* sc-exempt */ comment
+  if echo "$match" | grep -qE 'sc-lint-ok|sc-exempt'; then
     continue
   fi
   echo "  $match"

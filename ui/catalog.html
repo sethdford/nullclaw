@@ -99,6 +99,9 @@
       <a href="#sc-message-actions">sc-message-actions</a>
       <a href="#sc-tapback-menu">sc-tapback-menu</a>
       <a href="#sc-automation-card">sc-automation-card</a>
+      <a href="#sc-automation-form">sc-automation-form</a>
+      <a href="#sc-voice-orb">sc-voice-orb</a>
+      <a href="#sc-voice-conversation">sc-voice-conversation</a>
       <a href="#sc-chat-sessions-panel">sc-chat-sessions-panel</a>
       <a href="#sc-file-preview">sc-file-preview</a>
       <a href="#sc-json-viewer">sc-json-viewer</a>
@@ -1141,6 +1144,39 @@
         <div class="code-snippet"><code>&lt;sc-automation-card .job=${"{ ... }"} .runs=${"[...]"}&gt;&lt;/sc-automation-card&gt;</code></div>
       </section>
 
+      <section class="component-section" id="sc-automation-form">
+        <h2>sc-automation-form</h2>
+        <p>Form for creating/editing agent or shell automations with template pre-fill, schedule builder, and validation.</p>
+        <div class="playground">
+          <div class="preview" style="width:100%;max-width:480px">
+            <sc-automation-form type="agent"></sc-automation-form>
+          </div>
+        </div>
+        <div class="code-snippet"><code>&lt;sc-automation-form type="agent" .template=${"..."} .editingJob=${"..."} .channels=${"[...]"}&gt;&lt;/sc-automation-form&gt;</code></div>
+      </section>
+
+      <section class="component-section" id="sc-voice-orb">
+        <h2>sc-voice-orb</h2>
+        <p>Voice visualization orb with mic button, listening state animation, and status text. Dispatches sc-voice-mic-toggle on click.</p>
+        <div class="playground">
+          <div class="preview" style="width:100%;display:flex;justify-content:center;padding:var(--sc-space-xl)">
+            <sc-voice-orb state="idle"></sc-voice-orb>
+          </div>
+        </div>
+        <div class="code-snippet"><code>&lt;sc-voice-orb .state=${"idle"} .audioLevel=${0} ?disabled=${false} @sc-voice-mic-toggle=${"..."}&gt;&lt;/sc-voice-orb&gt;</code></div>
+      </section>
+
+      <section class="component-section" id="sc-voice-conversation">
+        <h2>sc-voice-conversation</h2>
+        <p>Conversation display for voice view: empty state or message thread with scroll-to-bottom.</p>
+        <div class="playground">
+          <div class="preview" style="width:100%;min-height:200px">
+            <sc-voice-conversation></sc-voice-conversation>
+          </div>
+        </div>
+        <div class="code-snippet"><code>&lt;sc-voice-conversation .items=${"[...]"} .isWaiting=${false}&gt;&lt;/sc-voice-conversation&gt;</code></div>
+      </section>
+
       <section class="component-section" id="sc-chat-sessions-panel">
         <h2>sc-chat-sessions-panel</h2>
         <p>Slide-out panel listing chat sessions with time groups, inline rename, and spring entrance animations.</p>
@@ -1299,6 +1335,9 @@
       import "/src/components/sc-message-actions.js";
       import "/src/components/sc-tapback-menu.js";
       import "/src/components/sc-automation-card.js";
+      import "/src/components/sc-automation-form.js";
+      import "/src/components/sc-voice-orb.js";
+      import "/src/components/sc-voice-conversation.js";
       import "/src/components/sc-chat-sessions-panel.js";
       import "/src/components/sc-file-preview.js";
       import "/src/components/sc-json-viewer.js";

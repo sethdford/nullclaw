@@ -11,13 +11,13 @@ import "../components/sc-stat-card.js";
 import "../components/sc-metric-row.js";
 import "../components/sc-tabs.js";
 import "../components/sc-modal.js";
-import "../components/sc-input.js";
 import "../components/sc-skeleton.js";
 import "../components/sc-empty-state.js";
 import "../components/sc-automation-card.js";
-import "../components/sc-schedule-builder.js";
-import "../components/sc-form-group.js";
+import "../components/sc-automation-form.js";
 import "../components/sc-chart.js";
+import { TEMPLATES, cronToHuman } from "../components/sc-automation-form.js";
+import type { AutomationFormData } from "../components/sc-automation-form.js";
 
 interface CronJob {
   id: number;
@@ -33,81 +33,6 @@ interface CronJob {
   last_run: number;
   last_status?: string;
   created_at: number;
-}
-
-const TEMPLATES = [
-  {
-    name: "Daily Digest",
-    description: "Summarize yesterday's messages across all channels",
-    type: "agent" as const,
-    prompt:
-      "Summarize all messages I received yesterday across all channels. Highlight anything urgent or requiring my attention.",
-    expression: "0 8 * * *",
-    icon: "summary",
-  },
-  {
-    name: "Weekly Report",
-    description: "Generate a weekly activity summary every Friday",
-    type: "agent" as const,
-    prompt:
-      "Generate a comprehensive weekly report summarizing: conversations handled, tools used, tasks completed, and any recurring topics or issues from this week.",
-    expression: "0 17 * * 5",
-    icon: "report",
-  },
-  {
-    name: "Email Monitor",
-    description: "Check for urgent emails every hour during business hours",
-    type: "agent" as const,
-    prompt:
-      "Check my email for any urgent or time-sensitive messages. If you find any, summarize them and alert me.",
-    expression: "0 9-17 * * 1-5",
-    channel: "gmail",
-    icon: "email",
-  },
-  {
-    name: "Health Check",
-    description: "Verify all systems are healthy every 15 minutes",
-    type: "shell" as const,
-    command: "curl -sf http://localhost:3000/health || echo 'ALERT: Health check failed'",
-    expression: "*/15 * * * *",
-    icon: "health",
-  },
-  {
-    name: "Database Backup",
-    description: "Backup the database every night at midnight",
-    type: "shell" as const,
-    command: "sqlite3 ~/.seaclaw/memory.db '.backup ~/.seaclaw/backups/memory-$(date +%Y%m%d).db'",
-    expression: "0 0 * * *",
-    icon: "backup",
-  },
-];
-
-function isValidCron(expr: string): boolean {
-  const parts = expr.trim().split(/\s+/);
-  return parts.length >= 5;
-}
-
-function cronToHuman(expr: string): string {
-  const parts = expr.trim().split(/\s+/);
-  if (parts.length < 5) return expr;
-  const [min, hour, dom, month, dow] = parts;
-  const every = (f: string, unit: string) =>
-    f === "*" ? `Every ${unit}` : f.startsWith("*/") ? `Every ${f.slice(2)} ${unit}s` : null;
-  if (min === "*" && hour === "*" && dom === "*" && month === "*" && dow === "*")
-    return "Every minute";
-  if (every(min, "minute")) return every(min, "minute")!;
-  if (every(hour, "hour") && min === "0") return every(hour, "hour")!;
-  if (hour !== "*" && !hour.startsWith("*/") && min === "0") {
-    const h = parseInt(hour, 10);
-    const ampm = h >= 12 ? (h === 12 ? "noon" : `${h - 12}pm`) : h === 0 ? "midnight" : `${h}am`;
-    if (dom === "*" && month === "*" && dow === "*") return `Daily at ${ampm}`;
-    if (dow !== "*" && dom === "*" && month === "*") {
-      const dayLabel = dow === "1-5" ? "Weekdays" : dow === "0,6" ? "Weekends" : `Days ${dow}`;
-      return `${dayLabel} at ${ampm}`;
-    }
-  }
-  if (dom !== "*" && month === "*" && hour === "0" && min === "0") return `Monthly on day ${dom}`;
-  return expr;
 }
 
 interface CronRun {
@@ -149,53 +74,6 @@ export class ScAutomationsView extends GatewayAwareLitElement {
       gap: var(--sc-space-lg);
     }
 
-    .form-group {
-      margin-bottom: var(--sc-space-md);
-    }
-
-    .form-group label {
-      display: block;
-      font-size: var(--sc-text-sm);
-      font-weight: var(--sc-weight-medium);
-      color: var(--sc-text-muted);
-      margin-bottom: var(--sc-space-xs);
-    }
-
-    sc-textarea {
-      width: 100%;
-    }
-
-    .form-select {
-      width: 100%;
-      box-sizing: border-box;
-      padding: var(--sc-space-sm) var(--sc-space-md);
-      font-family: var(--sc-font);
-      font-size: var(--sc-text-base);
-      background: var(--sc-bg-elevated);
-      border: 1px solid var(--sc-border);
-      border-radius: var(--sc-radius);
-      color: var(--sc-text);
-      cursor: pointer;
-      transition:
-        border-color var(--sc-duration-fast) var(--sc-ease-out),
-        background var(--sc-duration-fast) var(--sc-ease-out);
-    }
-
-    .form-select:hover:not(:disabled) {
-      border-color: var(--sc-text-faint);
-    }
-
-    .form-select:focus-visible {
-      outline: 2px solid var(--sc-accent);
-      outline-offset: var(--sc-focus-ring-offset);
-    }
-
-    .form-error {
-      font-size: var(--sc-text-sm);
-      color: var(--sc-error);
-      margin-top: var(--sc-space-xs);
-    }
-
     .modal-footer {
       display: flex;
       justify-content: flex-end;
@@ -214,16 +92,6 @@ export class ScAutomationsView extends GatewayAwareLitElement {
       font-size: var(--sc-text-base);
       color: var(--sc-text);
       line-height: var(--sc-leading-relaxed);
-    }
-
-    .mono-input :host(sc-input) input,
-    .mono-input input {
-      font-family: var(--sc-font-mono);
-    }
-
-    .mode-toggle {
-      display: flex;
-      gap: var(--sc-space-xs);
     }
 
     .templates-section {
@@ -261,14 +129,6 @@ export class ScAutomationsView extends GatewayAwareLitElement {
       color: var(--sc-text-faint);
     }
 
-    .run-once-message {
-      font-size: var(--sc-text-sm);
-      color: var(--sc-text-muted);
-      padding: var(--sc-space-sm);
-      background: var(--sc-bg-elevated);
-      border-radius: var(--sc-radius);
-    }
-
     @media (max-width: 40rem) /* --sc-breakpoint-md */ {
       .stats-row {
         grid-template-columns: 1fr 1fr;
@@ -277,12 +137,6 @@ export class ScAutomationsView extends GatewayAwareLitElement {
     @media (max-width: 30rem) /* --sc-breakpoint-sm */ {
       .stats-row {
         grid-template-columns: 1fr;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .form-select {
-        transition: none;
       }
     }
   `;
@@ -297,16 +151,7 @@ export class ScAutomationsView extends GatewayAwareLitElement {
   @state() private showShellModal = false;
   @state() private editingJob: CronJob | null = null;
   @state() private pendingDelete: CronJob | null = null;
-  @state() private agentPrompt = "";
-  @state() private agentChannel = "";
-  @state() private agentSchedule = "";
-  @state() private agentName = "";
-  @state() private shellCommand = "";
-  @state() private shellSchedule = "";
-  @state() private shellName = "";
-  @state() private formError = "";
-  @state() private agentOneShot = false;
-  @state() private shellOneShot = false;
+  @state() private selectedTemplate: (typeof TEMPLATES)[number] | null = null;
 
   protected override async load(): Promise<void> {
     const gw = this.gateway;
@@ -402,26 +247,13 @@ export class ScAutomationsView extends GatewayAwareLitElement {
   }
 
   private _openNewAutomation(): void {
-    this._resetForm();
     this.editingJob = null;
+    this.selectedTemplate = null;
     if (this.activeTab === "agent") {
       this.showAgentModal = true;
     } else {
       this.showShellModal = true;
     }
-  }
-
-  private _resetForm(): void {
-    this.agentPrompt = "";
-    this.agentChannel = "";
-    this.agentSchedule = "0 8 * * *";
-    this.agentName = "";
-    this.agentOneShot = false;
-    this.shellCommand = "";
-    this.shellSchedule = "0 8 * * *";
-    this.shellName = "";
-    this.shellOneShot = false;
-    this.formError = "";
   }
 
   private _handleToggle(e: CustomEvent<{ job: CronJob }>): void {
@@ -441,39 +273,80 @@ export class ScAutomationsView extends GatewayAwareLitElement {
   private _handleEdit(e: CustomEvent<{ job: CronJob }>): void {
     const job = e.detail.job;
     this.editingJob = job;
-    this.formError = "";
+    this.selectedTemplate = null;
     if (job.type === "agent") {
-      this.agentName = job.name ?? "";
-      this.agentPrompt = job.command ?? "";
-      this.agentChannel = job.channel ?? "";
-      this.agentSchedule = job.expression ?? "0 8 * * *";
-      this.agentOneShot = job.one_shot ?? false;
       this.showAgentModal = true;
     } else {
-      this.shellName = job.name ?? "";
-      this.shellCommand = job.command ?? "";
-      this.shellSchedule = job.expression ?? "0 8 * * *";
-      this.shellOneShot = job.one_shot ?? false;
       this.showShellModal = true;
     }
   }
 
   private _useTemplate(t: (typeof TEMPLATES)[number]): void {
     this.editingJob = null;
-    this.formError = "";
+    this.selectedTemplate = t;
     if (t.type === "agent") {
-      this.agentName = t.name;
-      this.agentPrompt = t.prompt;
-      this.agentChannel = (t as { channel?: string }).channel ?? "";
-      this.agentSchedule = t.expression;
-      this.agentOneShot = false;
       this.showAgentModal = true;
     } else {
-      this.shellName = t.name;
-      this.shellCommand = t.command;
-      this.shellSchedule = t.expression;
-      this.shellOneShot = false;
       this.showShellModal = true;
+    }
+  }
+
+  private async _handleFormSubmit(e: CustomEvent<AutomationFormData>): Promise<void> {
+    const data = e.detail;
+    const gw = this.gateway;
+    if (!gw) return;
+    try {
+      if (data.type === "agent") {
+        if (this.editingJob) {
+          await gw.request("cron.update", {
+            id: this.editingJob.id,
+            expression: data.expression,
+            command: data.prompt,
+          });
+          ScToast.show({ message: "Automation updated", variant: "success" });
+        } else {
+          const res = await gw.request<{ id?: number }>("cron.add", {
+            type: "agent",
+            prompt: data.prompt,
+            channel: data.channel,
+            expression: data.expression,
+            name: data.name,
+            one_shot: data.one_shot,
+          });
+          ScToast.show({ message: "Automation created", variant: "success" });
+          if (data.one_shot && res?.id != null) {
+            await gw.request("cron.run", { id: res.id });
+          }
+        }
+      } else {
+        if (this.editingJob) {
+          await gw.request("cron.update", {
+            id: this.editingJob.id,
+            expression: data.expression,
+            command: data.command,
+          });
+          ScToast.show({ message: "Shell job updated", variant: "success" });
+        } else {
+          const res = await gw.request<{ id?: number }>("cron.add", {
+            expression: data.expression,
+            command: data.command!,
+            name: data.name,
+            one_shot: data.one_shot,
+          });
+          ScToast.show({ message: "Shell job created", variant: "success" });
+          if (data.one_shot && res?.id != null) {
+            await gw.request("cron.run", { id: res.id });
+          }
+        }
+      }
+      this._closeAgentModal();
+      this._closeShellModal();
+      this.load();
+    } catch (err) {
+      ScToast.show({
+        message: err instanceof Error ? err.message : "Failed to save",
+        variant: "error",
+      });
     }
   }
 
@@ -519,115 +392,13 @@ export class ScAutomationsView extends GatewayAwareLitElement {
   private _closeAgentModal(): void {
     this.showAgentModal = false;
     this.editingJob = null;
+    this.selectedTemplate = null;
   }
 
   private _closeShellModal(): void {
     this.showShellModal = false;
     this.editingJob = null;
-  }
-
-  private async _saveAgent(): Promise<void> {
-    const name = this.agentName.trim();
-    const prompt = this.agentPrompt.trim();
-    const oneShot = this.agentOneShot;
-    const schedule = oneShot ? "0 0 1 1 *" : this.agentSchedule.trim();
-    if (!name) {
-      this.formError = "Name is required";
-      return;
-    }
-    if (!prompt) {
-      this.formError = "Prompt is required";
-      return;
-    }
-    if (!oneShot && !schedule) {
-      this.formError = "Schedule is required";
-      return;
-    }
-    if (!oneShot && !isValidCron(schedule)) {
-      this.formError = "Invalid cron expression (need 5 parts: min hour day month weekday)";
-      return;
-    }
-    const gw = this.gateway;
-    if (!gw) return;
-    this.formError = "";
-    try {
-      if (this.editingJob) {
-        await gw.request("cron.update", {
-          id: this.editingJob.id,
-          expression: schedule,
-          command: prompt,
-        });
-        ScToast.show({ message: "Automation updated", variant: "success" });
-      } else {
-        const res = await gw.request<{ id?: number }>("cron.add", {
-          type: "agent",
-          prompt,
-          channel: this.agentChannel || undefined,
-          expression: schedule,
-          name: name || "Agent task",
-          one_shot: oneShot,
-        });
-        ScToast.show({ message: "Automation created", variant: "success" });
-        if (oneShot && res?.id != null) {
-          await gw.request("cron.run", { id: res.id });
-        }
-      }
-      this._closeAgentModal();
-      this.load();
-    } catch (err) {
-      this.formError = err instanceof Error ? err.message : "Failed to save";
-    }
-  }
-
-  private async _saveShell(): Promise<void> {
-    const name = this.shellName.trim();
-    const cmd = this.shellCommand.trim();
-    const oneShot = this.shellOneShot;
-    const schedule = oneShot ? "0 0 1 1 *" : this.shellSchedule.trim();
-    if (!name) {
-      this.formError = "Name is required";
-      return;
-    }
-    if (!cmd) {
-      this.formError = "Command is required";
-      return;
-    }
-    if (!oneShot && !schedule) {
-      this.formError = "Schedule is required";
-      return;
-    }
-    if (!oneShot && !isValidCron(schedule)) {
-      this.formError = "Invalid cron expression (need 5 parts: min hour day month weekday)";
-      return;
-    }
-    const gw = this.gateway;
-    if (!gw) return;
-    this.formError = "";
-    try {
-      if (this.editingJob) {
-        await gw.request("cron.update", {
-          id: this.editingJob.id,
-          expression: schedule,
-          command: cmd,
-        });
-        ScToast.show({ message: "Shell job updated", variant: "success" });
-      } else {
-        const res = await gw.request<{ id?: number }>("cron.add", {
-          expression: schedule,
-          command: cmd,
-          name: name || cmd,
-          one_shot: oneShot,
-        });
-        ScToast.show({ message: "Shell job created", variant: "success" });
-        if (oneShot && res?.id != null) {
-          await gw.request("cron.run", { id: res.id });
-        }
-      }
-      this._closeShellModal();
-      this.load();
-    } catch (err) {
-      this.formError = err instanceof Error ? err.message : "Failed to save";
-    }
+    this.selectedTemplate = null;
   }
 
   private _renderStats() {
@@ -746,153 +517,40 @@ export class ScAutomationsView extends GatewayAwareLitElement {
   }
 
   private _renderAgentModal() {
+    const template = this.selectedTemplate?.type === "agent" ? this.selectedTemplate : null;
     return html`
       <sc-modal
         heading=${this.editingJob ? "Edit Automation" : "New Agent Automation"}
         ?open=${this.showAgentModal}
         @close=${this._closeAgentModal}
       >
-        <sc-form-group title="Job details" description="Name, prompt, and schedule">
-          <div class="form-group">
-            <sc-input
-              label="Name"
-              placeholder="My daily summary"
-              .value=${this.agentName}
-              @sc-input=${(e: CustomEvent<{ value: string }>) => (this.agentName = e.detail.value)}
-            ></sc-input>
-          </div>
-          <div class="form-group">
-            <label for="agent-prompt">Prompt</label>
-            <sc-textarea
-              placeholder="Summarize my unread messages..."
-              .value=${this.agentPrompt}
-              rows="3"
-              @sc-input=${(e: CustomEvent<{ value: string }>) =>
-                (this.agentPrompt = e.detail.value)}
-            ></sc-textarea>
-          </div>
-          <div class="form-group">
-            <label>Mode</label>
-            <div class="mode-toggle">
-              <sc-button
-                variant=${!this.agentOneShot ? "primary" : "secondary"}
-                @click=${() => (this.agentOneShot = false)}
-              >
-                Recurring
-              </sc-button>
-              <sc-button
-                variant=${this.agentOneShot ? "primary" : "secondary"}
-                @click=${() => (this.agentOneShot = true)}
-              >
-                Run Once
-              </sc-button>
-            </div>
-          </div>
-          ${this.agentOneShot
-            ? html`
-                <div class="form-group">
-                  <div class="run-once-message">Run immediately on save</div>
-                </div>
-              `
-            : html`
-                <div class="form-group">
-                  <label>Schedule</label>
-                  <sc-schedule-builder
-                    .value=${this.agentSchedule}
-                    @sc-schedule-change=${(e: CustomEvent<{ value: string }>) =>
-                      (this.agentSchedule = e.detail.value)}
-                  ></sc-schedule-builder>
-                </div>
-              `}
-          <div class="form-group">
-            <label for="agent-channel">Channel</label>
-            <select
-              id="agent-channel"
-              class="form-select"
-              .value=${this.agentChannel}
-              @change=${(e: Event) => (this.agentChannel = (e.target as HTMLSelectElement).value)}
-            >
-              <option value="">— Gateway (default) —</option>
-              ${this.channels.map(
-                (ch) =>
-                  html`<option value=${ch.key} ?disabled=${!ch.configured}>${ch.name}</option>`,
-              )}
-            </select>
-          </div>
-          ${this.formError ? html`<p class="form-error">${this.formError}</p>` : nothing}
-        </sc-form-group>
-        <div class="modal-footer">
-          <sc-button variant="secondary" @click=${this._closeAgentModal}>Cancel</sc-button>
-          <sc-button variant="primary" @click=${this._saveAgent}>Save</sc-button>
-        </div>
+        <sc-automation-form
+          type="agent"
+          .template=${template}
+          .editingJob=${this.editingJob}
+          .channels=${this.channels}
+          @sc-automation-submit=${this._handleFormSubmit}
+          @sc-automation-cancel=${this._closeAgentModal}
+        ></sc-automation-form>
       </sc-modal>
     `;
   }
 
   private _renderShellModal() {
+    const template = this.selectedTemplate?.type === "shell" ? this.selectedTemplate : null;
     return html`
       <sc-modal
         heading=${this.editingJob ? "Edit Shell Job" : "New Shell Job"}
         ?open=${this.showShellModal}
         @close=${this._closeShellModal}
       >
-        <sc-form-group title="Job details" description="Name, command, and schedule">
-          <div class="form-group">
-            <sc-input
-              label="Name"
-              placeholder="My backup script"
-              .value=${this.shellName}
-              @sc-input=${(e: CustomEvent<{ value: string }>) => (this.shellName = e.detail.value)}
-            ></sc-input>
-          </div>
-          <div class="form-group mono-input">
-            <sc-input
-              label="Command"
-              placeholder="echo 'hello world'"
-              .value=${this.shellCommand}
-              @sc-input=${(e: CustomEvent<{ value: string }>) =>
-                (this.shellCommand = e.detail.value)}
-            ></sc-input>
-          </div>
-          <div class="form-group">
-            <label>Mode</label>
-            <div class="mode-toggle">
-              <sc-button
-                variant=${!this.shellOneShot ? "primary" : "secondary"}
-                @click=${() => (this.shellOneShot = false)}
-              >
-                Recurring
-              </sc-button>
-              <sc-button
-                variant=${this.shellOneShot ? "primary" : "secondary"}
-                @click=${() => (this.shellOneShot = true)}
-              >
-                Run Once
-              </sc-button>
-            </div>
-          </div>
-          ${this.shellOneShot
-            ? html`
-                <div class="form-group">
-                  <div class="run-once-message">Run immediately on save</div>
-                </div>
-              `
-            : html`
-                <div class="form-group">
-                  <label>Schedule</label>
-                  <sc-schedule-builder
-                    .value=${this.shellSchedule}
-                    @sc-schedule-change=${(e: CustomEvent<{ value: string }>) =>
-                      (this.shellSchedule = e.detail.value)}
-                  ></sc-schedule-builder>
-                </div>
-              `}
-          ${this.formError ? html`<p class="form-error">${this.formError}</p>` : nothing}
-        </sc-form-group>
-        <div class="modal-footer">
-          <sc-button variant="secondary" @click=${this._closeShellModal}>Cancel</sc-button>
-          <sc-button variant="primary" @click=${this._saveShell}>Save</sc-button>
-        </div>
+        <sc-automation-form
+          type="shell"
+          .template=${template}
+          .editingJob=${this.editingJob}
+          @sc-automation-submit=${this._handleFormSubmit}
+          @sc-automation-cancel=${this._closeShellModal}
+        ></sc-automation-form>
       </sc-modal>
     `;
   }

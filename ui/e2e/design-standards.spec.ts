@@ -11,6 +11,7 @@
 import { test, expect } from "@playwright/test";
 import {
   shadowExists,
+  shadowExistsIn,
   shadowComputedStyle,
   shadowDomOrder,
   shadowInteractiveRects,
@@ -59,7 +60,7 @@ test.describe("Wave 1: Layout Archetypes", () => {
     test("conversation area appears before controls in DOM", async ({ page }) => {
       await expect(async () => {
         const order = await page.evaluate(
-          shadowDomOrder("sc-voice-view", ".conversation", ".voice-zone"),
+          shadowDomOrder("sc-voice-view", "sc-voice-conversation", "sc-voice-orb"),
         );
         expect(order).toBe(true);
       }).toPass({ timeout: POLL });
@@ -68,7 +69,7 @@ test.describe("Wave 1: Layout Archetypes", () => {
     test("conversation area appears before input bar in DOM", async ({ page }) => {
       await expect(async () => {
         const order = await page.evaluate(
-          shadowDomOrder("sc-voice-view", ".conversation", ".input-bar"),
+          shadowDomOrder("sc-voice-view", "sc-voice-conversation", ".input-bar"),
         );
         expect(order).toBe(true);
       }).toPass({ timeout: POLL });
@@ -77,7 +78,7 @@ test.describe("Wave 1: Layout Archetypes", () => {
     test("conversation area uses flex-grow", async ({ page }) => {
       await expect(async () => {
         const flexGrow = await page.evaluate(
-          shadowComputedStyle("sc-voice-view", ".conversation", "flex-grow"),
+          shadowComputedStyle("sc-voice-view", "sc-voice-conversation", "flex-grow"),
         );
         expect(Number(flexGrow)).toBeGreaterThanOrEqual(1);
       }).toPass({ timeout: POLL });
@@ -86,7 +87,7 @@ test.describe("Wave 1: Layout Archetypes", () => {
     test("conversation has no fixed max-height", async ({ page }) => {
       await expect(async () => {
         const maxHeight = await page.evaluate(
-          shadowComputedStyle("sc-voice-view", ".conversation", "max-height"),
+          shadowComputedStyle("sc-voice-view", "sc-voice-conversation", "max-height"),
         );
         expect(maxHeight).toBe("none");
       }).toPass({ timeout: POLL });
@@ -314,9 +315,13 @@ test.describe("Wave 3: Loading & Empty States", () => {
     await page.goto("/?demo#voice");
     await page.waitForTimeout(WAIT);
     await expect(async () => {
-      const hasEmpty = await page.evaluate(shadowExists("sc-voice-view", ".conversation-empty"));
-      const hasEmptyState = await page.evaluate(shadowExists("sc-voice-view", "sc-empty-state"));
-      expect(hasEmpty || hasEmptyState).toBe(true);
+      const hasConversation = await page.evaluate(
+        shadowExists("sc-voice-view", "sc-voice-conversation"),
+      );
+      const hasEmptyState = await page.evaluate(
+        shadowExistsIn("sc-voice-view", "sc-voice-conversation", "sc-empty-state"),
+      );
+      expect(hasConversation && hasEmptyState).toBe(true);
     }).toPass({ timeout: POLL });
   });
 });

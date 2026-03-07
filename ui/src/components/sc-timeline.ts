@@ -34,7 +34,7 @@ export class ScTimeline extends LitElement {
       width: 8px;
       height: 8px;
       border-radius: var(--sc-radius-full);
-      margin-top: 6px;
+      margin-top: var(--sc-space-xs);
       flex-shrink: 0;
       justify-self: center;
     }
@@ -52,8 +52,8 @@ export class ScTimeline extends LitElement {
     }
     .line {
       position: absolute;
-      left: 5px;
-      top: 16px;
+      left: var(--sc-space-xs);
+      top: var(--sc-icon-sm);
       bottom: 0;
       width: 1px;
       background: var(--sc-border-subtle);

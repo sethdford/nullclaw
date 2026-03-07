@@ -13,6 +13,44 @@ export function shadowExists(viewTag: string, selector: string): string {
   })()`;
 }
 
+/** Check if selector exists inside a container's shadow root (for nested web components). */
+export function shadowExistsIn(
+  viewTag: string,
+  containerSelector: string,
+  innerSelector: string,
+): string {
+  return `(() => {
+    const app = document.querySelector("sc-app");
+    const view = app?.shadowRoot?.querySelector("${viewTag}");
+    const container = view?.shadowRoot?.querySelector("${containerSelector}");
+    return !!container?.shadowRoot?.querySelector("${innerSelector}");
+  })()`;
+}
+
+/** Count elements inside a nested container's shadow root. */
+export function shadowCountIn(
+  viewTag: string,
+  containerSelector: string,
+  innerSelector: string,
+): string {
+  return `(() => {
+    const app = document.querySelector("sc-app");
+    const view = app?.shadowRoot?.querySelector("${viewTag}");
+    const container = view?.shadowRoot?.querySelector("${containerSelector}");
+    return container?.shadowRoot?.querySelectorAll("${innerSelector}").length ?? 0;
+  })()`;
+}
+
+/** Get text content inside a nested container's shadow root. */
+export function shadowTextIn(viewTag: string, containerSelector: string): string {
+  return `(() => {
+    const app = document.querySelector("sc-app");
+    const view = app?.shadowRoot?.querySelector("${viewTag}");
+    const container = view?.shadowRoot?.querySelector("${containerSelector}");
+    return container?.shadowRoot?.textContent ?? "";
+  })()`;
+}
+
 export function shadowCount(viewTag: string, selector: string): string {
   return `(() => {
     const app = document.querySelector("sc-app");

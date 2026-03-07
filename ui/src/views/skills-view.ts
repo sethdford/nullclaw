@@ -3,6 +3,8 @@ import { customElement, state } from "lit/decorators.js";
 import { GatewayAwareLitElement } from "../gateway-aware.js";
 import { icons } from "../icons.js";
 import { ScToast } from "../components/sc-toast.js";
+import type { InstalledSkill, RegistrySkill } from "../components/sc-skill-card.js";
+import type { SelectedSkill } from "../components/sc-skill-detail.js";
 import "../components/sc-page-hero.js";
 import "../components/sc-section-header.js";
 import "../components/sc-badge.js";
@@ -12,30 +14,9 @@ import "../components/sc-empty-state.js";
 import "../components/sc-skeleton.js";
 import "../components/sc-input.js";
 import "../components/sc-stat-card.js";
-import "../components/sc-sheet.js";
-import "../components/sc-switch.js";
-import "../components/sc-json-viewer.js";
-
-interface InstalledSkill {
-  name: string;
-  description?: string;
-  parameters?: string;
-  tags?: string;
-  enabled: boolean;
-}
-
-interface RegistrySkill {
-  name: string;
-  description?: string;
-  version?: string;
-  author?: string;
-  url?: string;
-  tags?: string;
-}
-
-type SelectedSkill =
-  | { source: "installed"; skill: InstalledSkill }
-  | { source: "registry"; skill: RegistrySkill };
+import "../components/sc-skill-card.js";
+import "../components/sc-skill-registry.js";
+import "../components/sc-skill-detail.js";
 
 function parseTags(tags?: string): string[] {
   if (!tags) return [];
@@ -145,139 +126,6 @@ export class ScSkillsView extends GatewayAwareLitElement {
     }
     .grid-full {
       grid-column: 1 / -1;
-    }
-    .skill-card {
-      cursor: pointer;
-      transition: box-shadow var(--sc-duration-fast) var(--sc-ease-out);
-    }
-    .skill-card:hover {
-      box-shadow: var(--sc-shadow-md);
-    }
-    .skill-card:focus-visible {
-      outline: 2px solid var(--sc-accent);
-      outline-offset: 2px;
-    }
-    .skill-card-inner {
-      display: flex;
-      flex-direction: column;
-      gap: var(--sc-space-sm);
-      min-height: 7.5rem;
-    }
-    .skill-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--sc-space-sm);
-    }
-    .skill-name {
-      font-weight: var(--sc-weight-semibold);
-      color: var(--sc-text);
-      font-size: var(--sc-text-base);
-    }
-    .skill-desc {
-      font-size: var(--sc-text-sm);
-      color: var(--sc-text-muted);
-      flex: 1;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .skill-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--sc-space-sm);
-    }
-    .skill-tags {
-      display: flex;
-      gap: var(--sc-space-xs);
-      flex-wrap: wrap;
-      flex: 1;
-      min-width: 0;
-    }
-    .registry-meta {
-      font-size: var(--sc-text-xs);
-      color: var(--sc-text-muted);
-      display: flex;
-      align-items: center;
-      gap: var(--sc-space-sm);
-    }
-    .detail-header {
-      display: flex;
-      align-items: center;
-      gap: var(--sc-space-md);
-      margin-bottom: var(--sc-space-xl);
-    }
-    .detail-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: var(--sc-radius-lg);
-      background: var(--sc-bg-inset);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--sc-text-muted);
-      flex-shrink: 0;
-    }
-    .detail-icon svg {
-      width: var(--sc-icon-md);
-      height: var(--sc-icon-md);
-    }
-    .detail-name {
-      font-size: var(--sc-text-xl);
-      font-weight: var(--sc-weight-bold);
-      color: var(--sc-text);
-    }
-    .detail-desc {
-      font-size: var(--sc-text-base);
-      color: var(--sc-text-muted);
-      line-height: 1.6;
-      margin-bottom: var(--sc-space-xl);
-    }
-    .detail-grid {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: var(--sc-space-sm) var(--sc-space-xl);
-      margin-bottom: var(--sc-space-2xl);
-      font-size: var(--sc-text-sm);
-    }
-    .detail-label {
-      color: var(--sc-text-muted);
-      font-weight: var(--sc-weight-medium);
-    }
-    .detail-value {
-      color: var(--sc-text);
-      font-family: var(--sc-font-mono);
-      word-break: break-all;
-    }
-    .detail-params {
-      margin-bottom: var(--sc-space-2xl);
-    }
-    .detail-params-title {
-      font-size: var(--sc-text-sm);
-      font-weight: var(--sc-weight-semibold);
-      color: var(--sc-text);
-      margin-bottom: var(--sc-space-sm);
-    }
-    .detail-params-code {
-      background: var(--sc-bg-inset);
-      border-radius: var(--sc-radius);
-      padding: var(--sc-space-md);
-      font-family: var(--sc-font-mono);
-      font-size: var(--sc-text-sm);
-      color: var(--sc-text-muted);
-      overflow-x: auto;
-      white-space: pre-wrap;
-    }
-    .detail-actions {
-      display: flex;
-      gap: var(--sc-space-sm);
-      flex-wrap: wrap;
-    }
-    .registry-search-row {
-      margin-bottom: var(--sc-space-lg);
-      max-width: 25rem;
     }
     @media (max-width: 40rem) /* --sc-breakpoint-md */ {
       .stats-row {
@@ -603,44 +451,6 @@ export class ScSkillsView extends GatewayAwareLitElement {
     </div>`;
   }
 
-  private _renderInstalledCard(skill: InstalledSkill): TemplateResult {
-    return html`<sc-card
-      glass
-      class="skill-card"
-      tabindex="0"
-      role="button"
-      aria-label=${`View ${skill.name} details`}
-      @click=${() => (this.selectedSkill = { source: "installed", skill })}
-      @keydown=${(e: KeyboardEvent) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          this.selectedSkill = { source: "installed", skill };
-        }
-      }}
-    >
-      <div class="skill-card-inner">
-        <div class="skill-header">
-          <span class="skill-name">${skill.name}</span>
-          <sc-badge variant=${skill.enabled ? "success" : "neutral"}
-            >${skill.enabled ? "Enabled" : "Disabled"}</sc-badge
-          >
-        </div>
-        <div class="skill-desc">${skill.description ?? "No description"}</div>
-        <div class="skill-footer">
-          <div class="skill-tags"></div>
-          <sc-switch
-            .checked=${skill.enabled}
-            .label=${`Toggle ${skill.name}`}
-            @sc-change=${(e: Event) => {
-              e.stopPropagation();
-              this._toggleSkill(skill);
-            }}
-          ></sc-switch>
-        </div>
-      </div>
-    </sc-card>`;
-  }
-
   private _renderInstalledSection(): TemplateResult {
     const filtered = this.filteredSkills;
     return html`<div class="section">
@@ -680,188 +490,57 @@ export class ScSkillsView extends GatewayAwareLitElement {
               description="Install skills from the registry below or paste a URL above."
             ></sc-empty-state>`
           : html`<div class="skills-grid sc-stagger">
-              ${filtered.map((s) => this._renderInstalledCard(s))}
+              ${filtered.map(
+                (s) => html`
+                  <sc-skill-card
+                    variant="installed"
+                    .skill=${s}
+                    @skill-select=${() => (this.selectedSkill = { source: "installed", skill: s })}
+                    @skill-toggle=${() => this._toggleSkill(s)}
+                  ></sc-skill-card>
+                `,
+              )}
             </div>`}
     </div>`;
-  }
-
-  private _renderRegistryCard(entry: RegistrySkill): TemplateResult {
-    const installed = this.installedNames.has(entry.name);
-    const tags = parseTags(entry.tags);
-    return html`<sc-card
-      class="skill-card"
-      tabindex="0"
-      role="button"
-      aria-label=${`View ${entry.name} in registry`}
-      @click=${() => (this.selectedSkill = { source: "registry", skill: entry })}
-      @keydown=${(e: KeyboardEvent) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          this.selectedSkill = { source: "registry", skill: entry };
-        }
-      }}
-    >
-      <div class="skill-card-inner">
-        <div class="skill-header">
-          <span class="skill-name">${entry.name}</span>
-          ${entry.version ? html`<sc-badge variant="info">${entry.version}</sc-badge>` : nothing}
-        </div>
-        <div class="skill-desc">${entry.description ?? "No description"}</div>
-        <div class="registry-meta">
-          ${entry.author ? html`<span>by ${entry.author}</span>` : nothing}
-        </div>
-        <div class="skill-footer">
-          <div class="skill-tags">
-            ${tags.map((t) => html`<sc-badge variant="neutral">${t}</sc-badge>`)}
-          </div>
-          ${installed
-            ? html`<sc-badge variant="success">Installed</sc-badge>`
-            : html`<sc-button
-                variant="primary"
-                size="sm"
-                ?disabled=${this.actionLoading}
-                @click=${(e: Event) => {
-                  e.stopPropagation();
-                  this._installFromRegistry(entry);
-                }}
-                >Install</sc-button
-              >`}
-        </div>
-      </div>
-    </sc-card>`;
   }
 
   private _renderRegistrySection(): TemplateResult {
-    return html`<div class="section">
-      <div class="section-head">
-        <div>
-          <span class="section-title">Explore Registry</span>
-          <span class="section-count">(${this.registryResults.length})</span>
-        </div>
-      </div>
-      <div class="registry-search-row">
-        <sc-input
-          placeholder="Search the skill registry..."
-          aria-label="Search skill registry"
-          .value=${this.registryQuery}
-          @sc-input=${this._onRegistrySearch}
-        ></sc-input>
-      </div>
-      ${this.registryLoading
-        ? html`<div class="skills-grid sc-stagger">
-            <sc-skeleton variant="card" height="140px"></sc-skeleton
-            ><sc-skeleton variant="card" height="140px"></sc-skeleton
-            ><sc-skeleton variant="card" height="140px"></sc-skeleton>
-          </div>`
-        : this.filteredRegistryResults.length === 0
-          ? html`<sc-empty-state
-              .icon=${icons.compass}
-              heading=${this.registryQuery
-                ? `No results for "${this.registryQuery}"`
-                : this.activeTag
-                  ? "No registry skills with this tag"
-                  : "No results"}
-              description=${this.activeTag
-                ? "Try a different tag or search query."
-                : "Try a different search query."}
-            ></sc-empty-state>`
-          : html`<div class="skills-grid sc-stagger">
-              ${this.filteredRegistryResults.map((e) => this._renderRegistryCard(e))}
-            </div>`}
-    </div>`;
-  }
-
-  private _parseParametersJson(raw: string): unknown {
-    try {
-      const trimmed = raw.trim();
-      if (!trimmed) return null;
-      return JSON.parse(trimmed);
-    } catch {
-      return null;
-    }
-  }
-
-  private _renderParametersViewer(params: string): TemplateResult {
-    const parsed = this._parseParametersJson(params);
-    if (parsed !== null && typeof parsed === "object") {
-      return html`<sc-json-viewer .data=${parsed} root-label="Parameters"></sc-json-viewer>`;
-    }
-    return html`<div class="detail-params-code">${params}</div>`;
+    return html`
+      <sc-skill-registry
+        .results=${this.registryResults}
+        .tags=${this.allTags}
+        .query=${this.registryQuery}
+        .installedNames=${Array.from(this.installedNames)}
+        .loading=${this.registryLoading}
+        .actionLoading=${this.actionLoading}
+        @registry-search=${(e: CustomEvent<{ query: string }>) => {
+          this.registryQuery = e.detail.query;
+          this._fetchRegistry(e.detail.query);
+        }}
+        @skill-select=${(e: CustomEvent<{ skill: RegistrySkill }>) =>
+          (this.selectedSkill = { source: "registry", skill: e.detail.skill })}
+        @install=${(e: CustomEvent<{ skill: RegistrySkill }>) =>
+          this._installFromRegistry(e.detail.skill)}
+      ></sc-skill-registry>
+    `;
   }
 
   private _renderDetailSheet(): TemplateResult | typeof nothing {
-    const sel = this.selectedSkill;
-    if (!sel) return nothing;
-    const isInstalled = sel.source === "installed";
-    const skill = sel.skill;
-    const name = skill.name;
-    const desc = skill.description ?? "No description";
-    return html`<sc-sheet .open=${true} size="md" @sc-close=${() => (this.selectedSkill = null)}>
-      <div class="detail-header">
-        <div class="detail-icon">${icons.puzzle}</div>
-        <div>
-          <div class="detail-name">${name}</div>
-          <sc-badge variant=${isInstalled ? "success" : "info"}
-            >${isInstalled ? "Installed" : "Registry"}</sc-badge
-          >
-        </div>
-      </div>
-      <div class="detail-desc">${desc}</div>
-      <div class="detail-grid">
-        ${isInstalled
-          ? html`<span class="detail-label">Status</span
-              ><span class="detail-value"
-                >${(sel.skill as InstalledSkill).enabled ? "Enabled" : "Disabled"}</span
-              >`
-          : nothing}
-        ${"version" in skill && (skill as RegistrySkill).version
-          ? html`<span class="detail-label">Version</span
-              ><span class="detail-value">${(skill as RegistrySkill).version}</span>`
-          : nothing}
-        ${"author" in skill && (skill as RegistrySkill).author
-          ? html`<span class="detail-label">Author</span
-              ><span class="detail-value">${(skill as RegistrySkill).author}</span>`
-          : nothing}
-        ${"tags" in skill && (skill as RegistrySkill).tags
-          ? html`<span class="detail-label">Tags</span
-              ><span class="detail-value">${(skill as RegistrySkill).tags}</span>`
-          : nothing}
-        ${"url" in skill && (skill as RegistrySkill).url
-          ? html`<span class="detail-label">URL</span
-              ><span class="detail-value">${(skill as RegistrySkill).url}</span>`
-          : nothing}
-      </div>
-      ${isInstalled && (sel.skill as InstalledSkill).parameters
-        ? html`<div class="detail-params">
-            <div class="detail-params-title">Parameters</div>
-            ${this._renderParametersViewer((sel.skill as InstalledSkill).parameters!)}
-          </div>`
-        : nothing}
-      <div class="detail-actions">
-        ${isInstalled
-          ? html`
-              <sc-button
-                variant=${(sel.skill as InstalledSkill).enabled ? "secondary" : "primary"}
-                ?loading=${this.actionLoading}
-                @click=${() => this._toggleSkill(sel.skill as InstalledSkill)}
-                >${(sel.skill as InstalledSkill).enabled ? "Disable" : "Enable"}</sc-button
-              >
-              <sc-button
-                variant="destructive"
-                ?loading=${this.actionLoading}
-                @click=${() => this._uninstallSkill(name)}
-                >Uninstall</sc-button
-              >
-            `
-          : html`<sc-button
-              variant="primary"
-              ?loading=${this.actionLoading}
-              ?disabled=${this.installedNames.has(name)}
-              @click=${() => this._installFromRegistry(sel.skill as RegistrySkill)}
-              >${this.installedNames.has(name) ? "Already Installed" : "Install"}</sc-button
-            >`}
-      </div>
-    </sc-sheet>`;
+    if (!this.selectedSkill) return nothing;
+    return html`
+      <sc-skill-detail
+        .skill=${this.selectedSkill}
+        .installedNames=${Array.from(this.installedNames)}
+        .actionLoading=${this.actionLoading}
+        @sc-close=${() => (this.selectedSkill = null)}
+        @skill-toggle=${(e: CustomEvent<{ skill: InstalledSkill }>) =>
+          this._toggleSkill(e.detail.skill)}
+        @skill-uninstall=${(e: CustomEvent<{ name: string }>) =>
+          this._uninstallSkill(e.detail.name)}
+        @install=${(e: CustomEvent<{ skill: RegistrySkill }>) =>
+          this._installFromRegistry(e.detail.skill)}
+      ></sc-skill-detail>
+    `;
   }
 
   private _renderSkeleton(): TemplateResult {

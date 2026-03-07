@@ -26,7 +26,7 @@ export class ScSegmentedControl extends LitElement {
       background: var(--sc-bg-inset);
       border: 1px solid var(--sc-border-subtle);
       border-radius: var(--sc-radius-lg);
-      padding: 2px;
+      padding: var(--sc-space-2xs);
       position: relative;
       gap: 0;
     }
@@ -38,11 +38,11 @@ export class ScSegmentedControl extends LitElement {
 
     .indicator {
       position: absolute;
-      top: 2px;
-      bottom: 2px;
-      left: 2px;
+      top: var(--sc-space-2xs);
+      bottom: var(--sc-space-2xs);
+      left: var(--sc-space-2xs);
       background: var(--sc-accent);
-      border-radius: calc(var(--sc-radius-lg) - 2px);
+      border-radius: calc(var(--sc-radius-lg) - var(--sc-space-2xs));
       transition: transform var(--sc-duration-normal) var(--sc-spring-bounce);
       pointer-events: none;
       z-index: 0;
@@ -65,7 +65,7 @@ export class ScSegmentedControl extends LitElement {
       color: var(--sc-text-muted);
       background: none;
       border: none;
-      border-radius: calc(var(--sc-radius-lg) - 2px);
+      border-radius: calc(var(--sc-radius-lg) - var(--sc-space-2xs));
       cursor: pointer;
       transition: color var(--sc-duration-fast) var(--sc-ease-out);
     }

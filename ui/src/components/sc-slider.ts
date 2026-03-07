@@ -87,8 +87,8 @@ export class ScSlider extends LitElement {
       left: var(--thumb-percent, 0%);
       width: 20px;
       height: 20px;
-      margin-left: -10px;
-      margin-top: -10px;
+      margin-left: calc(-1 * var(--sc-space-md));
+      margin-top: calc(-1 * var(--sc-space-md));
       background: var(--sc-bg-surface);
       border-radius: var(--sc-radius-full);
       box-shadow: var(--sc-shadow-md);

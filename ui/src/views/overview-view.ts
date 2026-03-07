@@ -1,6 +1,5 @@
 import { html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { formatDate, formatRelative } from "../utils.js";
 import { GatewayAwareLitElement } from "../gateway-aware.js";
 import { icons } from "../icons.js";
 import { observeAllCards, unobserveAllCards } from "../utils/scroll-entrance.js";
@@ -15,9 +14,9 @@ import "../components/sc-welcome-card.js";
 import "../components/sc-tooltip.js";
 import "../components/sc-page-hero.js";
 import "../components/sc-section-header.js";
-import "../components/sc-stat-card.js";
-import "../components/sc-metric-row.js";
-import "../components/sc-timeline.js";
+import "../components/sc-overview-stats.js";
+import "../components/sc-sessions-table.js";
+import "../components/sc-activity-timeline.js";
 import "../components/sc-chart.js";
 
 interface HealthRes {
@@ -168,19 +167,6 @@ export class ScOverviewView extends GatewayAwareLitElement {
       }
     }
 
-    /* ── Stats row ───────────────────────────────────── */
-
-    .metrics-block {
-      margin-bottom: var(--sc-space-2xl);
-    }
-
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(11.25rem, 1fr));
-      gap: var(--sc-space-md);
-      margin-bottom: var(--sc-space-2xl);
-    }
-
     /* ── Detail zone (asymmetric bento) ────────────────── */
 
     .details {
@@ -208,10 +194,6 @@ export class ScOverviewView extends GatewayAwareLitElement {
 
     .bento .sessions {
       grid-area: sessions;
-    }
-
-    .activity-sparkline {
-      margin-bottom: var(--sc-space-md);
     }
 
     .section-label {
@@ -254,43 +236,6 @@ export class ScOverviewView extends GatewayAwareLitElement {
       color: var(--sc-text);
     }
 
-    .sessions-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .sessions-table th,
-    .sessions-table td {
-      padding: var(--sc-space-sm) var(--sc-space-md);
-      text-align: left;
-      border-bottom: 1px solid var(--sc-border);
-      font-size: var(--sc-text-sm);
-    }
-
-    .sessions-table th {
-      font-size: var(--sc-text-xs);
-      font-weight: var(--sc-weight-medium);
-      color: var(--sc-text-muted);
-    }
-
-    .sessions-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .session-row {
-      cursor: pointer;
-      transition: background-color var(--sc-duration-fast) var(--sc-ease-out);
-    }
-
-    .session-row:hover {
-      background-color: var(--sc-bg-elevated);
-    }
-
-    .session-row:focus-visible {
-      outline: 2px solid var(--sc-accent);
-      outline-offset: -2px;
-    }
-
     /* ── Skeleton ─────────────────────────────────────── */
 
     .skeleton-hero {
@@ -328,10 +273,14 @@ export class ScOverviewView extends GatewayAwareLitElement {
     /* ── Responsive ───────────────────────────────────── */
 
     @media (max-width: 40rem) /* --sc-breakpoint-md */ {
-      .stats-row {
-        grid-template-columns: 1fr 1fr;
-      }
       .bento {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "activity"
+          "channels"
+          "sessions";
+      }
+      .skeleton-bento {
         grid-template-columns: 1fr;
         grid-template-areas:
           "activity"
@@ -341,13 +290,6 @@ export class ScOverviewView extends GatewayAwareLitElement {
       .skeleton-metrics {
         grid-template-columns: 1fr 1fr;
       }
-      .skeleton-bento {
-        grid-template-columns: 1fr;
-        grid-template-areas:
-          "activity"
-          "channels"
-          "sessions";
-      }
       .channels-with-chart {
         flex-direction: column;
       }
@@ -356,9 +298,6 @@ export class ScOverviewView extends GatewayAwareLitElement {
     @media (max-width: 30rem) /* --sc-breakpoint-sm */ {
       :host {
         padding: var(--sc-space-md) var(--sc-space-lg);
-      }
-      .stats-row {
-        grid-template-columns: 1fr;
       }
       .skeleton-metrics {
         grid-template-columns: 1fr;
@@ -529,53 +468,6 @@ export class ScOverviewView extends GatewayAwareLitElement {
     };
   }
 
-  private get _activitySparklineData() {
-    const now = Date.now();
-    const hourMs = 60 * 60 * 1000;
-    const buckets: number[] = [];
-    const labels: string[] = [];
-    for (let i = 11; i >= 0; i--) {
-      const bucketStart = now - (i + 1) * hourMs;
-      const bucketEnd = now - i * hourMs;
-      const count = this.activityEvents.filter((ev) => {
-        const t = typeof ev.time === "number" ? ev.time : Date.now();
-        return t >= bucketStart && t < bucketEnd;
-      }).length;
-      buckets.push(count);
-      labels.push(i === 0 ? "Now" : `${i}h`);
-    }
-    return {
-      labels,
-      datasets: [{ data: buckets, color: "var(--sc-chart-brand)" }],
-    };
-  }
-
-  private get _timelineItems() {
-    type Ev = ActivityEvent & { message?: string; text?: string; level?: string; detail?: string };
-    return this.activityEvents.map((ev: Ev) => {
-      let message = ev.message ?? ev.text ?? "";
-      if (!message && ev.type === "message") {
-        message = `${ev.user ?? ""} via ${ev.channel ?? ""}: ${ev.preview ?? ""}`.trim();
-      } else if (!message && ev.type === "tool_exec") {
-        message = `Tool ${ev.tool ?? ""}: ${ev.command ?? ""}`.trim();
-      } else if (!message && ev.type === "session_start") {
-        message = `Session ${ev.session ?? ""} started`.trim();
-      }
-      if (!message) message = "Activity";
-      const ts = typeof ev.time === "number" ? ev.time : Date.now();
-      return {
-        time: formatRelative(ts),
-        message,
-        status: (ev.level === "error" ? "error" : ev.level === "success" ? "success" : "info") as
-          | "success"
-          | "error"
-          | "info"
-          | "pending",
-        detail: ev.detail,
-      };
-    });
-  }
-
   private get _onboarded(): boolean {
     return localStorage.getItem("sc-onboarded") === "true";
   }
@@ -663,42 +555,26 @@ export class ScOverviewView extends GatewayAwareLitElement {
           ? "24/7"
           : "-";
     const rssValue = cap.peak_rss_mb != null ? `${cap.peak_rss_mb.toFixed(1)} MB` : "5.9 MB";
-    const metrics: Array<{ label: string; value?: number; valueStr?: string }> = [
+    const metrics = [
       { label: "Channels", value: cap.channels ?? 0 },
       { label: "Tools", value: cap.tools ?? 0 },
       { label: "Uptime", valueStr: uptimeValue },
       { label: "Peak RSS", valueStr: rssValue },
     ];
-
+    const metricRowItems = [
+      { label: "Sessions Today", value: String(this.sessions.length) },
+      {
+        label: "Channels Active",
+        value: String(this.channels.filter((c) => c.configured).length),
+      },
+      {
+        label: "Status",
+        value: this.gatewayOperational ? "Healthy" : "Offline",
+        accent: (this.gatewayOperational ? "success" : "error") as "success" | "error",
+      },
+    ];
     return html`
-      <div class="metrics-block">
-        <div class="stats-row">
-          ${metrics.map(
-            (m, i) => html`
-              <sc-stat-card
-                .value=${m.value ?? 0}
-                .valueStr=${m.valueStr ?? ""}
-                .label=${m.label}
-                style="--sc-stagger-delay: ${i * 50}ms"
-              ></sc-stat-card>
-            `,
-          )}
-        </div>
-        <sc-metric-row
-          .items=${[
-            { label: "Sessions Today", value: String(this.sessions.length) },
-            {
-              label: "Channels Active",
-              value: String(this.channels.filter((c) => c.configured).length),
-            },
-            {
-              label: "Status",
-              value: this.gatewayOperational ? "Healthy" : "Offline",
-              accent: this.gatewayOperational ? "success" : "error",
-            },
-          ]}
-        ></sc-metric-row>
-      </div>
+      <sc-overview-stats .metrics=${metrics} .metricRowItems=${metricRowItems}></sc-overview-stats>
     `;
   }
 
@@ -746,19 +622,7 @@ export class ScOverviewView extends GatewayAwareLitElement {
       <div class="details">
         <div class="bento">
           <sc-card hoverable accent class="activity">
-            <div class="section-label">Live Activity</div>
-            ${this.activityEvents.length > 0
-              ? html`
-                  <div class="activity-sparkline">
-                    <sc-chart
-                      type="line"
-                      .data=${this._activitySparklineData}
-                      height=${48}
-                    ></sc-chart>
-                  </div>
-                `
-              : nothing}
-            <sc-timeline .items=${this._timelineItems}></sc-timeline>
+            <sc-activity-timeline .events=${this.activityEvents}></sc-activity-timeline>
           </sc-card>
 
           <sc-card hoverable accent class="channels">
@@ -800,65 +664,17 @@ export class ScOverviewView extends GatewayAwareLitElement {
 
           <sc-card hoverable accent class="sessions">
             <div class="section-label">Recent Sessions</div>
-            ${this.recentSessions.length === 0
-              ? html`
-                  <sc-empty-state
-                    .icon=${icons["chat-circle"]}
-                    heading="No conversations yet"
-                    description="Start your first chat to see SeaClaw in action."
-                  >
-                    <sc-button variant="primary" @click=${() => this._navigate("chat")}>
-                      Start a Conversation
-                    </sc-button>
-                  </sc-empty-state>
-                `
-              : html`
-                  <table class="sessions-table">
-                    <thead>
-                      <tr>
-                        <th>Session</th>
-                        <th>Turns</th>
-                        <th>Last active</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${this.recentSessions.map(
-                        (s) => html`
-                          <tr
-                            class="session-row"
-                            role="button"
-                            tabindex="0"
-                            aria-label=${`Open session ${s.label ?? s.key ?? "unnamed"}`}
-                            @click=${() =>
-                              this.dispatchEvent(
-                                new CustomEvent("navigate", {
-                                  detail: "chat:" + (s.key ?? ""),
-                                  bubbles: true,
-                                  composed: true,
-                                }),
-                              )}
-                            @keydown=${(e: KeyboardEvent) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                this.dispatchEvent(
-                                  new CustomEvent("navigate", {
-                                    detail: "chat:" + (s.key ?? ""),
-                                    bubbles: true,
-                                    composed: true,
-                                  }),
-                                );
-                              }
-                            }}
-                          >
-                            <td>${s.label ?? s.key ?? "unnamed"}</td>
-                            <td>${s.turn_count ?? 0}</td>
-                            <td>${formatDate(s.last_active)}</td>
-                          </tr>
-                        `,
-                      )}
-                    </tbody>
-                  </table>
-                `}
+            <sc-sessions-table
+              .sessions=${this.recentSessions}
+              @session-select=${(e: CustomEvent<{ key: string }>) =>
+                this.dispatchEvent(
+                  new CustomEvent("navigate", {
+                    detail: "chat:" + (e.detail.key ?? ""),
+                    bubbles: true,
+                    composed: true,
+                  }),
+                )}
+            ></sc-sessions-table>
           </sc-card>
         </div>
       </div>

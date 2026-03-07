@@ -32,6 +32,7 @@ import "./sc-forecast-chart.js";
 import "./sc-page-hero.js";
 import "./sc-schedule-builder.js";
 import "./sc-automation-card.js";
+import "./sc-automation-form.js";
 import "./sc-chat-bubble.js";
 import "./sc-typing-indicator.js";
 import "./sc-delivery-status.js";
@@ -41,6 +42,8 @@ import "./sc-model-selector.js";
 import "./sc-tapback-menu.js";
 import "./sc-chat-composer.js";
 import "./sc-message-thread.js";
+import "./sc-voice-orb.js";
+import "./sc-voice-conversation.js";
 import "./sc-chart.js";
 import "./sc-json-viewer.js";
 import "./sc-pagination.js";
@@ -1882,6 +1885,102 @@ describe("sc-automation-card", () => {
     document.body.appendChild(el);
     await el.updateComplete;
     expect(el.shadowRoot).toBeTruthy();
+    el.remove();
+  });
+});
+
+describe("sc-automation-form", () => {
+  it("should be defined as a custom element", () => {
+    expect(customElements.get("sc-automation-form")).toBeDefined();
+  });
+
+  it("should be creatable", () => {
+    const el = document.createElement("sc-automation-form");
+    expect(el).toBeInstanceOf(HTMLElement);
+  });
+
+  it("should render form fields", async () => {
+    const el = document.createElement("sc-automation-form") as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    el.setAttribute("type", "agent");
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.shadowRoot).toBeTruthy();
+    el.remove();
+  });
+});
+
+describe("sc-voice-orb", () => {
+  it("should be defined as a custom element", () => {
+    expect(customElements.get("sc-voice-orb")).toBeDefined();
+  });
+
+  it("should be creatable", () => {
+    const el = document.createElement("sc-voice-orb");
+    expect(el).toBeInstanceOf(HTMLElement);
+  });
+
+  it("should render mic button and status", async () => {
+    const el = document.createElement("sc-voice-orb") as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.shadowRoot).toBeTruthy();
+    expect(el.shadowRoot?.querySelector(".mic-btn")).toBeTruthy();
+    el.remove();
+  });
+
+  it("should dispatch sc-voice-mic-toggle on click", async () => {
+    const el = document.createElement("sc-voice-orb") as HTMLElement & {
+      disabled: boolean;
+      updateComplete: Promise<boolean>;
+    };
+    el.disabled = false;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    let fired = false;
+    el.addEventListener("sc-voice-mic-toggle", () => {
+      fired = true;
+    });
+    const btn = el.shadowRoot?.querySelector(".mic-btn") as HTMLButtonElement;
+    btn?.click();
+    expect(fired).toBe(true);
+    el.remove();
+  });
+});
+
+describe("sc-voice-conversation", () => {
+  it("should be defined as a custom element", () => {
+    expect(customElements.get("sc-voice-conversation")).toBeDefined();
+  });
+
+  it("should be creatable", () => {
+    const el = document.createElement("sc-voice-conversation");
+    expect(el).toBeInstanceOf(HTMLElement);
+  });
+
+  it("should render empty state when no messages", async () => {
+    const el = document.createElement("sc-voice-conversation") as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.shadowRoot).toBeTruthy();
+    expect(el.shadowRoot?.querySelector("sc-empty-state")).toBeTruthy();
+    el.remove();
+  });
+
+  it("has scrollToBottom method", async () => {
+    const el = document.createElement("sc-voice-conversation") as HTMLElement & {
+      updateComplete: Promise<boolean>;
+      scrollToBottom: () => void;
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(typeof el.scrollToBottom).toBe("function");
+    expect(() => el.scrollToBottom()).not.toThrow();
     el.remove();
   });
 });

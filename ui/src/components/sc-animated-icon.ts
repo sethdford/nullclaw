@@ -32,7 +32,7 @@ export class ScAnimatedIcon extends LitElement {
     }
 
     .state-loading .icon-wrap {
-      animation: sc-icon-spin 800ms linear infinite;
+      animation: sc-icon-spin 800ms linear infinite; /* sc-lint-ok loading spinner needs slower than --sc-duration-slow */
     }
 
     .state-success .icon-wrap {
@@ -41,7 +41,7 @@ export class ScAnimatedIcon extends LitElement {
     }
 
     .state-error .icon-wrap {
-      animation: sc-icon-shake 400ms var(--sc-ease-out);
+      animation: sc-icon-shake var(--sc-duration-moderate) var(--sc-ease-out);
       color: var(--sc-error);
     }
 

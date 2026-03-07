@@ -1,5 +1,15 @@
 import { test, expect } from "@playwright/test";
-import { shadowCount, shadowExists, shadowElementText, shadowText, WAIT, POLL } from "./helpers.js";
+import {
+  shadowCount,
+  shadowCountIn,
+  shadowExists,
+  shadowExistsIn,
+  shadowElementText,
+  shadowText,
+  shadowTextIn,
+  WAIT,
+  POLL,
+} from "./helpers.js";
 
 // ─────────────────────────────────────────────────────────────
 // Overview View
@@ -12,7 +22,9 @@ test.describe("Overview (Demo)", () => {
 
   test("shows stat cards", async ({ page }) => {
     await expect(async () => {
-      const count = await page.evaluate(shadowCount("sc-overview-view", "sc-stat-card"));
+      const count = await page.evaluate(
+        shadowCountIn("sc-overview-view", "sc-overview-stats", "sc-stat-card"),
+      );
       expect(count).toBeGreaterThanOrEqual(3);
     }).toPass({ timeout: POLL });
   });
@@ -26,13 +38,15 @@ test.describe("Overview (Demo)", () => {
 
   test("shows sessions table", async ({ page }) => {
     await expect(async () => {
-      expect(await page.evaluate(shadowExists("sc-overview-view", ".sessions-table"))).toBe(true);
+      expect(await page.evaluate(shadowExists("sc-overview-view", "sc-sessions-table"))).toBe(true);
     }).toPass({ timeout: POLL });
   });
 
   test("shows live activity timeline", async ({ page }) => {
     await expect(async () => {
-      expect(await page.evaluate(shadowExists("sc-overview-view", "sc-timeline"))).toBe(true);
+      expect(await page.evaluate(shadowExists("sc-overview-view", "sc-activity-timeline"))).toBe(
+        true,
+      );
     }).toPass({ timeout: POLL });
   });
 });
@@ -514,7 +528,7 @@ test.describe("Voice (Demo)", () => {
 
   test("shows mic button", async ({ page }) => {
     await expect(async () => {
-      expect(await page.evaluate(shadowExists("sc-voice-view", ".mic-btn"))).toBe(true);
+      expect(await page.evaluate(shadowExists("sc-voice-view", "sc-voice-orb"))).toBe(true);
     }).toPass({ timeout: POLL });
   });
 
@@ -534,9 +548,13 @@ test.describe("Voice (Demo)", () => {
 
   test("shows empty conversation state", async ({ page }) => {
     await expect(async () => {
-      const hasEmpty = await page.evaluate(shadowExists("sc-voice-view", ".conversation-empty"));
-      const hasEmptyState = await page.evaluate(shadowExists("sc-voice-view", "sc-empty-state"));
-      expect(hasEmpty || hasEmptyState).toBe(true);
+      const hasConversation = await page.evaluate(
+        shadowExists("sc-voice-view", "sc-voice-conversation"),
+      );
+      const hasEmptyState = await page.evaluate(
+        shadowExistsIn("sc-voice-view", "sc-voice-conversation", "sc-empty-state"),
+      );
+      expect(hasConversation && hasEmptyState).toBe(true);
     }).toPass({ timeout: POLL });
   });
 });
@@ -566,8 +584,7 @@ test.describe("Skills (Demo) — extended", () => {
 
   test("shows registry cards", async ({ page }) => {
     await expect(async () => {
-      const sections = await page.evaluate(shadowCount("sc-skills-view", ".section"));
-      expect(sections).toBeGreaterThanOrEqual(2);
+      expect(await page.evaluate(shadowExists("sc-skills-view", "sc-skill-registry"))).toBe(true);
     }).toPass({ timeout: POLL });
   });
 });
