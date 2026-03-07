@@ -26,11 +26,18 @@ export class ScChatSessionsPanel extends LitElement {
       width: 0;
       overflow: hidden;
       z-index: 10;
-      transition: width var(--sc-duration-normal) var(--sc-ease-out);
+      opacity: 0;
+      transform: translateX(-20px);
+      transition:
+        width var(--sc-duration-normal) var(--sc-ease-out),
+        opacity var(--sc-duration-normal) var(--sc-ease-out),
+        transform var(--sc-duration-normal) var(--sc-ease-spring, cubic-bezier(0.22, 1, 0.36, 1));
     }
 
     :host([open]) {
       width: 280px;
+      opacity: 1;
+      transform: translateX(0);
     }
 
     .panel {
@@ -38,17 +45,11 @@ export class ScChatSessionsPanel extends LitElement {
       height: 100%;
       display: flex;
       flex-direction: column;
-      background: color-mix(
-        in srgb,
-        var(--sc-bg-surface) var(--sc-glass-standard-bg-opacity, 92%),
-        transparent
-      );
-      backdrop-filter: blur(var(--sc-glass-standard-blur, 24px))
-        saturate(var(--sc-glass-standard-saturate, 180%));
-      -webkit-backdrop-filter: blur(var(--sc-glass-standard-blur, 24px))
-        saturate(var(--sc-glass-standard-saturate, 180%));
+      background: color-mix(in srgb, var(--sc-bg-surface) 85%, transparent);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
       border-right: 1px solid var(--sc-border-subtle);
-      box-shadow: var(--sc-shadow-sm);
+      box-shadow: var(--sc-shadow-lg);
     }
 
     .new-chat-btn {
@@ -95,6 +96,21 @@ export class ScChatSessionsPanel extends LitElement {
       display: flex;
       flex-direction: column;
       gap: var(--sc-space-2xs);
+    }
+
+    .group-label {
+      display: block;
+      font-size: var(--sc-text-2xs, 10px);
+      font-weight: var(--sc-weight-medium);
+      color: var(--sc-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: var(--sc-space-sm) var(--sc-space-md);
+      margin-top: var(--sc-space-xs);
+    }
+
+    .session-group:first-child .group-label {
+      margin-top: 0;
     }
 
     .session-item {
@@ -195,6 +211,8 @@ export class ScChatSessionsPanel extends LitElement {
 
     @media (prefers-reduced-motion: reduce) {
       :host {
+        opacity: 1;
+        transform: none;
         transition: none;
       }
       .new-chat-btn,
@@ -235,6 +253,64 @@ export class ScChatSessionsPanel extends LitElement {
     );
   }
 
+  private _groupSessions(): Array<{ label: string; sessions: ChatSession[] }> {
+    const now = Date.now();
+    const day = 86400000;
+    const today: ChatSession[] = [];
+    const yesterday: ChatSession[] = [];
+    const thisWeek: ChatSession[] = [];
+    const older: ChatSession[] = [];
+
+    for (const s of this.sessions) {
+      const age = now - s.ts;
+      if (age < day) today.push(s);
+      else if (age < 2 * day) yesterday.push(s);
+      else if (age < 7 * day) thisWeek.push(s);
+      else older.push(s);
+    }
+
+    const groups: Array<{ label: string; sessions: ChatSession[] }> = [];
+    if (today.length) groups.push({ label: "Today", sessions: today });
+    if (yesterday.length) groups.push({ label: "Yesterday", sessions: yesterday });
+    if (thisWeek.length) groups.push({ label: "This Week", sessions: thisWeek });
+    if (older.length) groups.push({ label: "Older", sessions: older });
+    return groups;
+  }
+
+  private _startRename(e: Event, _s: ChatSession): void {
+    const el = e.target as HTMLElement;
+    el.contentEditable = "true";
+    el.focus();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(range);
+  }
+
+  private _finishRename(e: Event, id: string): void {
+    const el = e.target as HTMLElement;
+    el.contentEditable = "false";
+    const title = el.textContent?.trim() || "Untitled";
+    this.dispatchEvent(
+      new CustomEvent("sc-session-rename", {
+        bubbles: true,
+        composed: true,
+        detail: { id, title },
+      }),
+    );
+  }
+
+  private _renameKeydown(e: KeyboardEvent, _id: string): void {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      (e.target as HTMLElement).blur();
+    }
+    if (e.key === "Escape") {
+      (e.target as HTMLElement).contentEditable = "false";
+      this.requestUpdate();
+    }
+  }
+
   override render() {
     return html`
       <div class="panel" role="navigation" aria-label="Chat sessions">
@@ -242,32 +318,45 @@ export class ScChatSessionsPanel extends LitElement {
           ${icons["file-text"]} New Chat
         </button>
         <div class="session-list">
-          ${this.sessions.map(
-            (s) => html`
-              <div
-                class="session-item ${s.active ? "active" : ""}"
-                role="button"
-                tabindex="0"
-                @click=${() => this._onSelect(s.id)}
-                @keydown=${(e: KeyboardEvent) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    this._onSelect(s.id);
-                  }
-                }}
-              >
-                <div class="session-content">
-                  <span class="session-title">${s.title || "Untitled"}</span>
-                  <span class="session-ts">${formatRelative(s.ts)}</span>
-                </div>
-                <button
-                  type="button"
-                  class="delete-btn"
-                  aria-label="Delete session"
-                  @click=${(e: Event) => this._onDelete(e, s.id)}
-                >
-                  ${icons.x}
-                </button>
+          ${this._groupSessions().map(
+            (group) => html`
+              <div class="session-group">
+                <span class="group-label">${group.label}</span>
+                ${group.sessions.map(
+                  (s) => html`
+                    <div
+                      class="session-item ${s.active ? "active" : ""}"
+                      role="button"
+                      tabindex="0"
+                      @click=${() => this._onSelect(s.id)}
+                      @keydown=${(e: KeyboardEvent) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          this._onSelect(s.id);
+                        }
+                      }}
+                    >
+                      <div class="session-content">
+                        <span
+                          class="session-title"
+                          @dblclick=${(e: Event) => this._startRename(e, s)}
+                          @blur=${(e: Event) => this._finishRename(e, s.id)}
+                          @keydown=${(e: KeyboardEvent) => this._renameKeydown(e, s.id)}
+                          >${s.title || "Untitled"}</span
+                        >
+                        <span class="session-ts">${formatRelative(s.ts)}</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="delete-btn"
+                        aria-label="Delete session"
+                        @click=${(e: Event) => this._onDelete(e, s.id)}
+                      >
+                        ${icons.x}
+                      </button>
+                    </div>
+                  `,
+                )}
               </div>
             `,
           )}

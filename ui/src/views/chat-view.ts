@@ -382,6 +382,19 @@ export class ScChatView extends GatewayAwareLitElement {
     }
   }
 
+  private async _onSessionRename(e: CustomEvent<{ id: string; title: string }>): Promise<void> {
+    const { id, title } = e.detail;
+    const gw = this.gateway;
+    if (gw) {
+      try {
+        await gw.request("sessions.patch", { key: id, label: title });
+        this._sessions = this._sessions.map((s) => (s.id === id ? { ...s, title } : s));
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
   override render() {
     const sessionsWithActive = this._sessions.map((s) => ({
       ...s,
@@ -395,6 +408,7 @@ export class ScChatView extends GatewayAwareLitElement {
           @sc-session-select=${this._onSessionSelect}
           @sc-session-new=${this._onSessionNew}
           @sc-session-delete=${this._onSessionDelete}
+          @sc-session-rename=${this._onSessionRename}
         ></sc-chat-sessions-panel>
         <div class="container">
           ${this._renderStatusBar()} ${this._renderErrorBanner()} ${this._renderSearch()}
