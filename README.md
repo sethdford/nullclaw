@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Bring AI to every device on Earth.</strong><br>
-  <strong>~500 KB binary. < 6 MB RAM. Boots in <30 ms. Runs on anything with a CPU.</strong>
+  <strong>~530 KB binary. < 6 MB RAM. Boots in <30 ms. Runs on anything with a CPU.</strong>
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@ The smallest fully autonomous AI assistant infrastructure — a static C binary 
 
 ### Features
 
-- **Impossibly Small:** ~500 KB static binary — no runtime, no VM, no framework overhead.
+- **Impossibly Small:** ~530 KB static binary — no runtime, no VM, no framework overhead.
 - **Near-Zero Memory:** < 6 MB peak RSS. Runs comfortably on the cheapest ARM SBCs and microcontrollers.
 - **Instant Startup:** 6–27 ms on Apple Silicon, sub-50 ms on edge cores.
 - **True Portability:** Single self-contained binary across ARM, x86, and RISC-V. Drop it anywhere, it just runs.
@@ -46,7 +46,7 @@ Similar projects in the autonomous AI assistant space (data sourced from each pr
 | ----------------- | ------------------------------------------------ | ------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------- | ----------------- |
 | **Language**      | TypeScript                                       | Python                                      | Go                                             | Rust                                                  | **C**             |
 | **RAM** ¹         | —                                                | —                                           | < 10 MB                                        | < 5 MB                                                | **< 6 MB**        |
-| **Binary Size** ¹ | ~28 MB (npm dist)                                | N/A (Python)                                | ~8 MB                                          | ~8.8 MB                                               | **~500 KB**       |
+| **Binary Size** ¹ | ~28 MB (npm dist)                                | N/A (Python)                                | ~8 MB                                          | ~8.8 MB                                               | **~530 KB**       |
 | **Runtime Deps**  | Node.js ≥22                                      | Python ≥3.11                                | None (static)                                  | None (static)                                         | **None (static)** |
 
 > ¹ RAM and binary size figures for other projects are self-reported from their respective READMEs. SeaClaw's numbers are measured locally with `/usr/bin/time -l` on a MinSizeRel + LTO build.
@@ -54,10 +54,10 @@ Similar projects in the autonomous AI assistant space (data sourced from each pr
 SeaClaw's verified numbers (measured on macOS arm64, March 2026):
 
 ```
-Binary size:   ~500 KB (MinSizeRel + LTO, all channels)
+Binary size:   ~530 KB (MinSizeRel + LTO, all channels)
 Peak RSS:      ~5.7 MB (--version), ~5.9 MB (test suite)
 Startup:       6–27 ms avg (Apple Silicon M4 Max)
-Tests:         2910 passing, 0 ASan errors
+Tests:         2930 passing, 0 ASan errors
 ```
 
 ### Why Switch from OpenClaw?
@@ -603,7 +603,7 @@ Build and tests require a C11 compiler and CMake 3.16+.
 mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Debug -DSC_ENABLE_ALL_CHANNELS=ON
 cmake --build .                            # Dev build
-./seaclaw_tests                             # 2910 tests
+./seaclaw_tests                             # 2930 tests
 cd ..
 ```
 
@@ -615,7 +615,7 @@ cmake --build build
 ./build/seaclaw_tests
 ```
 
-Release build (~500 KB):
+Release build (~530 KB):
 
 ```bash
 mkdir -p build-release && cd build-release
@@ -640,9 +640,9 @@ Channel CJM coverage (ingress parsing/filtering, session key routing, account pr
 Language: C11 + ASM (aarch64, x86_64)
 Source files: 588
 Lines of code: ~99K
-Test files: 94
-Tests: 2,768
-Binary: ~500 KB (MinSizeRel + LTO, all channels)
+Test files: 92
+Tests: 2,910
+Binary: ~530 KB (MinSizeRel + LTO, all channels)
 Peak RSS: ~5.7 MB
 Startup: 6–27 ms avg (Apple Silicon)
 Dependencies: libc + optional SQLite, libcurl
@@ -670,7 +670,7 @@ config.c Config loading/merging (~/.seaclaw/config.json)
 ...
 
 include/seaclaw/ Public C headers
-tests/ 92 test files, 2910 tests
+tests/ 93 test files, 2930 tests
 asm/ Platform-specific assembly (aarch64, x86_64, generic C)
 
 ```
