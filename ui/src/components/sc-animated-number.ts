@@ -50,7 +50,9 @@ export class ScAnimatedNumber extends LitElement {
   }
 
   override render() {
-    return html`${this.prefix}${this._displayed}${this.suffix}`;
+    return html`<span role="status" aria-live="polite"
+      >${this.prefix}${this._displayed}${this.suffix}</span
+    >`;
   }
 }
 

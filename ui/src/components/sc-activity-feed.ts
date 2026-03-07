@@ -128,7 +128,7 @@ export class ScActivityFeed extends LitElement {
     }
 
     return html`
-      <div class="event">
+      <div class="event" role="article">
         <div class="event-icon ${iconClass}">${icon}</div>
         <div class="event-body">
           <div class="event-summary">${summary}</div>
@@ -143,7 +143,11 @@ export class ScActivityFeed extends LitElement {
     if (visible.length === 0) {
       return html`<div class="empty">No recent activity</div>`;
     }
-    return html` <div class="feed">${visible.map((ev) => this._renderEvent(ev))}</div> `;
+    return html`
+      <div class="feed" role="log" aria-live="polite">
+        ${visible.map((ev) => this._renderEvent(ev))}
+      </div>
+    `;
   }
 }
 

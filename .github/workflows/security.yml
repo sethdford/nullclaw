@@ -64,9 +64,15 @@ jobs:
           echo '{"k":"v","n":1,"a":[]}' > corpus/json/2.json
           echo 'https://example.com' > corpus/url/1.txt
           printf 'GET / HTTP/1.1\r\nHost: test\r\n\r\n' > corpus/http/1.txt
-      - run: ./build-fuzz/fuzz_json_parser corpus/json -max_total_time=30 -print_final_stats=1 || true
-      - run: ./build-fuzz/fuzz_url_validation corpus/url -max_total_time=30 -print_final_stats=1 || true
-      - run: ./build-fuzz/fuzz_http_parse corpus/http -max_total_time=30 -print_final_stats=1 || true
+      - name: Fuzz JSON parser
+        run: ./build-fuzz/fuzz_json_parser corpus/json -max_total_time=30 -print_final_stats=1
+        continue-on-error: true
+      - name: Fuzz URL validation
+        run: ./build-fuzz/fuzz_url_validation corpus/url -max_total_time=30 -print_final_stats=1
+        continue-on-error: true
+      - name: Fuzz HTTP parser
+        run: ./build-fuzz/fuzz_http_parse corpus/http -max_total_time=30 -print_final_stats=1
+        continue-on-error: true
 
   sbom:
     name: Generate SBOM

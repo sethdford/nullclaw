@@ -24,3 +24,11 @@ updates:
     groups:
       ui-deps:
         patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /design-tokens
+    schedule:
+      interval: weekly
+    groups:
+      design-tokens-deps:
+        patterns: ["*"]

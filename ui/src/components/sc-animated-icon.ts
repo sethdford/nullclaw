@@ -109,6 +109,8 @@ export class ScAnimatedIcon extends LitElement {
       <div
         class="state-${this.state}"
         style="width: ${this.size}; height: ${this.size}; color: ${this.color}"
+        role="img"
+        aria-hidden="true"
       >
         <span class="icon-wrap">${this._icon}</span>
       </div>

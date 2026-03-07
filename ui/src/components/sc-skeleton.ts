@@ -196,7 +196,12 @@ export class ScSkeleton extends LitElement {
   override render() {
     if (this.variant === "stat-card") {
       return html`
-        <div class="skeleton stat-card animation-${this.animation}" style="width: ${this.width};">
+        <div
+          class="skeleton stat-card animation-${this.animation}"
+          style="width: ${this.width};"
+          aria-busy="true"
+          aria-label="Loading"
+        >
           <div class="stat-inner">
             <div class="skel-label"></div>
             <div class="skel-value"></div>
@@ -210,6 +215,8 @@ export class ScSkeleton extends LitElement {
         <div
           class="skeleton channel-card animation-${this.animation}"
           style="width: ${this.width};"
+          aria-busy="true"
+          aria-label="Loading"
         >
           <div class="channel-inner">
             <div class="skel-name"></div>
@@ -223,6 +230,8 @@ export class ScSkeleton extends LitElement {
         <div
           class="skeleton session-card animation-${this.animation}"
           style="width: ${this.width};"
+          aria-busy="true"
+          aria-label="Loading"
         >
           <div class="session-inner">
             <div class="skel-title"></div>
@@ -237,7 +246,12 @@ export class ScSkeleton extends LitElement {
         ? `width: ${this.effectiveHeight}; height: ${this.effectiveHeight};`
         : `width: ${this.width}; height: ${this.effectiveHeight};`;
     return html`
-      <div class="skeleton ${this.variant} animation-${this.animation}" style="${style}"></div>
+      <div
+        class="skeleton ${this.variant} animation-${this.animation}"
+        style="${style}"
+        aria-busy="true"
+        aria-label="Loading"
+      ></div>
     `;
   }
 }
