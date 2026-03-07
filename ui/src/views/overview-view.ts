@@ -180,6 +180,10 @@ export class ScOverviewView extends GatewayAwareLitElement {
       gap: var(--sc-space-xl);
     }
 
+    .activity-sparkline {
+      margin-bottom: var(--sc-space-md);
+    }
+
     .section-label {
       font-size: var(--sc-text-xs);
       font-weight: var(--sc-weight-semibold, 600);
