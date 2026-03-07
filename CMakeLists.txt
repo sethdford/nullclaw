@@ -352,6 +352,7 @@ set(SC_CORE_SOURCES
     src/agent/max_tokens.c
     src/agent/preferences.c
     src/agent/awareness.c
+    src/agent/outcomes.c
     src/agent/episodic.c
     src/agent/reflection.c
     src/providers/error_classify.c
