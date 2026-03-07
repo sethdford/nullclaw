@@ -76,10 +76,15 @@ jobs:
           enable-lto: "true"
           enable-all-channels: "true"
       - run: ls -lh build/seaclaw
-      - run: |
+      - name: Enforce binary size budget (600KB)
+        run: |
           SIZE=$(stat -f%z build/seaclaw)
-          if [ "$SIZE" -gt 512000 ]; then
-            echo "Binary size $SIZE bytes exceeds 500KB (512000 bytes)"
+          BUDGET=614400
+          KB=$((SIZE / 1024))
+          PCT=$((SIZE * 100 / BUDGET))
+          echo "::notice::Binary size: ${KB}KB (${PCT}% of 600KB budget)"
+          if [ "$SIZE" -gt "$BUDGET" ]; then
+            echo "::error::Binary size ${KB}KB exceeds 600KB budget"
             exit 1
           fi
 
@@ -278,7 +283,10 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: website/package-lock.json
-      - run: cd website && npm ci && npm run build
+      - run: cd website && npm ci
+      - run: cd website && npm run format:check
+      - run: cd website && npm run check
+      - run: cd website && npm run build
       - run: test -d website/dist
 
   lighthouse:

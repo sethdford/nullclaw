@@ -1,3 +1,6 @@
+---
+title: Prunable Modules — Binary Size Reduction Candidates
+---
 # Prunable Modules — Binary Size Reduction Candidates
 
 Modules that could be removed or further gated to reduce binary size.

@@ -1,3 +1,6 @@
+---
+title: Component API Reference
+---
 # Component API Reference
 
 Auto-generated from `ui/src/components/`

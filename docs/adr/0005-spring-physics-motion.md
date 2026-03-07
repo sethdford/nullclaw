@@ -1,3 +1,6 @@
+---
+title: ADR-0005: Spring Physics Motion
+---
 # ADR-0005: Spring Physics Motion
 
 - **Status**: accepted

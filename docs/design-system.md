@@ -1,3 +1,6 @@
+---
+title: SeaClaw Design System
+---
 # SeaClaw Design System
 
 Overview of the design system philosophy, tokens, and usage rules for all SeaClaw UI surfaces (web dashboard, website, native apps, CLI/TUI).

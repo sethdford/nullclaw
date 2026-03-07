@@ -54,6 +54,16 @@ if [ -n "$staged_tokens" ]; then
   fi
 fi
 
+# Regenerate website assets when SVG sources or generate script change
+staged_assets=$(git diff --cached --name-only --diff-filter=ACM -- 'website/public/seaclaw.svg' 'website/public/og-image.svg' 'website/scripts/generate-assets.mjs')
+if [ -n "$staged_assets" ]; then
+  if command -v node >/dev/null 2>&1 && [ -f "website/scripts/generate-assets.mjs" ]; then
+    echo "Regenerating website favicon/OG assets..."
+    (cd website && node scripts/generate-assets.mjs)
+    git add website/public/favicon-32.png website/public/apple-touch-icon.png website/public/og-image.png 2>/dev/null
+  fi
+fi
+
 # Lint for raw hex colors in staged CSS/TS/Astro files
 # Skip token definition files (they define the colors themselves)
 if [ -x "scripts/lint-raw-colors.sh" ]; then

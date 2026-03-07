@@ -9,7 +9,7 @@ _seaclaw() {
 
     # Global flags (before or as first argument)
     if [[ $COMP_CWORD -eq 1 ]]; then
-        COMPREPLY=($(compgen -W '--version -v --help -h --mcp agent gateway mcp service service-loop status onboard doctor cron channel skills hardware migrate memory workspace capabilities models auth update version help' -- "$cur"))
+        COMPREPLY=($(compgen -W '--version -v --help -h --mcp agent gateway mcp service service-loop status onboard init doctor cron channel skills hardware migrate memory workspace capabilities models auth update version help persona sandbox' -- "$cur"))
         return
     fi
 
@@ -69,6 +69,16 @@ _seaclaw() {
         update)
             if [[ $COMP_CWORD -eq 2 ]]; then
                 COMPREPLY=($(compgen -W '--check' -- "$cur"))
+            fi
+            ;;
+        persona)
+            if [[ $COMP_CWORD -eq 2 ]]; then
+                COMPREPLY=($(compgen -W 'create show list delete validate feedback export import merge' -- "$cur"))
+            fi
+            ;;
+        sandbox)
+            if [[ $COMP_CWORD -eq 2 ]]; then
+                COMPREPLY=($(compgen -W 'list status' -- "$cur"))
             fi
             ;;
         *)

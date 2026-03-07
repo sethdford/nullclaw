@@ -1,3 +1,6 @@
+---
+title: ADR-0004: W3C Design Tokens
+---
 # ADR-0004: W3C Design Tokens
 
 - **Status**: accepted

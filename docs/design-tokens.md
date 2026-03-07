@@ -1,3 +1,6 @@
+---
+title: Design Tokens Reference
+---
 # Design Tokens Reference
 
 Auto-generated from W3C token files in `design-tokens/`.

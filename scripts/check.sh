@@ -57,7 +57,11 @@ fi
 info "Step 2/4: cmake configure..."
 BUILD_DIR="build-check"
 mkdir -p "$BUILD_DIR"
-(cd "$BUILD_DIR" && cmake .. -DCMAKE_BUILD_TYPE=Debug -DSC_ENABLE_ALL_CHANNELS=ON) >/dev/null 2>&1
+CURL_FLAG=""
+case "$(uname -s)" in
+  Linux) CURL_FLAG="-DSC_ENABLE_CURL=ON" ;;
+esac
+(cd "$BUILD_DIR" && cmake .. -DCMAKE_BUILD_TYPE=Debug -DSC_ENABLE_ALL_CHANNELS=ON $CURL_FLAG) >/dev/null 2>&1
 if [ $? -eq 0 ]; then
     info "  cmake configure: pass"
     PASS=$((PASS + 1))

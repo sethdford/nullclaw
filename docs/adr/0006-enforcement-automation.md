@@ -1,3 +1,6 @@
+---
+title: ADR-0006: Enforcement Automation
+---
 # ADR-0006: Enforcement Automation
 
 - **Status**: accepted

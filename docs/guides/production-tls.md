@@ -1,3 +1,6 @@
+---
+title: Production TLS / Reverse Proxy Setup
+---
 # Production TLS / Reverse Proxy Setup
 
 SeaClaw gateway serves HTTP. Terminate TLS at a reverse proxy.

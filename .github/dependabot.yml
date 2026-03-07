@@ -32,3 +32,27 @@ updates:
     groups:
       design-tokens-deps:
         patterns: ["*"]
+
+  - package-ecosystem: swift
+    directory: /apps/shared/SeaClawKit
+    schedule:
+      interval: weekly
+    groups:
+      seaclawkit-deps:
+        patterns: ["*"]
+
+  - package-ecosystem: swift
+    directory: /apps/ios
+    schedule:
+      interval: weekly
+    groups:
+      ios-deps:
+        patterns: ["*"]
+
+  - package-ecosystem: swift
+    directory: /apps/macos
+    schedule:
+      interval: weekly
+    groups:
+      macos-deps:
+        patterns: ["*"]

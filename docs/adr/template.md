@@ -1,3 +1,6 @@
+---
+title: ADR-{NUMBER}: {TITLE}
+---
 # ADR-{NUMBER}: {TITLE}
 
 - **Status**: {proposed | accepted | deprecated | superseded}

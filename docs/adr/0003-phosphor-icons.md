@@ -1,3 +1,6 @@
+---
+title: ADR-0003: Phosphor Icons
+---
 # ADR-0003: Phosphor Icons
 
 - **Status**: accepted

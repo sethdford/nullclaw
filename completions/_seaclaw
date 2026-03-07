@@ -38,6 +38,9 @@ _seaclaw() {
                 update:Check for updates
                 version:Show version information
                 help:Show help information
+                init:Initialize configuration
+                persona:Persona management
+                sandbox:Sandbox management
             )'
             ;;
         args)
@@ -122,6 +125,25 @@ _seaclaw() {
                 update)
                     _describe 'update option' '(
                         --check:Check only, do not update
+                    )'
+                    ;;
+                persona)
+                    _describe 'persona subcommand' '(
+                        create:Create a persona
+                        show:Show persona details
+                        list:List personas
+                        delete:Delete a persona
+                        validate:Validate persona JSON
+                        feedback:Apply feedback
+                        export:Export persona
+                        import:Import persona
+                        merge:Merge personas
+                    )'
+                    ;;
+                sandbox)
+                    _describe 'sandbox subcommand' '(
+                        list:List sandbox backends
+                        status:Sandbox status
                     )'
                     ;;
             esac

@@ -1,3 +1,6 @@
+---
+title: ADR-0001: C11 Vtable Architecture
+---
 # ADR-0001: C11 Vtable Architecture
 
 - **Status**: accepted

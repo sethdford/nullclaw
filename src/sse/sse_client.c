@@ -217,8 +217,11 @@ static sc_error_t process_buffer(sse_ctx_t *ctx) {
                         ctx->alloc->free(ctx->alloc->ctx, event_type, event_type_len + 1);
                     event_type_len = value_len;
                     event_type = (char *)ctx->alloc->alloc(ctx->alloc->ctx, value_len + 1);
-                    if (!event_type)
+                    if (!event_type) {
+                        if (data)
+                            ctx->alloc->free(ctx->alloc->ctx, data, data_cap);
                         return SC_ERR_OUT_OF_MEMORY;
+                    }
                     memcpy(event_type, value, value_len);
                     event_type[value_len] = '\0';
                 }

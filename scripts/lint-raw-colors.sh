@@ -2,6 +2,10 @@
 # Lints staged CSS, Astro, and TS files for raw hex color values that should use
 # --sc-* design tokens instead. Runs as part of .githooks/pre-commit.
 #
+# Usage:
+#   lint-raw-colors.sh        Check only staged files (default, for pre-commit)
+#   lint-raw-colors.sh --all  Check all CSS/TS/Astro files in ui/src and website/src
+#
 # Allowed patterns:
 #   - Token definitions (--sc-*: #hex or --sc-web-*: #hex)
 #   - Generated token files (_tokens.css)
@@ -10,10 +14,19 @@
 #   - Comments
 set -euo pipefail
 
-STAGED=$(git diff --cached --name-only --diff-filter=ACM -- \
-  '*.css' '*.astro' '*.ts' '*.tsx' 2>/dev/null || true)
+MODE="staged"
+if [ "${1:-}" = "--all" ]; then
+  MODE="all"
+fi
 
-if [ -z "$STAGED" ]; then
+if [ "$MODE" = "all" ]; then
+  FILES=$(find ui/src website/src \( -name '*.css' -o -name '*.ts' -o -name '*.tsx' -o -name '*.astro' \) 2>/dev/null || true)
+else
+  FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.css' '*.ts' '*.tsx' '*.astro' 2>/dev/null || true)
+fi
+
+if [ -z "$FILES" ]; then
+  echo "No files to check."
   exit 0
 fi
 
@@ -24,7 +37,11 @@ while IFS= read -r file; do
     */_tokens.css|design-tokens/*|*/generate-assets*|*.svg|*.json|docs/tokens.*|*/DesignTokens.*|*/design_tokens.*|website/src/pages/index.astro) continue ;;
   esac
 
-  content=$(git show ":$file" 2>/dev/null) || continue
+  if [ "$MODE" = "all" ]; then
+    content=$(cat "$file" 2>/dev/null) || continue
+  else
+    content=$(git show ":$file" 2>/dev/null) || continue
+  fi
 
   lineno=0
   in_print_media=0
@@ -66,7 +83,7 @@ while IFS= read -r file; do
       VIOLATIONS=$((VIOLATIONS + 1))
     fi
   done <<< "$content"
-done <<< "$STAGED"
+done <<< "$FILES"
 
 if [ "$VIOLATIONS" -gt 0 ]; then
   echo ""

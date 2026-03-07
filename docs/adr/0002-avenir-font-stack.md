@@ -1,3 +1,6 @@
+---
+title: ADR-0002: Avenir Font Stack
+---
 # ADR-0002: Avenir Font Stack
 
 - **Status**: accepted

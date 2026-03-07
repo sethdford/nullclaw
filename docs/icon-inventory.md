@@ -1,3 +1,6 @@
+---
+title: Icon Inventory
+---
 # Icon Inventory
 
 Auto-generated from `ui/src/icons.ts`

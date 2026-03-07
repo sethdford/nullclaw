@@ -237,8 +237,19 @@ static sc_error_t parse_providers(sc_allocator_t *a, sc_config_t *cfg, const sc_
         providers[n].native_tools = sc_json_get_bool(item, "native_tools", true);
         providers[n].ws_streaming = sc_json_get_bool(item, "ws_streaming", false);
 
-        if (providers[n].name)
+        if (providers[n].name) {
             n++;
+        } else {
+            /* OOM on name; free partial allocations before next iteration overwrites */
+            if (providers[n].api_key) {
+                a->free(a->ctx, providers[n].api_key, strlen(providers[n].api_key) + 1);
+                providers[n].api_key = NULL;
+            }
+            if (providers[n].base_url) {
+                a->free(a->ctx, providers[n].base_url, strlen(providers[n].base_url) + 1);
+                providers[n].base_url = NULL;
+            }
+        }
     }
     cfg->providers = providers;
     cfg->providers_len = n;
@@ -778,9 +789,10 @@ static void parse_telegram_channel(sc_allocator_t *a, sc_config_t *cfg,
     sc_telegram_channel_config_t *t = &cfg->channels.telegram;
 
     const sc_json_value_t *val = obj;
-    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items)
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items &&
+        obj->data.array.items[0])
         val = obj->data.array.items[0];
-    if (val->type != SC_JSON_OBJECT)
+    if (!val || val->type != SC_JSON_OBJECT)
         return;
 
     const char *s = sc_json_get_string(val, "token");
@@ -812,9 +824,10 @@ static void parse_discord_channel(sc_allocator_t *a, sc_config_t *cfg, const sc_
     sc_discord_channel_config_t *d = &cfg->channels.discord;
 
     const sc_json_value_t *val = obj;
-    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items)
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items &&
+        obj->data.array.items[0])
         val = obj->data.array.items[0];
-    if (val->type != SC_JSON_OBJECT)
+    if (!val || val->type != SC_JSON_OBJECT)
         return;
 
     const char *s = sc_json_get_string(val, "token");
@@ -858,9 +871,10 @@ static void parse_slack_channel(sc_allocator_t *a, sc_config_t *cfg, const sc_js
         return;
     sc_slack_channel_config_t *sl = &cfg->channels.slack;
     const sc_json_value_t *val = obj;
-    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items)
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items &&
+        obj->data.array.items[0])
         val = obj->data.array.items[0];
-    if (val->type != SC_JSON_OBJECT)
+    if (!val || val->type != SC_JSON_OBJECT)
         return;
     const char *s = sc_json_get_string(val, "token");
     if (s) {
@@ -889,9 +903,10 @@ static void parse_whatsapp_channel(sc_allocator_t *a, sc_config_t *cfg,
         return;
     sc_whatsapp_channel_config_t *wa = &cfg->channels.whatsapp;
     const sc_json_value_t *val = obj;
-    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items)
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items &&
+        obj->data.array.items[0])
         val = obj->data.array.items[0];
-    if (val->type != SC_JSON_OBJECT)
+    if (!val || val->type != SC_JSON_OBJECT)
         return;
     const char *s = sc_json_get_string(val, "phone_number_id");
     if (s) {
@@ -918,9 +933,10 @@ static void parse_line_channel(sc_allocator_t *a, sc_config_t *cfg, const sc_jso
         return;
     sc_line_channel_config_t *ln = &cfg->channels.line;
     const sc_json_value_t *val = obj;
-    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items)
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items &&
+        obj->data.array.items[0])
         val = obj->data.array.items[0];
-    if (val->type != SC_JSON_OBJECT)
+    if (!val || val->type != SC_JSON_OBJECT)
         return;
     const char *s = sc_json_get_string(val, "channel_token");
     if (s) {
@@ -948,9 +964,10 @@ static void parse_google_chat_channel(sc_allocator_t *a, sc_config_t *cfg,
         return;
     sc_google_chat_channel_config_t *gc = &cfg->channels.google_chat;
     const sc_json_value_t *val = obj;
-    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items)
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items &&
+        obj->data.array.items[0])
         val = obj->data.array.items[0];
-    if (val->type != SC_JSON_OBJECT)
+    if (!val || val->type != SC_JSON_OBJECT)
         return;
     const char *s = sc_json_get_string(val, "webhook_url");
     if (s) {
@@ -966,9 +983,10 @@ static void parse_facebook_channel(sc_allocator_t *a, sc_config_t *cfg,
         return;
     sc_facebook_channel_config_t *fb = &cfg->channels.facebook;
     const sc_json_value_t *val = obj;
-    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items)
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items &&
+        obj->data.array.items[0])
         val = obj->data.array.items[0];
-    if (val->type != SC_JSON_OBJECT)
+    if (!val || val->type != SC_JSON_OBJECT)
         return;
     const char *s = sc_json_get_string(val, "page_id");
     if (s) {
@@ -1002,9 +1020,10 @@ static void parse_instagram_channel(sc_allocator_t *a, sc_config_t *cfg,
         return;
     sc_instagram_channel_config_t *ig = &cfg->channels.instagram;
     const sc_json_value_t *val = obj;
-    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items)
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items &&
+        obj->data.array.items[0])
         val = obj->data.array.items[0];
-    if (val->type != SC_JSON_OBJECT)
+    if (!val || val->type != SC_JSON_OBJECT)
         return;
     const char *s = sc_json_get_string(val, "business_account_id");
     if (s) {
@@ -1037,9 +1056,10 @@ static void parse_twitter_channel(sc_allocator_t *a, sc_config_t *cfg, const sc_
         return;
     sc_twitter_channel_config_t *tw = &cfg->channels.twitter;
     const sc_json_value_t *val = obj;
-    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items)
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items &&
+        obj->data.array.items[0])
         val = obj->data.array.items[0];
-    if (val->type != SC_JSON_OBJECT)
+    if (!val || val->type != SC_JSON_OBJECT)
         return;
     const char *s = sc_json_get_string(val, "api_key");
     if (s) {
@@ -1079,9 +1099,10 @@ static void parse_google_rcs_channel(sc_allocator_t *a, sc_config_t *cfg,
         return;
     sc_google_rcs_channel_config_t *rcs = &cfg->channels.google_rcs;
     const sc_json_value_t *val = obj;
-    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items)
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items &&
+        obj->data.array.items[0])
         val = obj->data.array.items[0];
-    if (val->type != SC_JSON_OBJECT)
+    if (!val || val->type != SC_JSON_OBJECT)
         return;
     const char *s = sc_json_get_string(val, "agent_id");
     if (s) {

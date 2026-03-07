@@ -16,10 +16,8 @@ sc_error_t sc_web_search_tavily(sc_allocator_t *alloc, const char *query, size_t
     if (query_len == 0 || count < 1 || count > 10)
         return SC_ERR_INVALID_ARGUMENT;
 
-    /* Build JSON body: {"api_key":"...","query":"...","max_results":N,"search_depth":"basic",...}
-     */
     char body_buf[2048];
-    /* Escape query for JSON */
+    /* Escape query and api_key for safe JSON interpolation */
     char escaped[1024];
     size_t ej = 0;
     for (size_t i = 0; i < query_len && ej + 2 < sizeof(escaped); i++) {
@@ -38,11 +36,24 @@ sc_error_t sc_web_search_tavily(sc_allocator_t *alloc, const char *query, size_t
     }
     escaped[ej] = '\0';
 
+    char key_escaped[512];
+    size_t kj = 0;
+    size_t key_len = strlen(api_key);
+    for (size_t i = 0; i < key_len && kj + 2 < sizeof(key_escaped); i++) {
+        char c = api_key[i];
+        if (c == '"' || c == '\\') {
+            key_escaped[kj++] = '\\';
+            key_escaped[kj++] = c;
+        } else if ((unsigned char)c >= 32)
+            key_escaped[kj++] = c;
+    }
+    key_escaped[kj] = '\0';
+
     int n = snprintf(
         body_buf, sizeof(body_buf),
         "{\"api_key\":\"%s\",\"query\":\"%s\",\"max_results\":%d,\"search_depth\":\"basic\","
         "\"include_answer\":false,\"include_raw_content\":false,\"include_images\":false}",
-        api_key, escaped, count);
+        key_escaped, escaped, count);
     if (n <= 0 || (size_t)n >= sizeof(body_buf)) {
         *out = sc_tool_result_fail("Request body too long", 21);
         return SC_OK;

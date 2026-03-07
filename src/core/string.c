@@ -1,5 +1,6 @@
 #include "seaclaw/core/string.h"
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -43,6 +44,8 @@ char *sc_str_dup(sc_allocator_t *alloc, sc_str_t s) {
 }
 
 char *sc_str_concat(sc_allocator_t *alloc, sc_str_t a, sc_str_t b) {
+    if (a.len > SIZE_MAX - b.len)
+        return NULL;
     size_t total = a.len + b.len;
     char *out = (char *)alloc->alloc(alloc->ctx, total + 1);
     if (!out)
@@ -65,10 +68,17 @@ char *sc_str_join(sc_allocator_t *alloc, const sc_str_t *parts, size_t count, sc
 
     size_t total = 0;
     for (size_t i = 0; i < count; i++) {
+        if (parts[i].len > SIZE_MAX - total)
+            return NULL;
         total += parts[i].len;
-        if (i + 1 < count)
+        if (i + 1 < count) {
+            if (sep.len > SIZE_MAX - total)
+                return NULL;
             total += sep.len;
+        }
     }
+    if (total > SIZE_MAX - 1)
+        return NULL;
 
     char *out = (char *)alloc->alloc(alloc->ctx, total + 1);
     if (!out)
