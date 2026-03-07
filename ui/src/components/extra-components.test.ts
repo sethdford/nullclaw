@@ -45,6 +45,53 @@ import "./sc-chart.js";
 import "./sc-json-viewer.js";
 import "./sc-pagination.js";
 import "./sc-data-table-v2.js";
+import "./sc-checkbox.js";
+
+describe("sc-checkbox", () => {
+  it("should be defined as a custom element", () => {
+    expect(customElements.get("sc-checkbox")).toBeDefined();
+  });
+
+  it("should be creatable", () => {
+    const el = document.createElement("sc-checkbox");
+    expect(el).toBeInstanceOf(HTMLElement);
+  });
+
+  it("should default checked to false", () => {
+    const el = document.createElement("sc-checkbox") as any;
+    expect(el.checked).toBe(false);
+  });
+
+  it("should toggle on click", async () => {
+    const el = document.createElement("sc-checkbox") as any;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const events: any[] = [];
+    el.addEventListener("sc-change", (e: any) => events.push(e.detail));
+    (el.shadowRoot?.querySelector('[role="checkbox"]') as HTMLElement)?.click();
+    expect(events.length).toBe(1);
+    expect(events[0].checked).toBe(true);
+    el.remove();
+  });
+
+  it("should not toggle when disabled", async () => {
+    const el = document.createElement("sc-checkbox") as any;
+    el.disabled = true;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const events: any[] = [];
+    el.addEventListener("sc-change", (e: any) => events.push(e.detail));
+    (el.shadowRoot?.querySelector('[role="checkbox"]') as HTMLElement)?.click();
+    expect(events.length).toBe(0);
+    el.remove();
+  });
+
+  it("should support label", () => {
+    const el = document.createElement("sc-checkbox") as any;
+    el.label = "Accept terms";
+    expect(el.label).toBe("Accept terms");
+  });
+});
 
 describe("sc-pagination", () => {
   it("should be defined as a custom element", () => {
