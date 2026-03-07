@@ -218,9 +218,10 @@ sc_error_t sc_imessage_create(sc_allocator_t *alloc, const char *default_target,
                               size_t allow_from_count, sc_channel_t *out) {
     if (!alloc || !out)
         return SC_ERR_INVALID_ARGUMENT;
-    sc_imessage_ctx_t *c = (sc_imessage_ctx_t *)calloc(1, sizeof(*c));
+    sc_imessage_ctx_t *c = (sc_imessage_ctx_t *)alloc->alloc(alloc->ctx, sizeof(*c));
     if (!c)
         return SC_ERR_OUT_OF_MEMORY;
+    memset(c, 0, sizeof(*c));
     c->alloc = alloc;
     c->default_target = NULL;
     c->default_target_len = 0;

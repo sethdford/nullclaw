@@ -225,14 +225,17 @@ sc_error_t sc_irc_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel_loop
 
 sc_error_t sc_irc_create(sc_allocator_t *alloc, const char *server, size_t server_len,
                          uint16_t port, sc_channel_t *out) {
-    (void)alloc;
-    sc_irc_ctx_t *c = (sc_irc_ctx_t *)calloc(1, sizeof(*c));
+    if (!alloc || !out)
+        return SC_ERR_INVALID_ARGUMENT;
+    sc_irc_ctx_t *c = (sc_irc_ctx_t *)alloc->alloc(alloc->ctx, sizeof(*c));
     if (!c)
         return SC_ERR_OUT_OF_MEMORY;
+    memset(c, 0, sizeof(*c));
+    c->alloc = alloc;
     if (server && server_len > 0) {
         c->server = (char *)malloc(server_len + 1);
         if (!c->server) {
-            free(c);
+            alloc->free(alloc->ctx, c, sizeof(*c));
             return SC_ERR_OUT_OF_MEMORY;
         }
         memcpy(c->server, server, server_len);
@@ -250,6 +253,7 @@ sc_error_t sc_irc_create(sc_allocator_t *alloc, const char *server, size_t serve
 void sc_irc_destroy(sc_channel_t *ch) {
     if (ch && ch->ctx) {
         sc_irc_ctx_t *c = (sc_irc_ctx_t *)ch->ctx;
+        sc_allocator_t *a = c->alloc;
 #if !SC_IS_TEST
         if (c->connected && c->sock_fd >= 0) {
             close(c->sock_fd);
@@ -259,7 +263,7 @@ void sc_irc_destroy(sc_channel_t *ch) {
 #endif
         if (c->server)
             free(c->server);
-        free(c);
+        a->free(a->ctx, c, sizeof(*c));
         ch->ctx = NULL;
         ch->vtable = NULL;
     }

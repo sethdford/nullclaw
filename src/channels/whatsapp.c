@@ -282,14 +282,15 @@ sc_error_t sc_whatsapp_create(sc_allocator_t *alloc, const char *phone_number_id
                               sc_channel_t *out) {
     if (!alloc || !out)
         return SC_ERR_INVALID_ARGUMENT;
-    sc_whatsapp_ctx_t *c = (sc_whatsapp_ctx_t *)calloc(1, sizeof(*c));
+    sc_whatsapp_ctx_t *c = (sc_whatsapp_ctx_t *)alloc->alloc(alloc->ctx, sizeof(*c));
     if (!c)
         return SC_ERR_OUT_OF_MEMORY;
+    memset(c, 0, sizeof(*c));
     c->alloc = alloc;
     if (phone_number_id && phone_number_id_len > 0) {
         c->phone_number_id = (char *)malloc(phone_number_id_len + 1);
         if (!c->phone_number_id) {
-            free(c);
+            alloc->free(alloc->ctx, c, sizeof(*c));
             return SC_ERR_OUT_OF_MEMORY;
         }
         memcpy(c->phone_number_id, phone_number_id, phone_number_id_len);
@@ -301,7 +302,7 @@ sc_error_t sc_whatsapp_create(sc_allocator_t *alloc, const char *phone_number_id
         if (!c->token) {
             if (c->phone_number_id)
                 free(c->phone_number_id);
-            free(c);
+            alloc->free(alloc->ctx, c, sizeof(*c));
             return SC_ERR_OUT_OF_MEMORY;
         }
         memcpy(c->token, token, token_len);

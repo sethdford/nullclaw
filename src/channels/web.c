@@ -256,11 +256,13 @@ bool sc_web_validate_token(const sc_channel_t *ch, const char *candidate, size_t
 void sc_web_destroy(sc_channel_t *ch) {
     if (ch && ch->ctx) {
         sc_web_ctx_t *c = (sc_web_ctx_t *)ch->ctx;
+        sc_allocator_t *a = c->alloc;
         free_last_event(c);
-        if (c->alloc && c->last_response) {
-            c->alloc->free(c->alloc->ctx, c->last_response, c->last_response_len + 1);
+        if (a && c->last_response) {
+            a->free(a->ctx, c->last_response, c->last_response_len + 1);
         }
-        free(ch->ctx);
+        if (a)
+            a->free(a->ctx, c, sizeof(*c));
         ch->ctx = NULL;
         ch->vtable = NULL;
     }

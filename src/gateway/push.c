@@ -307,6 +307,8 @@ sc_error_t sc_push_register_token(sc_push_manager_t *mgr, const char *device_tok
     }
 
     if (mgr->token_count >= mgr->token_cap) {
+        if (mgr->token_cap > SIZE_MAX / 2)
+            return SC_ERR_OUT_OF_MEMORY;
         size_t new_cap = mgr->token_cap * 2;
         sc_push_token_t *new_tokens = (sc_push_token_t *)mgr->alloc->realloc(
             mgr->alloc->ctx, mgr->tokens, mgr->token_cap * sizeof(sc_push_token_t),

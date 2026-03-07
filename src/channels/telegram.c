@@ -772,9 +772,10 @@ sc_error_t sc_telegram_create_ex(sc_allocator_t *alloc, const char *token, size_
                                  sc_channel_t *out) {
     if (!alloc || !out)
         return SC_ERR_INVALID_ARGUMENT;
-    sc_telegram_ctx_t *c = (sc_telegram_ctx_t *)calloc(1, sizeof(*c));
+    sc_telegram_ctx_t *c = (sc_telegram_ctx_t *)alloc->alloc(alloc->ctx, sizeof(*c));
     if (!c)
         return SC_ERR_OUT_OF_MEMORY;
+    memset(c, 0, sizeof(*c));
     c->alloc = alloc;
     c->last_update_id = 0;
     c->allow_from = allow_from;
@@ -782,7 +783,7 @@ sc_error_t sc_telegram_create_ex(sc_allocator_t *alloc, const char *token, size_
     if (token && token_len > 0) {
         c->token = (char *)malloc(token_len + 1);
         if (!c->token) {
-            free(c);
+            alloc->free(alloc->ctx, c, sizeof(*c));
             return SC_ERR_OUT_OF_MEMORY;
         }
         memcpy(c->token, token, token_len);
@@ -797,11 +798,12 @@ sc_error_t sc_telegram_create_ex(sc_allocator_t *alloc, const char *token, size_
 void sc_telegram_destroy(sc_channel_t *ch) {
     if (ch && ch->ctx) {
         sc_telegram_ctx_t *c = (sc_telegram_ctx_t *)ch->ctx;
-        if (c->stream_text && c->alloc)
-            c->alloc->free(c->alloc->ctx, c->stream_text, c->stream_text_cap + 1);
+        sc_allocator_t *a = c->alloc;
+        if (c->stream_text && a)
+            a->free(a->ctx, c->stream_text, c->stream_text_cap + 1);
         if (c->token)
             free(c->token);
-        free(c);
+        a->free(a->ctx, c, sizeof(*c));
         ch->ctx = NULL;
         ch->vtable = NULL;
     }
