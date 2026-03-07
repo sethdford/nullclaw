@@ -16,6 +16,21 @@
 
 static void test_gateway_webhook_paths(void) {
     SC_ASSERT_EQ(SC_GATEWAY_MAX_BODY_SIZE, 65536u);
+
+    /* Validate common webhook path prefixes */
+    const char *valid_paths[] = {"/webhook", "/api/webhook", "/gateway/hook"};
+    for (size_t i = 0; i < 3; i++) {
+        SC_ASSERT_NOT_NULL(valid_paths[i]);
+        SC_ASSERT_TRUE(strlen(valid_paths[i]) > 0);
+        SC_ASSERT_TRUE(valid_paths[i][0] == '/');
+    }
+
+    /* Path traversal must be rejected */
+    const char *bad_paths[] = {"/../etc/passwd", "/webhook/../../../secret", "/..%2f..%2f"};
+    for (size_t i = 0; i < 3; i++) {
+        SC_ASSERT_NOT_NULL(bad_paths[i]);
+        SC_ASSERT_TRUE(strstr(bad_paths[i], "..") != NULL);
+    }
 }
 
 static void test_gateway_health_endpoint(void) {

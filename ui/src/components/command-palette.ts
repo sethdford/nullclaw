@@ -26,7 +26,7 @@ const NAV_ICON_MAP: Record<string, TemplateResult> = {
   security: icons.shield,
   nodes: icons.server,
   usage: icons["bar-chart"],
-  logs: icons["file-text"],
+  logs: icons.terminal,
 };
 
 const NAV_ITEMS: { id: string; label: string }[] = [

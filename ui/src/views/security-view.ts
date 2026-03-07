@@ -2,6 +2,8 @@ import { html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { GatewayAwareLitElement } from "../gateway-aware.js";
 import { icons } from "../icons.js";
+import { ScToast } from "../components/sc-toast.js";
+import "../components/sc-toast.js";
 import "../components/sc-page-hero.js";
 import "../components/sc-section-header.js";
 import "../components/sc-stat-card.js";
@@ -114,6 +116,12 @@ export class ScSecurityView extends GatewayAwareLitElement {
     }
     .policy-value.warning {
       color: var(--sc-warning);
+    }
+    .control-row {
+      display: flex;
+      align-items: center;
+      gap: var(--sc-space-sm);
+      margin-top: var(--sc-space-md);
     }
     .domain-list {
       display: flex;
@@ -251,9 +259,52 @@ export class ScSecurityView extends GatewayAwareLitElement {
             >
           </div>
           <div class="description">${info.description}</div>
+          <div class="control-row">
+            <label class="policy-label" for="autonomy-select">Change level</label>
+            <select
+              id="autonomy-select"
+              .value=${String(this.autonomyLevel)}
+              @change=${this._onAutonomyChange}
+              style="
+                font-family: var(--sc-font);
+                font-size: var(--sc-text-sm);
+                padding: var(--sc-space-xs) var(--sc-space-sm);
+                border-radius: var(--sc-radius-sm);
+                border: 1px solid var(--sc-border-subtle);
+                background: var(--sc-bg-elevated);
+                color: var(--sc-text);
+              "
+            >
+              <option value="0">0 — Read-Only</option>
+              <option value="1">1 — Supervised</option>
+              <option value="2">2 — Full Autonomy</option>
+            </select>
+          </div>
         </div>
       </sc-card>
     `;
+  }
+
+  private async _onAutonomyChange(e: Event): Promise<void> {
+    const select = e.target as HTMLSelectElement;
+    const level = parseInt(select.value, 10);
+    const gw = this.gateway;
+    if (!gw) return;
+    try {
+      await gw.request("config.set", {
+        key: "security.autonomy_level",
+        value: level,
+      });
+      if (this.config) {
+        this.config = { ...this.config, autonomy_level: level };
+      }
+      ScToast.show({ message: `Autonomy level set to ${level}`, variant: "success" });
+    } catch (err) {
+      ScToast.show({
+        message: err instanceof Error ? err.message : "Failed to update",
+        variant: "error",
+      });
+    }
   }
 
   private _renderSandbox() {

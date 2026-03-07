@@ -347,10 +347,11 @@ export class ScChatView extends GatewayAwareLitElement {
 
   private async _handleSend(
     message: string,
-    files?: Array<{ name: string; size: number; type: string }>,
+    files?: Array<{ name: string; size: number; type: string; dataUrl?: string }>,
   ): Promise<void> {
     if (!message || !this.gateway) return;
     this.inputValue = "";
+    const attachments: Array<{ name: string; type: string; data: string }> = [];
     if (files?.length) {
       for (const f of files) {
         this.chat.items = [
@@ -358,16 +359,23 @@ export class ScChatView extends GatewayAwareLitElement {
           {
             type: "message",
             role: "user",
-            content: `[Attached file: ${f.name} (${(f.size / 1024).toFixed(1)} KB)]`,
+            content: `📎 ${f.name} (${(f.size / 1024).toFixed(1)} KB)`,
             ts: Date.now(),
           },
         ];
+        if (f.dataUrl) {
+          attachments.push({ name: f.name, type: f.type, data: f.dataUrl });
+        }
       }
       this.chat.cacheMessages(this.sessionKey);
       this.requestUpdate();
     }
     try {
-      await this.chat.send(message, this.sessionKey);
+      await this.chat.send(
+        message,
+        this.sessionKey,
+        attachments.length > 0 ? attachments : undefined,
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to send message";
       ScToast.show({ message: msg, variant: "error" });
@@ -466,7 +474,7 @@ export class ScChatView extends GatewayAwareLitElement {
             @sc-send=${(
               e: CustomEvent<{
                 message: string;
-                files?: Array<{ name: string; size: number; type: string }>;
+                files?: Array<{ name: string; size: number; type: string; dataUrl?: string }>;
               }>,
             ) => this._handleSend(e.detail.message, e.detail.files)}
             @sc-use-suggestion=${(e: CustomEvent<{ text: string }>) =>

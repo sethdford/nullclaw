@@ -125,28 +125,88 @@ function handleRequest(method: string, _params?: Record<string, unknown>): unkno
       };
     case "activity.recent":
       return { events: DEMO_EVENTS };
+    case "agents.list":
+      return {
+        agents: [
+          {
+            name: "main",
+            status: "idle",
+            model: "claude-sonnet-4-20250514",
+            turns: 142,
+            uptime: 86400,
+          },
+          { name: "researcher", status: "running", model: "gpt-4o", turns: 37, uptime: 3600 },
+          { name: "coder", status: "idle", model: "gemini-2.5-pro", turns: 89, uptime: 7200 },
+        ],
+      };
+    case "models.list":
+      return {
+        providers: [
+          {
+            name: "openrouter",
+            label: "OpenRouter",
+            configured: true,
+            models: ["claude-sonnet-4-20250514", "gpt-4o", "gemini-2.5-pro"],
+          },
+          {
+            name: "anthropic",
+            label: "Anthropic",
+            configured: true,
+            models: ["claude-sonnet-4-20250514", "claude-3-haiku"],
+          },
+          { name: "openai", label: "OpenAI", configured: false, models: ["gpt-4o", "gpt-4o-mini"] },
+          { name: "ollama", label: "Ollama", configured: true, models: ["llama3.1", "mistral"] },
+          {
+            name: "gemini",
+            label: "Google Gemini",
+            configured: true,
+            models: ["gemini-2.5-pro", "gemini-2.0-flash"],
+          },
+        ],
+      };
+    case "tools.list":
+      return {
+        tools: [
+          { name: "shell", enabled: true, description: "Execute shell commands" },
+          { name: "file_write", enabled: true, description: "Write content to files" },
+          { name: "file_edit", enabled: true, description: "Edit existing files" },
+          { name: "git", enabled: true, description: "Git operations" },
+          { name: "web_search", enabled: true, description: "Search the web" },
+          { name: "web_fetch", enabled: true, description: "Fetch URL content" },
+          { name: "browser_open", enabled: true, description: "Open browser tabs" },
+          { name: "memory_store", enabled: true, description: "Store to memory" },
+          { name: "memory_recall", enabled: true, description: "Recall from memory" },
+          { name: "cron_add", enabled: false, description: "Add scheduled tasks" },
+          { name: "analytics", enabled: true, description: "Usage analytics" },
+          { name: "screenshot", enabled: true, description: "Take screenshots" },
+        ],
+      };
     case "config.get":
       return {
-        exists: true,
-        raw: JSON.stringify(
-          {
-            default_provider: "openai",
-            default_model: "gpt-4o",
-            workspace_dir: "~/projects",
+        provider: "openrouter",
+        model: "claude-sonnet-4-20250514",
+        channels: { telegram: { enabled: true }, discord: { enabled: true } },
+        security: {
+          autonomy_level: 1,
+          sandbox: "auto",
+          sandbox_config: {
+            enabled: true,
+            backend: "landlock",
+            net_proxy: {
+              enabled: true,
+              deny_all: false,
+              allowed_domains: ["api.openai.com", "api.anthropic.com", "openrouter.ai"],
+            },
           },
-          null,
-          2,
-        ),
-        workspace_dir: "~/projects",
-        default_provider: "openai",
-        default_model: "gpt-4o",
-        max_tokens: 0,
-        temperature: 0.7,
+        },
+        gateway: { require_pairing: true },
+        memory: { backend: "sqlite", auto_save: true },
+        agent: { persona: "default", max_turns: 50 },
       };
     case "config.schema":
       return { schema: { type: "object", properties: {} } };
     case "config.set":
-      return { saved: true };
+      return { ok: true };
     case "tools.catalog":
       return {
         tools: [
@@ -158,55 +218,61 @@ function handleRequest(method: string, _params?: Record<string, unknown>): unkno
           { name: "web_fetch", description: "Fetch URL contents", category: "web" },
         ],
       };
-    case "models.list":
+    case "cron.list":
       return {
-        models: [
-          { id: "gpt-4o", provider: "openai", context_window: 128000 },
-          { id: "claude-sonnet-4-20250514", provider: "anthropic", context_window: 200000 },
-          { id: "gemini-2.5-pro", provider: "gemini", context_window: 1000000 },
-        ],
-        providers: [
+        jobs: [
           {
-            name: "openai",
-            has_key: true,
-            base_url: "https://api.openai.com",
-            native_tools: true,
-            is_default: true,
+            id: "j1",
+            type: "agent",
+            schedule: "0 9 * * *",
+            prompt: "Summarize overnight emails",
+            enabled: true,
+            last_run: Date.now() - 3600000,
           },
           {
-            name: "anthropic",
-            has_key: true,
-            base_url: "https://api.anthropic.com",
-            native_tools: true,
-            is_default: false,
+            id: "j2",
+            type: "shell",
+            schedule: "*/30 * * * *",
+            command: "git pull && npm test",
+            enabled: true,
+            last_run: Date.now() - 1800000,
           },
           {
-            name: "gemini",
-            has_key: true,
-            base_url: "https://api.gemini.google.com",
-            native_tools: true,
-            is_default: false,
-          },
-        ],
-        default_model: "gpt-4o",
-      };
-    case "nodes.list":
-      return {
-        nodes: [
-          {
-            id: "local",
-            hostname: "localhost",
-            status: "healthy",
-            uptime_seconds: 86400,
-            type: "gateway",
+            id: "j3",
+            type: "agent",
+            schedule: "0 18 * * 1-5",
+            prompt: "Generate daily standup report",
+            enabled: false,
           },
         ],
       };
     case "skills.list":
       return {
         skills: [
-          { name: "code-review", enabled: true, description: "Review code for issues" },
-          { name: "test-gen", enabled: false, description: "Generate unit tests" },
+          {
+            name: "web-research",
+            description: "Deep web research with citations",
+            installed: true,
+            enabled: true,
+          },
+          {
+            name: "code-review",
+            description: "Automated code review with suggestions",
+            installed: true,
+            enabled: true,
+          },
+          {
+            name: "data-analysis",
+            description: "Analyze CSV and JSON datasets",
+            installed: false,
+            enabled: false,
+          },
+          {
+            name: "image-gen",
+            description: "Generate images via DALL-E or Stable Diffusion",
+            installed: false,
+            enabled: false,
+          },
         ],
       };
     case "skills.enable":
@@ -215,37 +281,35 @@ function handleRequest(method: string, _params?: Record<string, unknown>): unkno
       return { ok: true };
     case "usage.summary":
       return {
-        session_cost_usd: 0.42,
-        daily_cost_usd: 3.14,
-        monthly_cost_usd: 28.5,
-        total_tokens: 125000,
-        request_count: 47,
+        total_tokens: 1_247_832,
+        total_cost: 18.42,
+        turns_today: 67,
+        turns_week: 412,
+        by_provider: [
+          { provider: "openrouter", tokens: 892_100, cost: 12.3 },
+          { provider: "anthropic", tokens: 245_732, cost: 4.92 },
+          { provider: "ollama", tokens: 110_000, cost: 0 },
+        ],
       };
-    case "cron.list":
+    case "nodes.list":
       return {
-        jobs: [
-          {
-            id: 1,
-            name: "Daily Backup",
-            schedule: "0 2 * * *",
-            enabled: true,
-            last_run: Date.now() - 86400000,
-          },
+        nodes: [
+          { id: "local", name: "Local", status: "healthy", uptime: 172800, version: "0.42.0" },
         ],
       };
     case "cron.runs":
       return { runs: [] };
     case "cron.add":
-      return { id: Date.now() };
     case "cron.update":
-    case "cron.run":
     case "cron.remove":
+      return { ok: true };
+    case "cron.run":
       return { ok: true };
     case "sessions.patch":
     case "sessions.delete":
       return { ok: true };
     case "chat.send":
-      return { status: "ok", sessionKey: "demo-session" };
+      return {};
     case "persona.set":
       return { ok: true };
     default:

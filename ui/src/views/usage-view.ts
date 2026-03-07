@@ -9,6 +9,7 @@ import "../components/sc-card.js";
 import "../components/sc-skeleton.js";
 import "../components/sc-empty-state.js";
 import "../components/sc-animated-number.js";
+import "../components/sc-sparkline-enhanced.js";
 
 interface UsageSummary {
   session_cost_usd?: number;
@@ -16,6 +17,7 @@ interface UsageSummary {
   monthly_cost_usd?: number;
   total_tokens?: number;
   request_count?: number;
+  token_trend?: number[];
 }
 
 @customElement("sc-usage-view")
@@ -316,6 +318,7 @@ export class ScUsageView extends GatewayAwareLitElement {
             `
           : html`
               ${this._renderStats(sessionCost, dailyCost, monthlyCost, totalTokens, requestCount)}
+              ${this._renderTokenTrend()}
               ${this._renderChart(sessionCost, dailyCost, monthlyCost, maxCost)}
             `}
     `;

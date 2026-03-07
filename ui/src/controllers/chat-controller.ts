@@ -60,7 +60,11 @@ export class ChatController implements ReactiveController {
     this._stopStreamTimer();
   }
 
-  async send(text: string, sessionKey: string): Promise<void> {
+  async send(
+    text: string,
+    sessionKey: string,
+    attachments?: Array<{ name: string; type: string; data: string }>,
+  ): Promise<void> {
     const gw = this._getGateway();
     if (!gw) return;
 
@@ -72,7 +76,11 @@ export class ChatController implements ReactiveController {
     this._requestUpdate();
 
     try {
-      await gw.request("chat.send", { message: text, sessionKey });
+      await gw.request("chat.send", {
+        message: text,
+        sessionKey,
+        ...(attachments?.length ? { attachments } : {}),
+      });
     } catch (err) {
       this.isWaiting = false;
       this._stopStreamTimer();

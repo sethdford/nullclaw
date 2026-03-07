@@ -83,7 +83,7 @@ const MORE_TABS: { id: TabId; label: string; icon: ReturnType<typeof html> }[] =
   { id: "models", label: "Models", icon: icons.cpu },
   { id: "channels", label: "Channels", icon: icons["message-square"] },
   { id: "automations", label: "Automations", icon: icons.timer },
-  { id: "skills", label: "Skills", icon: icons.zap },
+  { id: "skills", label: "Skills", icon: icons.puzzle },
   { id: "voice", label: "Voice", icon: icons.mic },
   { id: "nodes", label: "Nodes", icon: icons.server },
   { id: "usage", label: "Usage", icon: icons["bar-chart"] },
@@ -404,9 +404,7 @@ export class ScApp extends LitElement {
       ? (new DemoGatewayClient() as unknown as GatewayClient)
       : new GatewayClientClass();
     setGateway(this.gateway);
-    this.gateway.addEventListener("status", ((e: CustomEvent<GatewayStatus>) => {
-      this.connectionStatus = e.detail;
-    }) as EventListener);
+    this.gateway.addEventListener("status", this._statusHandler);
 
     this.sidebarCollapsed = localStorage.getItem(SIDEBAR_KEY) === "true";
     document.addEventListener("keydown", this._keyHandler);
@@ -444,6 +442,7 @@ export class ScApp extends LitElement {
     document.removeEventListener("keydown", this._keyHandler);
     window.removeEventListener("hashchange", this._hashHandler);
     dynamicLight.stop();
+    this.gateway?.removeEventListener("status", this._statusHandler);
     this.gateway?.disconnect();
   }
 
