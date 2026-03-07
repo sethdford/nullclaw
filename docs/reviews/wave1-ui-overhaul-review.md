@@ -20,7 +20,11 @@
 function isSafeHref(href: string): boolean {
   try {
     const u = new URL(href, "https://example.com");
-    return ["https:", "http:", "mailto:", "tel:"].includes(u.protocol) || href.startsWith("/") || href.startsWith("./");
+    return (
+      ["https:", "http:", "mailto:", "tel:"].includes(u.protocol) ||
+      href.startsWith("/") ||
+      href.startsWith("./")
+    );
   } catch {
     return false;
   }
@@ -30,7 +34,11 @@ function isSafeImgSrc(src: string): boolean {
   try {
     const u = new URL(src, "https://example.com");
     if (u.protocol === "data:") return /^data:image\//i.test(src);
-    return ["https:", "http:"].includes(u.protocol) || src.startsWith("/") || src.startsWith("./");
+    return (
+      ["https:", "http:"].includes(u.protocol) ||
+      src.startsWith("/") ||
+      src.startsWith("./")
+    );
   } catch {
     return false;
   }
@@ -48,9 +56,10 @@ Then use `isSafeHref(link.href) ? link.href : "#"` and `isSafeImgSrc(img.href) ?
 **Issue**: Review criteria require "No use of `unsafeHTML` without prior DOMPurify sanitization." Shiki and KaTeX output are trusted library output but should still be sanitized for defense in depth and policy compliance.
 
 **Fix**:
-- **sc-code-block.ts**: `html`${unsafeHTML(DOMPurify.sanitize(this._highlighted, { ALLOWED_TAGS: ["pre", "code", "span"], ALLOWED_ATTR: ["class", "style"] }))}`  
+
+- **sc-code-block.ts**: `html`${unsafeHTML(DOMPurify.sanitize(this.\_highlighted, { ALLOWED_TAGS: ["pre", "code", "span"], ALLOWED_ATTR: ["class", "style"] }))}`  
   (Adjust ALLOWED_TAGS/ALLOWED_ATTR to match Shiki’s output structure.)
-- **sc-latex.ts**: `html`<span class="katex">${unsafeHTML(DOMPurify.sanitize(this._rendered, { /* KaTeX-safe config */ }))}</span>`
+- **sc-latex.ts**: `html`<span class="katex">${unsafeHTML(DOMPurify.sanitize(this.\_rendered, { /_ KaTeX-safe config _/ }))}</span>`
 
 ---
 
@@ -73,6 +82,7 @@ Then use `isSafeHref(link.href) ? link.href : "#"` and `isSafeImgSrc(img.href) ?
 **Issue**: `updated()` only checks `changed.has("latex")`. If `display` changes from `false` to `true` (or vice versa), the component does not re-render with the correct `displayMode`.
 
 **Fix**: Include `changed.has("display")` in the condition:
+
 ```ts
 if ((changed.has("latex") || changed.has("display")) && this.latex && this._loaded) {
 ```
@@ -86,6 +96,7 @@ if ((changed.has("latex") || changed.has("display")) && this.latex && this._load
 **Issue**: If `latex` is empty at mount and set later via a property update, `connectedCallback` does nothing and `updated()` only runs when `_loaded` is true. The first load never happens.
 
 **Fix**: In `updated()`, also handle the initial load when `latex` is set and `_loaded` is false:
+
 ```ts
 override updated(changed: Map<string, unknown>): void {
   if (!changed.has("latex") && !changed.has("display")) return;
@@ -109,6 +120,7 @@ override updated(changed: Map<string, unknown>): void {
 **Issue**: The 2s timeout for resetting `_copied` is not stored or cleared. If the component is removed before it fires, `requestUpdate()` may run on a disconnected element.
 
 **Fix**: Store the timeout ID and clear it in `disconnectedCallback`:
+
 ```ts
 private _copyTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -130,6 +142,7 @@ override disconnectedCallback(): void {
 **Issue**: When sanitizing HTML blocks, links with `target="_blank"` may not get `rel="noopener noreferrer"`. DOMPurify does not add this by default.
 
 **Fix**: Use a DOMPurify hook to add `rel="noopener noreferrer"` to all `<a>` tags:
+
 ```ts
 DOMPurify.addHook("afterSanitizeAttributes", (node) => {
   if (node.tagName === "A" && node.getAttribute("target") === "_blank") {
@@ -137,6 +150,7 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
   }
 });
 ```
+
 (Remove the hook after sanitization if you want to avoid global state.)
 
 ---
@@ -199,24 +213,24 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
 
 ## Verified Compliant
 
-| Criterion | Status |
-|-----------|--------|
-| markdown.ts uses `marked.lexer()` (AST) | Yes (line 248) |
-| Code blocks delegate to `<sc-code-block>` | Yes (lines 145–150) |
-| Shiki lazy-loaded | Yes (dynamic `import("shiki")`) |
-| KaTeX lazy-loaded | Yes (dynamic `import("katex")`) |
-| sc-message-stream API (.content, .streaming, .role) | Unchanged |
-| chat-view message handling logic | Unchanged |
-| Links have `rel="noopener noreferrer"` (hand-built) | Yes (lines 94–95) |
-| Links have `target="_blank"` (hand-built) | Yes (line 94) |
-| DOMPurify used for HTML tokens | Yes (lines 116–121, 195–228) |
-| CSS uses `--sc-*` tokens (in reviewed files) | Mostly; some raw px in chat-view |
-| No emoji in UI | Yes |
-| Code blocks have `role="region"` and `aria-label` | Yes (sc-code-block lines 184–185) |
-| Copy button has `aria-label` | Yes (line 192) |
-| Message list has `role="log"` and `aria-live="polite"` | Yes (chat-view lines 516–518) |
-| Focus-visible with accent outline | Yes (sc-code-block line 91) |
-| Shiki highlighter | Uses shorthand `codeToHtml` (internal singleton) |
+| Criterion                                              | Status                                           |
+| ------------------------------------------------------ | ------------------------------------------------ |
+| markdown.ts uses `marked.lexer()` (AST)                | Yes (line 248)                                   |
+| Code blocks delegate to `<sc-code-block>`              | Yes (lines 145–150)                              |
+| Shiki lazy-loaded                                      | Yes (dynamic `import("shiki")`)                  |
+| KaTeX lazy-loaded                                      | Yes (dynamic `import("katex")`)                  |
+| sc-message-stream API (.content, .streaming, .role)    | Unchanged                                        |
+| chat-view message handling logic                       | Unchanged                                        |
+| Links have `rel="noopener noreferrer"` (hand-built)    | Yes (lines 94–95)                                |
+| Links have `target="_blank"` (hand-built)              | Yes (line 94)                                    |
+| DOMPurify used for HTML tokens                         | Yes (lines 116–121, 195–228)                     |
+| CSS uses `--sc-*` tokens (in reviewed files)           | Mostly; some raw px in chat-view                 |
+| No emoji in UI                                         | Yes                                              |
+| Code blocks have `role="region"` and `aria-label`      | Yes (sc-code-block lines 184–185)                |
+| Copy button has `aria-label`                           | Yes (line 192)                                   |
+| Message list has `role="log"` and `aria-live="polite"` | Yes (chat-view lines 516–518)                    |
+| Focus-visible with accent outline                      | Yes (sc-code-block line 91)                      |
+| Shiki highlighter                                      | Uses shorthand `codeToHtml` (internal singleton) |
 
 ---
 

@@ -80,12 +80,24 @@ static sc_error_t homeassistant_execute(void *ctx, sc_allocator_t *alloc,
         return SC_OK;
     }
 
+    if (strlen(token) > 500) {
+        *out = sc_tool_result_fail("token too long", 14);
+        return SC_OK;
+    }
     char auth[512];
-    snprintf(auth, sizeof(auth), "Bearer %s", token);
+    int auth_n = snprintf(auth, sizeof(auth), "Bearer %s", token);
+    if (auth_n < 0 || (size_t)auth_n >= sizeof(auth)) {
+        *out = sc_tool_result_fail("token too long", 14);
+        return SC_OK;
+    }
 
     if (strcmp(operation, "get_states") == 0) {
         char api_url[512];
-        snprintf(api_url, sizeof(api_url), "%s/api/states", url);
+        int url_n = snprintf(api_url, sizeof(api_url), "%s/api/states", url);
+        if (url_n < 0 || (size_t)url_n >= sizeof(api_url)) {
+            *out = sc_tool_result_fail("url too long", 12);
+            return SC_OK;
+        }
         sc_http_response_t resp = {0};
         sc_error_t err = sc_http_get(alloc, api_url, auth, &resp);
         if (err != SC_OK || resp.status_code != 200) {
