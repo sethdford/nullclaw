@@ -1,5 +1,4 @@
 #include "seaclaw/channels/dispatch.h"
-#include <stdlib.h>
 #include <string.h>
 
 #define SC_DISPATCH_INITIAL_CAP 4
@@ -80,9 +79,10 @@ static const sc_channel_vtable_t dispatch_vtable = {
 sc_error_t sc_dispatch_create(sc_allocator_t *alloc, sc_channel_t *out) {
     if (!alloc || !out)
         return SC_ERR_INVALID_ARGUMENT;
-    sc_dispatch_ctx_t *c = (sc_dispatch_ctx_t *)calloc(1, sizeof(*c));
+    sc_dispatch_ctx_t *c = (sc_dispatch_ctx_t *)alloc->alloc(alloc->ctx, sizeof(*c));
     if (!c)
         return SC_ERR_OUT_OF_MEMORY;
+    memset(c, 0, sizeof(*c));
     c->alloc = alloc;
     c->sub_channels = NULL;
     c->sub_count = 0;
@@ -95,9 +95,10 @@ sc_error_t sc_dispatch_create(sc_allocator_t *alloc, sc_channel_t *out) {
 void sc_dispatch_destroy(sc_channel_t *ch) {
     if (ch && ch->ctx) {
         sc_dispatch_ctx_t *c = (sc_dispatch_ctx_t *)ch->ctx;
+        sc_allocator_t *a = c->alloc;
         if (c->sub_channels)
-            free(c->sub_channels);
-        free(ch->ctx);
+            a->free(a->ctx, c->sub_channels, c->sub_cap * sizeof(sc_channel_t));
+        a->free(a->ctx, c, sizeof(*c));
         ch->ctx = NULL;
         ch->vtable = NULL;
     }
@@ -109,9 +110,14 @@ sc_error_t sc_dispatch_add_channel(sc_channel_t *dispatch_ch, const sc_channel_t
     sc_dispatch_ctx_t *c = (sc_dispatch_ctx_t *)dispatch_ch->ctx;
     if (c->sub_count >= c->sub_cap) {
         size_t new_cap = c->sub_cap == 0 ? SC_DISPATCH_INITIAL_CAP : c->sub_cap * 2;
-        sc_channel_t *n = (sc_channel_t *)realloc(c->sub_channels, new_cap * sizeof(sc_channel_t));
+        sc_channel_t *n =
+            (sc_channel_t *)c->alloc->alloc(c->alloc->ctx, new_cap * sizeof(sc_channel_t));
         if (!n)
             return SC_ERR_OUT_OF_MEMORY;
+        if (c->sub_channels) {
+            memcpy(n, c->sub_channels, c->sub_count * sizeof(sc_channel_t));
+            c->alloc->free(c->alloc->ctx, c->sub_channels, c->sub_cap * sizeof(sc_channel_t));
+        }
         c->sub_channels = n;
         c->sub_cap = new_cap;
     }

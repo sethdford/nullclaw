@@ -136,22 +136,21 @@ export class ScMessageList extends LitElement {
     }
     .message.user {
       align-self: flex-end;
-      background: linear-gradient(
-        135deg,
-        color-mix(in srgb, var(--sc-accent) 85%, transparent),
-        var(--sc-accent-hover)
+      background: var(
+        --sc-user-message-gradient,
+        linear-gradient(135deg, var(--sc-accent-strong), var(--sc-accent))
       );
-      color: var(--sc-on-accent, #fff);
-      border-radius: 20px 20px 6px 20px;
+      color: var(--sc-on-accent);
+      border-radius: var(--sc-radius-lg) var(--sc-radius-lg) var(--sc-radius-sm) var(--sc-radius-lg);
+      box-shadow: var(--sc-shadow-xs);
     }
     .message.assistant {
       align-self: flex-start;
       max-width: 85%;
-      background: color-mix(in srgb, var(--sc-bg-surface) 80%, transparent);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 20px 20px 20px 6px;
+      background: var(--sc-bg-surface);
+      border: 1px solid var(--sc-border);
+      border-radius: var(--sc-radius-lg) var(--sc-radius-lg) var(--sc-radius-lg) var(--sc-radius-sm);
+      box-shadow: var(--sc-shadow-xs);
       color: var(--sc-text);
     }
     .message.continuation {

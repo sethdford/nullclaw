@@ -180,9 +180,10 @@ sc_error_t sc_mqtt_create(sc_allocator_t *alloc, const char *broker_url, size_t 
     if (!broker_url || broker_url_len == 0)
         return SC_ERR_INVALID_ARGUMENT;
 
-    sc_mqtt_ctx_t *c = (sc_mqtt_ctx_t *)calloc(1, sizeof(*c));
+    sc_mqtt_ctx_t *c = (sc_mqtt_ctx_t *)alloc->alloc(alloc->ctx, sizeof(*c));
     if (!c)
         return SC_ERR_OUT_OF_MEMORY;
+    memset(c, 0, sizeof(*c));
     c->alloc = alloc;
     c->qos = qos;
 
@@ -234,7 +235,7 @@ oom:
         size_t n = strlen(c->password) + 1;
         alloc->free(alloc->ctx, c->password, n);
     }
-    free(c);
+    alloc->free(alloc->ctx, c, sizeof(*c));
     return SC_ERR_OUT_OF_MEMORY;
 }
 
@@ -265,7 +266,7 @@ void sc_mqtt_destroy(sc_channel_t *ch, sc_allocator_t *alloc) {
             a->free(a->ctx, c->password, n);
         }
     }
-    free(c);
+    a->free(a->ctx, c, sizeof(*c));
     ch->ctx = NULL;
     ch->vtable = NULL;
 }

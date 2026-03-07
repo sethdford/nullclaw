@@ -10,9 +10,9 @@
 #endif
 #include "seaclaw/agent.h"
 #include "seaclaw/agent/awareness.h"
-#include "seaclaw/agent/outcomes.h"
 #include "seaclaw/agent/cli.h"
 #include "seaclaw/agent/episodic.h"
+#include "seaclaw/agent/outcomes.h"
 #include "seaclaw/agent/spawn.h"
 #include "seaclaw/bus.h"
 #include "seaclaw/channel.h"
@@ -115,6 +115,9 @@
 #endif
 #if SC_HAS_GOOGLE_RCS
 #include "seaclaw/channels/google_rcs.h"
+#endif
+#if SC_HAS_MQTT
+#include "seaclaw/channels/mqtt.h"
 #endif
 
 #define SC_VERSION  "0.3.0"
@@ -707,8 +710,7 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
                 alloc->ctx, (tools_count + plugin_tools_count) * sizeof(sc_tool_t));
             if (merged) {
                 memcpy(merged, tools, tools_count * sizeof(sc_tool_t));
-                memcpy(merged + tools_count, plugin_tools,
-                       plugin_tools_count * sizeof(sc_tool_t));
+                memcpy(merged + tools_count, plugin_tools, plugin_tools_count * sizeof(sc_tool_t));
                 alloc->free(alloc->ctx, tools, tools_count * sizeof(sc_tool_t));
                 tools = merged;
                 tools_count += plugin_tools_count;
@@ -1103,6 +1105,30 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
     }
 #endif
 
+#if SC_HAS_MQTT
+    sc_channel_t mqtt_ch = {0};
+    if (cfg.channels.mqtt.broker_url) {
+        const char *in_t = cfg.channels.mqtt.inbound_topic;
+        const char *out_t = cfg.channels.mqtt.outbound_topic;
+        const char *usr = cfg.channels.mqtt.username;
+        const char *pwd = cfg.channels.mqtt.password;
+        err = sc_mqtt_create(alloc, cfg.channels.mqtt.broker_url,
+                             strlen(cfg.channels.mqtt.broker_url), in_t, in_t ? strlen(in_t) : 0,
+                             out_t, out_t ? strlen(out_t) : 0, usr, usr ? strlen(usr) : 0, pwd,
+                             pwd ? strlen(pwd) : 0, cfg.channels.mqtt.qos, &mqtt_ch);
+        if (err == SC_OK) {
+            channels[ch_count].channel_ctx = mqtt_ch.ctx;
+            channels[ch_count].channel = &mqtt_ch;
+            channels[ch_count].poll_fn = sc_mqtt_poll;
+            channels[ch_count].webhook_fn = NULL;
+            channels[ch_count].interval_ms = 500;
+            channels[ch_count].last_poll_ms = 0;
+            ch_count++;
+            fprintf(stderr, "[%s] mqtt channel configured (poll)\n", SC_CODENAME);
+        }
+    }
+#endif
+
 #ifdef SC_HAS_CRON
     fprintf(stderr, "[%s] %zu channel(s) active, cron enabled\n", SC_CODENAME, ch_count);
 #else
@@ -1198,6 +1224,10 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
 #if SC_HAS_GOOGLE_RCS
     if (google_rcs_ch.ctx)
         sc_google_rcs_destroy(&google_rcs_ch);
+#endif
+#if SC_HAS_MQTT
+    if (mqtt_ch.ctx)
+        sc_mqtt_destroy(&mqtt_ch, alloc);
 #endif
 
     sc_agent_deinit(&agent);
@@ -1731,8 +1761,7 @@ static sc_error_t cmd_gateway(sc_allocator_t *alloc, int argc, char **argv) {
                 alloc->ctx, (tools_count + plugin_tools_count) * sizeof(sc_tool_t));
             if (merged) {
                 memcpy(merged, tools, tools_count * sizeof(sc_tool_t));
-                memcpy(merged + tools_count, plugin_tools,
-                       plugin_tools_count * sizeof(sc_tool_t));
+                memcpy(merged + tools_count, plugin_tools, plugin_tools_count * sizeof(sc_tool_t));
                 alloc->free(alloc->ctx, tools, tools_count * sizeof(sc_tool_t));
                 tools = merged;
                 tools_count += plugin_tools_count;

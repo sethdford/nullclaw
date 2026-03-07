@@ -18,7 +18,7 @@
 The smallest fully autonomous AI assistant infrastructure — a static C binary that fits on any $5 board, boots in milliseconds, and requires nothing but libc.
 
 ```
-~511 KB binary · <30 ms startup · 3129+ tests · 50+ providers · 33 channels · 66+ tools · Pluggable everything
+~511 KB binary · <30 ms startup · 3185+ tests · 50+ providers · 33 channels · 66+ tools · Pluggable everything
 ```
 
 ### Features
@@ -57,7 +57,7 @@ SeaClaw's verified numbers (measured on macOS arm64, March 2026):
 Binary size:   ~511 KB (MinSizeRel + LTO, all channels)
 Peak RSS:      ~5.7 MB (--version), ~5.9 MB (test suite)
 Startup:       6–27 ms avg (Apple Silicon M4 Max)
-Tests:         3129 passing, 0 ASan errors
+Tests:         3185 passing, 0 ASan errors
 ```
 
 ### Why Switch from OpenClaw?
@@ -201,7 +201,7 @@ Every subsystem is a **vtable interface** — swap implementations with a config
 | **AI Models**     | `Provider`       | 50+ providers (OpenRouter, Anthropic, OpenAI, Gemini, Ollama, llama.cpp, Groq, Mistral, xAI, DeepSeek, Together, Fireworks, Perplexity, Cohere, Bedrock, etc.) | `custom:https://your-api.com` — any OpenAI-compatible API |
 | **Channels**      | `Channel`        | CLI, Telegram, Signal, Discord, Slack, iMessage, Matrix, WhatsApp, Webhook, IRC, Lark/Feishu, OneBot, Line, DingTalk, Email, Nostr, QQ, MaixCam, Mattermost    | Any messaging API                                         |
 | **Memory**        | `Memory`         | SQLite with hybrid search (FTS5 + vector cosine similarity), Markdown                                                                                          | Any persistence backend                                   |
-| **Tools**         | `Tool`           | 73 built-in: shell, file ops, git, memory, browser, screenshot, composio, http, cron, hardware, web search, delegate, and more                                 | Any capability                                            |
+| **Tools**         | `Tool`           | 66+ built-in: shell, file ops, git, memory, browser, screenshot, composio, http, cron, hardware, web search, delegate, and more                                | Any capability                                            |
 | **Observability** | `Observer`       | Noop, Log, File, Multi                                                                                                                                         | Prometheus, OTel                                          |
 | **Runtime**       | `RuntimeAdapter` | Native, Docker (sandboxed), WASM (wasmtime)                                                                                                                    | Any runtime                                               |
 | **Security**      | `Sandbox`        | Landlock, Firejail, Bubblewrap, Docker, auto-detect                                                                                                            | Any sandbox backend                                       |
@@ -607,7 +607,7 @@ Build and tests require a C11 compiler and CMake 3.16+. One-time setup:
 mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Debug -DSC_ENABLE_ALL_CHANNELS=ON
 cmake --build .                            # Dev build
-./seaclaw_tests                             # 3129+ tests
+./seaclaw_tests                             # 3185+ tests
 cd ..
 ```
 
@@ -644,8 +644,8 @@ Channel CJM coverage (ingress parsing/filtering, session key routing, account pr
 Language: C11 + ASM (aarch64, x86_64)
 Source files: 597
 Lines of code: ~104K
-Test files: 98
-Tests: 3129
+Test files: 101
+Tests: 3185
 Binary: ~511 KB (MinSizeRel + LTO, all channels)
 Peak RSS: ~5.7 MB
 Startup: 6–27 ms avg (Apple Silicon)
@@ -663,7 +663,7 @@ agent/ Agent loop, context, planner, compaction, dispatcher
 channels/ 33 channel implementations (cli, telegram, discord, ...)
 providers/ 50+ AI provider implementations
 memory/ SQLite + markdown + LRU backends, embeddings, vector search
-tools/ 73 tool implementations
+tools/ 66+ tool implementations
 security/ Policy, pairing, secrets, sandbox backends
 runtime/ Runtime adapters (native, docker, wasm, cloudflare)
 core/ Allocator, arena, error, json, http, string, slice
@@ -674,7 +674,7 @@ config.c Config loading/merging (~/.seaclaw/config.json)
 ...
 
 include/seaclaw/ Public C headers
-tests/ 98 test files, 3129 tests
+tests/ 101 test files, 3185 tests
 asm/ Platform-specific assembly (aarch64, x86_64, generic C)
 
 ```

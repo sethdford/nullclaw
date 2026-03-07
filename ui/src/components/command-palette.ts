@@ -322,6 +322,7 @@ export class ScCommandPalette extends LitElement {
               class="input"
               type="text"
               placeholder="Search commands..."
+              aria-label="Search commands"
               .value=${this.query}
               @input=${(e: Event) => {
                 this.query = (e.target as HTMLInputElement).value;

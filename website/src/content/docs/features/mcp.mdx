@@ -37,6 +37,23 @@ Add MCP servers in `~/.seaclaw/config.json` under `mcp_servers` (object keyed by
 | `command` | Yes      | Executable to run (e.g. `npx`, `node`) |
 | `args`    | Yes      | Array of string arguments              |
 
+### Google Workspace CLI via MCP
+
+If you have a Google Workspace CLI MCP server (e.g. `@anthropic/gws-mcp` or a custom wrapper), you can connect it to SeaClaw and the agent will gain access to Google Docs, Sheets, Drive, Calendar, and other Workspace APIs:
+
+```json
+{
+  "mcp_servers": {
+    "google-workspace": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/gws-mcp"]
+    }
+  }
+}
+```
+
+The agent will automatically discover all tools from the Google Workspace MCP server (e.g. `docs.create`, `sheets.read`, `drive.list`) and expose them as `mcp_google-workspace_*` tools.
+
 ### How it works
 
 1. SeaClaw spawns each MCP server as a child process (stdio transport)

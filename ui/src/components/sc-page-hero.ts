@@ -11,7 +11,7 @@ export class ScPageHero extends LitElement {
       position: relative;
       padding: var(--sc-space-2xl) var(--sc-space-lg) var(--sc-space-xl);
       overflow: hidden;
-      animation: sc-fade-in 300ms var(--sc-ease-out) both;
+      animation: sc-fade-in var(--sc-duration-normal) var(--sc-ease-out) both;
     }
     .hero::after {
       content: "";

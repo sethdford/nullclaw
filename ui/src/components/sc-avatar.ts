@@ -76,7 +76,7 @@ export class ScAvatar extends LitElement {
     }
 
     .status-dot.online.pulse {
-      animation: sc-avatar-pulse 2s ease-in-out infinite;
+      animation: sc-avatar-pulse var(--sc-duration-slow) ease-in-out infinite;
     }
 
     @keyframes sc-avatar-pulse {

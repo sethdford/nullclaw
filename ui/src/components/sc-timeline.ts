@@ -28,7 +28,7 @@ export class ScTimeline extends LitElement {
       gap: var(--sc-space-md);
       padding-bottom: var(--sc-space-md);
       position: relative;
-      animation: sc-slide-up 300ms var(--sc-ease-out) both;
+      animation: sc-slide-up var(--sc-duration-normal) var(--sc-ease-out) both;
     }
     .dot {
       width: 8px;

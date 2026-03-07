@@ -79,7 +79,7 @@ static void agent_record_cost(sc_agent_t *agent, const sc_token_usage_t *usage) 
     entry.total_tokens = usage->total_tokens;
     entry.cost_usd = 0.0;
     entry.timestamp_secs = (int64_t)time(NULL);
-    sc_cost_record_usage(agent->cost_tracker, &entry, agent->active_job_id);
+    (void)sc_cost_record_usage(agent->cost_tracker, &entry, agent->active_job_id);
 }
 
 #define SC_AGENT_HISTORY_INIT_CAP 16
@@ -383,11 +383,17 @@ void sc_agent_set_mailbox(sc_agent_t *agent, sc_mailbox_t *mailbox) {
     if (!agent)
         return;
     uint64_t id = agent->agent_id ? agent->agent_id : (uint64_t)(uintptr_t)agent;
-    if (agent->mailbox)
-        sc_mailbox_unregister(agent->mailbox, id);
+    if (agent->mailbox) {
+        sc_error_t err = sc_mailbox_unregister(agent->mailbox, id);
+        if (err != SC_OK)
+            fprintf(stderr, "warning: mailbox unregister failed: %s\n", sc_error_string(err));
+    }
     agent->mailbox = mailbox;
-    if (agent->mailbox)
-        sc_mailbox_register(agent->mailbox, id);
+    if (agent->mailbox) {
+        sc_error_t err = sc_mailbox_register(agent->mailbox, id);
+        if (err != SC_OK)
+            fprintf(stderr, "warning: mailbox register failed: %s\n", sc_error_string(err));
+    }
 }
 
 void sc_agent_set_task_list(sc_agent_t *agent, sc_task_list_t *task_list) {
@@ -419,7 +425,7 @@ void sc_agent_deinit(sc_agent_t *agent) {
         return;
     if (agent->mailbox) {
         uint64_t id = agent->agent_id ? agent->agent_id : (uint64_t)(uintptr_t)agent;
-        sc_mailbox_unregister(agent->mailbox, id);
+        (void)sc_mailbox_unregister(agent->mailbox, id);
         agent->mailbox = NULL;
     }
     sc_agent_clear_history(agent);

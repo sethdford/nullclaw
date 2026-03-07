@@ -85,6 +85,12 @@
       <a href="#sc-latex">sc-latex</a>
       <a href="#sc-shortcut-overlay">sc-shortcut-overlay</a>
       <a href="#sc-context-menu">sc-context-menu</a>
+      <a href="#sc-stat-card">sc-stat-card</a>
+      <a href="#sc-section-header">sc-section-header</a>
+      <a href="#sc-metric-row">sc-metric-row</a>
+      <a href="#sc-timeline">sc-timeline</a>
+      <a href="#sc-sparkline-enhanced">sc-sparkline-enhanced</a>
+      <a href="#sc-page-hero">sc-page-hero</a>
     </nav>
     <main class="catalog-main">
       <header class="catalog-header">
@@ -948,6 +954,71 @@
         <div class="code-snippet"><pre><code>&lt;sc-context-menu .open=${open} .x=${x} .y=${y} .items=${items} @close=${...}&gt;&lt;/sc-context-menu&gt;</code></pre></div>
       </section>
 
+      <section class="component-section" id="sc-stat-card">
+        <h2>sc-stat-card</h2>
+        <div class="playground">
+          <div class="preview">
+            <sc-stat-card value="2895" label="Tests" trend="+12%" trendDirection="up" accent="primary"></sc-stat-card>
+          </div>
+          <div class="controls">
+            <label>Value <input type="number" value="2895" id="stat-card-value" /></label>
+            <label>Label <input type="text" value="Tests" id="stat-card-label" /></label>
+            <label>Trend <input type="text" value="+12%" id="stat-card-trend" /></label>
+          </div>
+        </div>
+        <div class="code-snippet"><code>&lt;sc-stat-card value="2895" label="Tests" trend="+12%" trendDirection="up"&gt;&lt;/sc-stat-card&gt;</code></div>
+      </section>
+
+      <section class="component-section" id="sc-section-header">
+        <h2>sc-section-header</h2>
+        <div class="playground">
+          <div class="preview" style="width:100%">
+            <sc-section-header heading="Overview" description="System health and activity"></sc-section-header>
+          </div>
+        </div>
+        <div class="code-snippet"><code>&lt;sc-section-header heading="Overview" description="System health"&gt;&lt;/sc-section-header&gt;</code></div>
+      </section>
+
+      <section class="component-section" id="sc-metric-row">
+        <h2>sc-metric-row</h2>
+        <div class="playground">
+          <div class="preview" style="width:100%" id="metric-row-preview">
+            <sc-metric-row></sc-metric-row>
+          </div>
+        </div>
+        <div class="code-snippet"><code>&lt;sc-metric-row .items=\${[{label:"CPU",value:"23%"},{label:"RAM",value:"1.2GB"}]}&gt;&lt;/sc-metric-row&gt;</code></div>
+      </section>
+
+      <section class="component-section" id="sc-timeline">
+        <h2>sc-timeline</h2>
+        <div class="playground">
+          <div class="preview" style="width:100%" id="timeline-preview">
+            <sc-timeline></sc-timeline>
+          </div>
+        </div>
+        <div class="code-snippet"><code>&lt;sc-timeline .items=\${[{time:"2m ago",message:"Test passed",status:"success"}]}&gt;&lt;/sc-timeline&gt;</code></div>
+      </section>
+
+      <section class="component-section" id="sc-sparkline-enhanced">
+        <h2>sc-sparkline-enhanced</h2>
+        <div class="playground">
+          <div class="preview" id="sparkline-enhanced-preview">
+            <sc-sparkline-enhanced></sc-sparkline-enhanced>
+          </div>
+        </div>
+        <div class="code-snippet"><code>&lt;sc-sparkline-enhanced .data=\${[10,20,15,25,30]} fillGradient showTooltip&gt;&lt;/sc-sparkline-enhanced&gt;</code></div>
+      </section>
+
+      <section class="component-section" id="sc-page-hero">
+        <h2>sc-page-hero</h2>
+        <div class="playground">
+          <div class="preview" style="width:100%">
+            <sc-page-hero><h2 style="margin:0;font-size:1.5rem">Welcome</h2><p style="color:var(--sc-text-muted)">Gradient mesh hero section</p></sc-page-hero>
+          </div>
+        </div>
+        <div class="code-snippet"><code>&lt;sc-page-hero&gt;...content...&lt;/sc-page-hero&gt;</code></div>
+      </section>
+
     <sc-toast></sc-toast>
 
     <script type="module">
@@ -997,6 +1068,12 @@
       import "/src/components/sc-latex.js";
       import "/src/components/sc-shortcut-overlay.js";
       import "/src/components/sc-context-menu.js";
+      import "/src/components/sc-stat-card.js";
+      import "/src/components/sc-section-header.js";
+      import "/src/components/sc-metric-row.js";
+      import "/src/components/sc-timeline.js";
+      import "/src/components/sc-sparkline-enhanced.js";
+      import "/src/components/sc-page-hero.js";
 
       // Theme toggle
       function setTheme(theme) {
@@ -1375,6 +1452,32 @@
           { type: "session_start", session: "Code Review", time: Date.now() - 600000 },
           { type: "message", channel: "Slack", user: "Charlie", preview: "Tests passing on CI", time: Date.now() - 1800000 },
         ];
+      }
+
+      // Metric row
+      const metricRowPreview = document.getElementById("metric-row-preview")?.querySelector("sc-metric-row");
+      if (metricRowPreview) {
+        metricRowPreview.items = [
+          { label: "CPU", value: "23%" },
+          { label: "RAM", value: "1.2 GB" },
+          { label: "Uptime", value: "4d 12h" },
+        ];
+      }
+
+      // Timeline
+      const timelinePreview = document.getElementById("timeline-preview")?.querySelector("sc-timeline");
+      if (timelinePreview) {
+        timelinePreview.items = [
+          { time: "2m ago", message: "Test suite passed", status: "success" },
+          { time: "15m ago", message: "Deployment started", status: "info" },
+          { time: "1h ago", message: "Build failed", status: "error", detail: "Exit code 1" },
+        ];
+      }
+
+      // Sparkline enhanced
+      const sparklineEnhPreview = document.getElementById("sparkline-enhanced-preview")?.querySelector("sc-sparkline-enhanced");
+      if (sparklineEnhPreview) {
+        sparklineEnhPreview.data = [10, 20, 15, 25, 18, 30, 28];
       }
     </script>
   </body>

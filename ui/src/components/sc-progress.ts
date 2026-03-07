@@ -64,7 +64,7 @@ export class ScProgress extends LitElement {
 
     .fill.indeterminate {
       width: 30% !important;
-      animation: sc-progress-indeterminate 1.5s ease-in-out infinite;
+      animation: sc-progress-indeterminate var(--sc-duration-slow) ease-in-out infinite;
     }
 
     @keyframes sc-progress-indeterminate {

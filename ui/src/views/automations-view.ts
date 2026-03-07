@@ -16,7 +16,6 @@ import "../components/sc-skeleton.js";
 import "../components/sc-empty-state.js";
 import "../components/sc-automation-card.js";
 import "../components/sc-schedule-builder.js";
-import "../components/sc-badge.js";
 
 interface CronJob {
   id: number;

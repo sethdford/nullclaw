@@ -1170,6 +1170,49 @@ static void parse_google_rcs_channel(sc_allocator_t *a, sc_config_t *cfg,
     }
 }
 
+static void parse_mqtt_channel(sc_allocator_t *a, sc_config_t *cfg, const sc_json_value_t *obj) {
+    if (!obj)
+        return;
+    sc_mqtt_channel_config_t *mq = &cfg->channels.mqtt;
+    const sc_json_value_t *val = obj;
+    if (obj->type == SC_JSON_ARRAY && obj->data.array.len > 0 && obj->data.array.items &&
+        obj->data.array.items[0])
+        val = obj->data.array.items[0];
+    if (!val || val->type != SC_JSON_OBJECT)
+        return;
+    const char *s = sc_json_get_string(val, "broker_url");
+    if (s) {
+        if (mq->broker_url)
+            a->free(a->ctx, mq->broker_url, strlen(mq->broker_url) + 1);
+        mq->broker_url = sc_strdup(a, s);
+    }
+    s = sc_json_get_string(val, "inbound_topic");
+    if (s) {
+        if (mq->inbound_topic)
+            a->free(a->ctx, mq->inbound_topic, strlen(mq->inbound_topic) + 1);
+        mq->inbound_topic = sc_strdup(a, s);
+    }
+    s = sc_json_get_string(val, "outbound_topic");
+    if (s) {
+        if (mq->outbound_topic)
+            a->free(a->ctx, mq->outbound_topic, strlen(mq->outbound_topic) + 1);
+        mq->outbound_topic = sc_strdup(a, s);
+    }
+    s = sc_json_get_string(val, "username");
+    if (s) {
+        if (mq->username)
+            a->free(a->ctx, mq->username, strlen(mq->username) + 1);
+        mq->username = sc_strdup(a, s);
+    }
+    s = sc_json_get_string(val, "password");
+    if (s) {
+        if (mq->password)
+            a->free(a->ctx, mq->password, strlen(mq->password) + 1);
+        mq->password = sc_strdup(a, s);
+    }
+    mq->qos = (int)sc_json_get_number(val, "qos", (double)mq->qos);
+}
+
 static sc_error_t parse_channels(sc_allocator_t *a, sc_config_t *cfg, const sc_json_value_t *obj) {
     if (!obj || obj->type != SC_JSON_OBJECT)
         return SC_OK;
@@ -1239,6 +1282,10 @@ static sc_error_t parse_channels(sc_allocator_t *a, sc_config_t *cfg, const sc_j
     sc_json_value_t *google_rcs_obj = sc_json_object_get(obj, "google_rcs");
     if (google_rcs_obj)
         parse_google_rcs_channel(a, cfg, google_rcs_obj);
+
+    sc_json_value_t *mqtt_obj = sc_json_object_get(obj, "mqtt");
+    if (mqtt_obj)
+        parse_mqtt_channel(a, cfg, mqtt_obj);
 
     cfg->channels.channel_config_len = 0;
     if (obj->data.object.pairs && cfg->channels.channel_config_len < SC_CHANNEL_CONFIG_MAX) {

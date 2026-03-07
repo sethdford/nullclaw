@@ -441,6 +441,7 @@ export class ScComposer extends LitElement {
                         class="bento-card"
                         type="button"
                         style="--bento-idx: ${i}"
+                        aria-label=${s.title}
                         @click=${() => this._handlePillClick(s.title)}
                       >
                         <span class="bento-icon">${icons[s.icon as keyof typeof icons]}</span>

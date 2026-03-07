@@ -23,6 +23,12 @@ import "./sc-welcome-card.js";
 import "./sc-message-actions.js";
 import "./sc-chat-sessions-panel.js";
 import "./sc-file-preview.js";
+import "./sc-stat-card.js";
+import "./sc-section-header.js";
+import "./sc-metric-row.js";
+import "./sc-timeline.js";
+import "./sc-sparkline-enhanced.js";
+import "./sc-page-hero.js";
 
 describe("sc-floating-mic", () => {
   it("should be defined as a custom element", () => {
@@ -1270,6 +1276,161 @@ describe("sc-context-menu", () => {
     await el.updateComplete;
     const menu = el.shadowRoot?.querySelector(".menu");
     expect(menu?.getAttribute("role")).toBe("menu");
+    el.remove();
+  });
+});
+
+describe("sc-stat-card", () => {
+  it("should be defined as a custom element", () => {
+    expect(customElements.get("sc-stat-card")).toBeDefined();
+  });
+
+  it("should be creatable", () => {
+    const el = document.createElement("sc-stat-card");
+    expect(el).toBeInstanceOf(HTMLElement);
+  });
+
+  it("should render value and label", async () => {
+    const el = document.createElement("sc-stat-card") as HTMLElement & {
+      value: number;
+      label: string;
+      updateComplete: Promise<boolean>;
+    };
+    el.value = 42;
+    el.label = "Tests";
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const shadow = el.shadowRoot;
+    expect(shadow?.textContent).toContain("Tests");
+    el.remove();
+  });
+});
+
+describe("sc-section-header", () => {
+  it("should be defined as a custom element", () => {
+    expect(customElements.get("sc-section-header")).toBeDefined();
+  });
+
+  it("should be creatable", () => {
+    const el = document.createElement("sc-section-header");
+    expect(el).toBeInstanceOf(HTMLElement);
+  });
+
+  it("should render heading", async () => {
+    const el = document.createElement("sc-section-header") as HTMLElement & {
+      heading: string;
+      updateComplete: Promise<boolean>;
+    };
+    el.heading = "Overview";
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.shadowRoot?.textContent).toContain("Overview");
+    el.remove();
+  });
+});
+
+describe("sc-metric-row", () => {
+  it("should be defined as a custom element", () => {
+    expect(customElements.get("sc-metric-row")).toBeDefined();
+  });
+
+  it("should be creatable", () => {
+    const el = document.createElement("sc-metric-row");
+    expect(el).toBeInstanceOf(HTMLElement);
+  });
+
+  it("should render items", async () => {
+    const el = document.createElement("sc-metric-row") as HTMLElement & {
+      items: Array<{ label: string; value: string }>;
+      updateComplete: Promise<boolean>;
+    };
+    el.items = [{ label: "CPU", value: "23%" }];
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.shadowRoot?.textContent).toContain("CPU");
+    expect(el.shadowRoot?.textContent).toContain("23%");
+    el.remove();
+  });
+});
+
+describe("sc-timeline", () => {
+  it("should be defined as a custom element", () => {
+    expect(customElements.get("sc-timeline")).toBeDefined();
+  });
+
+  it("should be creatable", () => {
+    const el = document.createElement("sc-timeline");
+    expect(el).toBeInstanceOf(HTMLElement);
+  });
+
+  it("should render items", async () => {
+    const el = document.createElement("sc-timeline") as HTMLElement & {
+      items: Array<{ time: string; message: string; status: string }>;
+      updateComplete: Promise<boolean>;
+    };
+    el.items = [{ time: "2m ago", message: "Test passed", status: "success" }];
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.shadowRoot?.textContent).toContain("Test passed");
+    el.remove();
+  });
+
+  it("should show empty state", async () => {
+    const el = document.createElement("sc-timeline") as HTMLElement & {
+      items: Array<{ time: string; message: string; status: string }>;
+      updateComplete: Promise<boolean>;
+    };
+    el.items = [];
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.shadowRoot?.textContent).toContain("No recent activity");
+    el.remove();
+  });
+});
+
+describe("sc-sparkline-enhanced", () => {
+  it("should be defined as a custom element", () => {
+    expect(customElements.get("sc-sparkline-enhanced")).toBeDefined();
+  });
+
+  it("should be creatable", () => {
+    const el = document.createElement("sc-sparkline-enhanced");
+    expect(el).toBeInstanceOf(HTMLElement);
+  });
+
+  it("should render SVG with data", async () => {
+    const el = document.createElement("sc-sparkline-enhanced") as HTMLElement & {
+      data: number[];
+      updateComplete: Promise<boolean>;
+    };
+    el.data = [10, 20, 15, 25, 30];
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const svg = el.shadowRoot?.querySelector("svg");
+    expect(svg).toBeTruthy();
+    el.remove();
+  });
+});
+
+describe("sc-page-hero", () => {
+  it("should be defined as a custom element", () => {
+    expect(customElements.get("sc-page-hero")).toBeDefined();
+  });
+
+  it("should be creatable", () => {
+    const el = document.createElement("sc-page-hero");
+    expect(el).toBeInstanceOf(HTMLElement);
+  });
+
+  it("should render slot content", async () => {
+    const el = document.createElement("sc-page-hero") as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    el.innerHTML = "<p>Hello</p>";
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const slot = el.shadowRoot?.querySelector("slot");
+    expect(slot).toBeTruthy();
     el.remove();
   });
 });

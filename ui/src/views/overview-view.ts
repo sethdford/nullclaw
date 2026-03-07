@@ -66,19 +66,6 @@ export class ScOverviewView extends GatewayAwareLitElement {
 
     /* ── Hero zone ────────────────────────────────────── */
 
-    .hero {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: var(--sc-space-md);
-      padding: var(--sc-space-xl) var(--sc-space-2xl);
-      margin-bottom: var(--sc-space-2xl, 2rem);
-      background-image: var(--sc-hero-gradient);
-      border-radius: var(--sc-radius-xl, 16px);
-      border: 1px solid var(--sc-border-subtle, var(--sc-border));
-    }
-
     .hero-left {
       display: flex;
       align-items: center;

@@ -233,6 +233,15 @@ typedef struct sc_google_rcs_channel_config {
     char *service_account_json_path;
 } sc_google_rcs_channel_config_t;
 
+typedef struct sc_mqtt_channel_config {
+    char *broker_url;
+    char *inbound_topic;
+    char *outbound_topic;
+    char *username;
+    char *password;
+    int qos;
+} sc_mqtt_channel_config_t;
+
 typedef struct sc_channels_config {
     bool cli;
     char *default_channel;
@@ -254,6 +263,7 @@ typedef struct sc_channels_config {
     sc_instagram_channel_config_t instagram;
     sc_twitter_channel_config_t twitter;
     sc_google_rcs_channel_config_t google_rcs;
+    sc_mqtt_channel_config_t mqtt;
 } sc_channels_config_t;
 
 typedef struct sc_memory_config {
