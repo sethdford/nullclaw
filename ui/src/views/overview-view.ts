@@ -18,6 +18,7 @@ import "../components/sc-section-header.js";
 import "../components/sc-stat-card.js";
 import "../components/sc-metric-row.js";
 import "../components/sc-timeline.js";
+import "../components/sc-chart.js";
 
 interface HealthRes {
   status?: string;
@@ -188,10 +189,22 @@ export class ScOverviewView extends GatewayAwareLitElement {
       margin-bottom: var(--sc-space-sm);
     }
 
+    .channels-with-chart {
+      display: flex;
+      gap: var(--sc-space-lg);
+      align-items: flex-start;
+    }
+
+    .channels-with-chart sc-chart {
+      flex-shrink: 0;
+    }
+
     .channels-inner {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
       gap: var(--sc-space-sm);
+      flex: 1;
+      min-width: 0;
     }
 
     .channel-item {
@@ -228,6 +241,20 @@ export class ScOverviewView extends GatewayAwareLitElement {
 
     .sessions-table tr:last-child td {
       border-bottom: none;
+    }
+
+    .session-row {
+      cursor: pointer;
+      transition: background-color var(--sc-duration-fast) var(--sc-ease-out);
+    }
+
+    .session-row:hover {
+      background-color: var(--sc-bg-elevated);
+    }
+
+    .session-row:focus-visible {
+      outline: 2px solid var(--sc-accent);
+      outline-offset: -2px;
     }
 
     /* ── Error ────────────────────────────────────────── */
@@ -275,6 +302,9 @@ export class ScOverviewView extends GatewayAwareLitElement {
       }
       .skeleton-details {
         grid-template-columns: 1fr;
+      }
+      .channels-with-chart {
+        flex-direction: column;
       }
     }
 
@@ -393,6 +423,36 @@ export class ScOverviewView extends GatewayAwareLitElement {
       return (bTs as number) - (aTs as number);
     });
     return sorted.slice(0, 5);
+  }
+
+  private get _channelDoughnutData() {
+    const configured = this.channels.filter((c) => c.configured).length;
+    const unconfigured = this.channels.length - configured;
+    return {
+      labels: ["Configured", "Unconfigured"],
+      datasets: [{ data: [configured, unconfigured] }],
+    };
+  }
+
+  private get _activitySparklineData() {
+    const now = Date.now();
+    const hourMs = 60 * 60 * 1000;
+    const buckets: number[] = [];
+    const labels: string[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const bucketStart = now - (i + 1) * hourMs;
+      const bucketEnd = now - i * hourMs;
+      const count = this.activityEvents.filter((ev) => {
+        const t = typeof ev.time === "number" ? ev.time : Date.now();
+        return t >= bucketStart && t < bucketEnd;
+      }).length;
+      buckets.push(count);
+      labels.push(i === 0 ? "Now" : `${i}h`);
+    }
+    return {
+      labels,
+      datasets: [{ data: buckets, color: "var(--sc-chart-brand)" }],
+    };
   }
 
   private get _timelineItems() {
@@ -542,6 +602,17 @@ export class ScOverviewView extends GatewayAwareLitElement {
         <div class="details-row">
           <sc-card hoverable accent>
             <div class="section-label">Live Activity</div>
+            ${this.activityEvents.length > 0
+              ? html`
+                  <div class="activity-sparkline">
+                    <sc-chart
+                      type="line"
+                      .data=${this._activitySparklineData}
+                      height=${48}
+                    ></sc-chart>
+                  </div>
+                `
+              : nothing}
             <sc-timeline .items=${this._timelineItems}></sc-timeline>
           </sc-card>
 
@@ -560,17 +631,24 @@ export class ScOverviewView extends GatewayAwareLitElement {
                   </sc-empty-state>
                 `
               : html`
-                  <div class="channels-inner">
-                    ${this.channels.map(
-                      (ch) => html`
-                        <div class="channel-item">
-                          <span class="channel-name">${ch.label ?? ch.key ?? "unnamed"}</span>
-                          <sc-badge variant=${ch.configured ? "success" : "neutral"} dot>
-                            ${ch.status ?? (ch.configured ? "Configured" : "\u2014")}
-                          </sc-badge>
-                        </div>
-                      `,
-                    )}
+                  <div class="channels-with-chart">
+                    <sc-chart
+                      type="doughnut"
+                      .data=${this._channelDoughnutData}
+                      height=${100}
+                    ></sc-chart>
+                    <div class="channels-inner">
+                      ${this.channels.map(
+                        (ch) => html`
+                          <div class="channel-item">
+                            <span class="channel-name">${ch.label ?? ch.key ?? "unnamed"}</span>
+                            <sc-badge variant=${ch.configured ? "success" : "neutral"} dot>
+                              ${ch.status ?? (ch.configured ? "Configured" : "\u2014")}
+                            </sc-badge>
+                          </div>
+                        `,
+                      )}
+                    </div>
                   </div>
                 `}
           </sc-card>
@@ -602,7 +680,32 @@ export class ScOverviewView extends GatewayAwareLitElement {
                   <tbody>
                     ${this.recentSessions.map(
                       (s) => html`
-                        <tr>
+                        <tr
+                          class="session-row"
+                          role="link"
+                          tabindex="0"
+                          aria-label=${`Open session ${s.label ?? s.key ?? "unnamed"}`}
+                          @click=${() =>
+                            this.dispatchEvent(
+                              new CustomEvent("navigate", {
+                                detail: "chat:" + (s.key ?? ""),
+                                bubbles: true,
+                                composed: true,
+                              }),
+                            )}
+                          @keydown=${(e: KeyboardEvent) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              this.dispatchEvent(
+                                new CustomEvent("navigate", {
+                                  detail: "chat:" + (s.key ?? ""),
+                                  bubbles: true,
+                                  composed: true,
+                                }),
+                              );
+                            }
+                          }}
+                        >
                           <td>${s.label ?? s.key ?? "unnamed"}</td>
                           <td>${s.turn_count ?? 0}</td>
                           <td>${formatDate(s.last_active)}</td>
