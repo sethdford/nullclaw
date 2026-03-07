@@ -439,14 +439,15 @@ export class ScApp extends LitElement {
       if (targetTab === "chat" && sessionPart) {
         this.chatSessionKey = sessionPart;
       }
-      this._ensureLoaded(targetTab);
-      if (!document.startViewTransition) {
-        this.tab = targetTab;
-        return;
-      }
-      document.startViewTransition(() => {
-        this.tab = targetTab;
-        return this.updateComplete;
+      this._ensureLoaded(targetTab).then(() => {
+        if (!document.startViewTransition) {
+          this.tab = targetTab;
+          return;
+        }
+        document.startViewTransition(() => {
+          this.tab = targetTab;
+          return this.updateComplete;
+        });
       });
     }
   }

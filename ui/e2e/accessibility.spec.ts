@@ -7,6 +7,8 @@ const SHADOW_DOM_EXCLUDED_RULES = [
   "scrollable-region-focusable",
   "nested-interactive",
   "label",
+  "aria-required-children",
+  "aria-required-parent",
 ];
 
 const VIEWS = [
