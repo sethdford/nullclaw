@@ -283,8 +283,16 @@ function handleRequest(method: string, _params?: Record<string, unknown>): unkno
       return {
         total_tokens: 1_247_832,
         total_cost: 18.42,
+        session_cost_usd: 0.42,
+        daily_cost_usd: 3.87,
+        monthly_cost_usd: 18.42,
+        request_count: 412,
         turns_today: 67,
         turns_week: 412,
+        token_trend: [
+          12000, 18400, 9200, 24100, 31200, 15800, 42300, 38100, 27600, 19400, 45200, 52100, 33800,
+          28900, 47100, 39200, 21800, 54300, 41700, 36200, 29800, 48100, 57200, 43500,
+        ],
         by_provider: [
           { provider: "openrouter", tokens: 892_100, cost: 12.3 },
           { provider: "anthropic", tokens: 245_732, cost: 4.92 },

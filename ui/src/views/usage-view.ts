@@ -260,6 +260,26 @@ export class ScUsageView extends GatewayAwareLitElement {
     `;
   }
 
+  private _renderTokenTrend() {
+    const trend = this.summary.token_trend;
+    if (!trend || trend.length < 2) return nothing;
+    return html`
+      <sc-card style="margin-bottom: var(--sc-space-xl)">
+        <div class="card-label" style="padding: var(--sc-space-md) var(--sc-space-md) 0">
+          Token Usage (last 24h)
+        </div>
+        <div style="padding: var(--sc-space-sm) var(--sc-space-md) var(--sc-space-md)">
+          <sc-sparkline-enhanced
+            .data=${trend}
+            .width=${480}
+            .height=${64}
+            tooltipLabel="tokens"
+          ></sc-sparkline-enhanced>
+        </div>
+      </sc-card>
+    `;
+  }
+
   override render() {
     const s = this.summary;
     const sessionCost = s.session_cost_usd ?? 0;
