@@ -35,7 +35,7 @@ interface PairingInfo {
 }
 
 const AUTONOMY_OPTIONS = [
-  { value: "0", label: "0 — Read-Only (Supervised)" },
+  { value: "0", label: "0 — Read-Only" },
   { value: "1", label: "1 — Supervised" },
   { value: "2", label: "2 — Full Autonomy" },
 ];
