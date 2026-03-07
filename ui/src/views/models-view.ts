@@ -98,6 +98,15 @@ export class ScModelsView extends GatewayAwareLitElement {
       width: 14px;
       height: 14px;
     }
+    .key-icon {
+      width: 14px;
+      height: 14px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .info-card {
+      margin-bottom: var(--sc-space-2xl);
+    }
     @media (max-width: 768px) {
       .grid {
         grid-template-columns: 1fr 1fr;
@@ -170,7 +179,7 @@ export class ScModelsView extends GatewayAwareLitElement {
             ></sc-empty-state>`
           : nothing
       }
-      <sc-card style="margin-bottom: var(--sc-space-2xl);">
+      <sc-card class="info-card">
         <div class="info-bar">
           <span class="info-item"
             ><strong>Default provider:</strong> ${this.defaultProvider || "—"}</span
