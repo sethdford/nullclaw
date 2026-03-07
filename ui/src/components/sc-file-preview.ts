@@ -39,10 +39,19 @@ export class ScFilePreview extends LitElement {
       justify-content: center;
       min-height: 80px;
       padding: var(--sc-space-sm);
-      background: var(--sc-bg-elevated);
+      background: var(--sc-bg-surface);
       border: 1px solid var(--sc-border);
       border-radius: var(--sc-radius);
       overflow: hidden;
+      box-shadow: var(--sc-shadow-xs);
+      transition:
+        box-shadow var(--sc-duration-fast) var(--sc-ease-out),
+        transform var(--sc-duration-fast) var(--sc-ease-out);
+    }
+
+    .card:hover {
+      box-shadow: var(--sc-shadow-sm);
+      transform: translateY(-2px);
     }
 
     .card-image {
@@ -50,6 +59,7 @@ export class ScFilePreview extends LitElement {
       height: 80px;
       object-fit: cover;
       border-radius: var(--sc-radius-sm);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
     }
 
     .card-icon {
@@ -94,7 +104,9 @@ export class ScFilePreview extends LitElement {
       width: 24px;
       height: 24px;
       padding: 0;
-      background: color-mix(in srgb, var(--sc-bg) 90%, transparent);
+      background: color-mix(in srgb, var(--sc-bg-surface) 90%, transparent);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       border: none;
       border-radius: var(--sc-radius-full);
       color: var(--sc-text-muted);
@@ -120,6 +132,7 @@ export class ScFilePreview extends LitElement {
     }
 
     @media (prefers-reduced-motion: reduce) {
+      .card,
       .remove-btn {
         transition: none;
       }
