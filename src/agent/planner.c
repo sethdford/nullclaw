@@ -1,6 +1,5 @@
 #include "seaclaw/agent/planner.h"
 #include "seaclaw/core/string.h"
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 

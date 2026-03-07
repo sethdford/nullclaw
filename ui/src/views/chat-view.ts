@@ -524,9 +524,25 @@ export class ScChatView extends GatewayAwareLitElement {
     try {
       const raw = sessionStorage.getItem(this._cacheKey);
       if (!raw) return false;
-      const cached = JSON.parse(raw) as ChatItem[];
-      if (Array.isArray(cached) && cached.length > 0) {
-        this.items = cached;
+      const cached = JSON.parse(raw) as unknown;
+      if (!Array.isArray(cached) || cached.length === 0) return false;
+      this.items = cached
+        .map((item: unknown) => {
+          const obj = item as Record<string, unknown>;
+          if (obj?.type === "message" || obj?.type === "tool_call" || obj?.type === "thinking") {
+            return item as ChatItem;
+          }
+          if (obj?.role && obj?.content) {
+            return {
+              type: "message",
+              role: obj.role as "user" | "assistant",
+              content: String(obj.content ?? ""),
+            } as ChatItem;
+          }
+          return null;
+        })
+        .filter((i): i is ChatItem => i != null);
+      if (this.items.length > 0) {
         this.scrollToBottom();
         return true;
       }
