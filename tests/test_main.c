@@ -104,6 +104,9 @@ void run_context_tests(void);
 void run_qmd_tests(void);
 void run_terminal_tests(void);
 void run_tavily_tests(void);
+void run_awareness_tests(void);
+void run_episodic_tests(void);
+void run_reflection_tests(void);
 
 int main(void) {
     printf("SeaClaw Test Suite\n");
@@ -209,6 +212,9 @@ int main(void) {
     run_qmd_tests();
     run_terminal_tests();
     run_tavily_tests();
+    run_awareness_tests();
+    run_episodic_tests();
+    run_reflection_tests();
 
     SC_TEST_REPORT();
     SC_TEST_EXIT();

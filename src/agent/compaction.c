@@ -151,6 +151,28 @@ static void free_messages(sc_allocator_t *alloc, sc_owned_message_t *history, si
             history[i].tool_calls = NULL;
             history[i].tool_calls_count = 0;
         }
+        if (history[i].content_parts) {
+            for (size_t j = 0; j < history[i].content_parts_count; j++) {
+                sc_content_part_t *cp = &history[i].content_parts[j];
+                if (cp->tag == SC_CONTENT_PART_TEXT && cp->data.text.ptr) {
+                    alloc->free(alloc->ctx, (void *)cp->data.text.ptr, cp->data.text.len + 1);
+                } else if (cp->tag == SC_CONTENT_PART_IMAGE_URL && cp->data.image_url.url) {
+                    alloc->free(alloc->ctx, (void *)cp->data.image_url.url,
+                                cp->data.image_url.url_len + 1);
+                } else if (cp->tag == SC_CONTENT_PART_IMAGE_BASE64) {
+                    if (cp->data.image_base64.data)
+                        alloc->free(alloc->ctx, (void *)cp->data.image_base64.data,
+                                    cp->data.image_base64.data_len + 1);
+                    if (cp->data.image_base64.media_type)
+                        alloc->free(alloc->ctx, (void *)cp->data.image_base64.media_type,
+                                    cp->data.image_base64.media_type_len + 1);
+                }
+            }
+            alloc->free(alloc->ctx, history[i].content_parts,
+                        history[i].content_parts_count * sizeof(sc_content_part_t));
+            history[i].content_parts = NULL;
+            history[i].content_parts_count = 0;
+        }
     }
 }
 

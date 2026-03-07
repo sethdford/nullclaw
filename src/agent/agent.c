@@ -31,12 +31,12 @@
 #include <string.h>
 #include <time.h>
 
-#define SC_OBS_SAFE_RECORD_EVENT(agent, ev)                              \
-    do {                                                                 \
-        if ((agent)->observer) {                                         \
+#define SC_OBS_SAFE_RECORD_EVENT(agent, ev)                                   \
+    do {                                                                      \
+        if ((agent)->observer) {                                              \
             (ev)->trace_id = (agent)->trace_id[0] ? (agent)->trace_id : NULL; \
-            sc_observer_record_event(*(agent)->observer, (ev));          \
-        }                                                                \
+            sc_observer_record_event(*(agent)->observer, (ev));               \
+        }                                                                     \
     } while (0)
 
 static void generate_trace_id(char *buf) {
@@ -546,6 +546,8 @@ static sc_error_t append_history(sc_agent_t *agent, sc_role_t role, const char *
     }
     agent->history[agent->history_count].tool_calls = NULL;
     agent->history[agent->history_count].tool_calls_count = 0;
+    agent->history[agent->history_count].content_parts = NULL;
+    agent->history[agent->history_count].content_parts_count = 0;
     agent->history_count++;
     return SC_OK;
 }
@@ -571,6 +573,8 @@ static sc_error_t append_history_with_tool_calls(sc_agent_t *agent, const char *
     agent->history[agent->history_count].tool_call_id_len = 0;
     agent->history[agent->history_count].tool_calls = NULL;
     agent->history[agent->history_count].tool_calls_count = 0;
+    agent->history[agent->history_count].content_parts = NULL;
+    agent->history[agent->history_count].content_parts_count = 0;
     if (tool_calls && tool_calls_count > 0) {
         sc_tool_call_t *owned = (sc_tool_call_t *)agent->alloc->alloc(
             agent->alloc->ctx, tool_calls_count * sizeof(sc_tool_call_t));
@@ -651,6 +655,30 @@ void sc_agent_clear_history(sc_agent_t *agent) {
                                   agent->history[i].tool_calls_count);
             agent->history[i].tool_calls = NULL;
             agent->history[i].tool_calls_count = 0;
+        }
+        if (agent->history[i].content_parts && agent->history[i].content_parts_count > 0) {
+            for (size_t j = 0; j < agent->history[i].content_parts_count; j++) {
+                sc_content_part_t *cp = &agent->history[i].content_parts[j];
+                if (cp->tag == SC_CONTENT_PART_TEXT && cp->data.text.ptr)
+                    agent->alloc->free(agent->alloc->ctx, (void *)cp->data.text.ptr,
+                                       cp->data.text.len + 1);
+                else if (cp->tag == SC_CONTENT_PART_IMAGE_URL && cp->data.image_url.url)
+                    agent->alloc->free(agent->alloc->ctx, (void *)cp->data.image_url.url,
+                                       cp->data.image_url.url_len + 1);
+                else if (cp->tag == SC_CONTENT_PART_IMAGE_BASE64) {
+                    if (cp->data.image_base64.data)
+                        agent->alloc->free(agent->alloc->ctx, (void *)cp->data.image_base64.data,
+                                           cp->data.image_base64.data_len + 1);
+                    if (cp->data.image_base64.media_type)
+                        agent->alloc->free(agent->alloc->ctx,
+                                           (void *)cp->data.image_base64.media_type,
+                                           cp->data.image_base64.media_type_len + 1);
+                }
+            }
+            agent->alloc->free(agent->alloc->ctx, agent->history[i].content_parts,
+                               agent->history[i].content_parts_count * sizeof(sc_content_part_t));
+            agent->history[i].content_parts = NULL;
+            agent->history[i].content_parts_count = 0;
         }
     }
     agent->history_count = 0;
@@ -1610,6 +1638,13 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
                 /* Reflection: evaluate response quality and retry if needed */
                 sc_reflection_quality_t quality = sc_reflection_evaluate(
                     msg, msg_len, resp.content, resp.content_len, &agent->reflection);
+
+                if (quality == SC_QUALITY_ACCEPTABLE && agent->reflection.use_llm &&
+                    agent->reflection.enabled && reflection_retries_left > 0) {
+                    quality =
+                        sc_reflection_evaluate_llm(agent->alloc, &agent->provider, msg, msg_len,
+                                                   resp.content, resp.content_len, quality);
+                }
 
                 if (quality == SC_QUALITY_NEEDS_RETRY && agent->reflection.enabled &&
                     reflection_retries_left > 0 && iter < agent->max_tool_iterations - 1) {

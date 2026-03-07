@@ -47,8 +47,8 @@ sc_error_t sc_context_format_messages(sc_allocator_t *alloc, const sc_owned_mess
         msgs[i].name_len = src->name_len;
         msgs[i].tool_call_id = src->tool_call_id;
         msgs[i].tool_call_id_len = src->tool_call_id_len;
-        msgs[i].content_parts = NULL;
-        msgs[i].content_parts_count = 0;
+        msgs[i].content_parts = src->content_parts;
+        msgs[i].content_parts_count = src->content_parts_count;
         msgs[i].tool_calls = src->tool_calls;
         msgs[i].tool_calls_count = src->tool_calls_count;
     }

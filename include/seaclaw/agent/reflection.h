@@ -9,6 +9,7 @@
 
 typedef struct sc_reflection_config {
     bool enabled;
+    bool use_llm;            /* if true, ACCEPTABLE responses get LLM second opinion */
     int min_response_tokens; /* only reflect on responses >= this length; 0 = always */
     int max_retries;         /* max self-correction retries; 0 = no retry */
 } sc_reflection_config_t;
@@ -39,5 +40,13 @@ sc_error_t sc_reflection_build_critique_prompt(sc_allocator_t *alloc, const char
                                                size_t *out_prompt_len);
 
 void sc_reflection_result_free(sc_allocator_t *alloc, sc_reflection_result_t *result);
+
+/* LLM-driven evaluation: sends the critique prompt to the provider and parses
+ * the response for GOOD/ACCEPTABLE/NEEDS_RETRY keywords.
+ * Falls back to heuristic_quality on provider failure. */
+sc_reflection_quality_t sc_reflection_evaluate_llm(sc_allocator_t *alloc, sc_provider_t *provider,
+                                                   const char *user_query, size_t user_query_len,
+                                                   const char *response, size_t response_len,
+                                                   sc_reflection_quality_t heuristic_quality);
 
 #endif /* SC_AGENT_REFLECTION_H */

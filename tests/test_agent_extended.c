@@ -112,16 +112,11 @@ static void test_agent_compaction_no_trigger(void) {
     cfg.keep_recent = 5;
     cfg.max_history_messages = 100;
     sc_owned_message_t msgs[6];
+    memset(msgs, 0, sizeof(msgs));
     for (int i = 0; i < 6; i++) {
         msgs[i].role = SC_ROLE_USER;
         msgs[i].content = "x";
         msgs[i].content_len = 1;
-        msgs[i].name = NULL;
-        msgs[i].name_len = 0;
-        msgs[i].tool_call_id = NULL;
-        msgs[i].tool_call_id_len = 0;
-        msgs[i].tool_calls = NULL;
-        msgs[i].tool_calls_count = 0;
     }
     SC_ASSERT_FALSE(sc_should_compact(msgs, 6, &cfg));
 }
@@ -235,10 +230,9 @@ static void test_agent_tool_call_round_trip(void) {
     sc_shell_create(&alloc, "/tmp", 4, NULL, &shell_tool);
     sc_agent_t agent;
     memset(&agent, 0, sizeof(agent));
-    err = sc_agent_from_config(&agent, &alloc, prov,
-        &shell_tool, 1, NULL, NULL, NULL, NULL,
-        "gpt-4", 5, "openai", 6, 0.7,
-        ".", 1, 25, 50, false, 0, NULL, 0, NULL, 0, NULL);
+    err =
+        sc_agent_from_config(&agent, &alloc, prov, &shell_tool, 1, NULL, NULL, NULL, NULL, "gpt-4",
+                             5, "openai", 6, 0.7, ".", 1, 25, 50, false, 0, NULL, 0, NULL, 0, NULL);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_EQ(agent.tool_specs_count, 1u);
     SC_ASSERT_EQ(agent.tools_count, 1u);
@@ -248,8 +242,10 @@ static void test_agent_tool_call_round_trip(void) {
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_NOT_NULL(response);
     SC_ASSERT_TRUE(response_len > 0);
-    if (response) alloc.free(alloc.ctx, response, response_len + 1);
-    if (shell_tool.vtable->deinit) shell_tool.vtable->deinit(shell_tool.ctx, &alloc);
+    if (response)
+        alloc.free(alloc.ctx, response, response_len + 1);
+    if (shell_tool.vtable->deinit)
+        shell_tool.vtable->deinit(shell_tool.ctx, &alloc);
     sc_agent_deinit(&agent);
 }
 
@@ -384,16 +380,11 @@ static void test_compaction_trigger_over_message_limit(void) {
     cfg.keep_recent = 5;
     cfg.max_history_messages = 5;
     sc_owned_message_t msgs[10];
+    memset(msgs, 0, sizeof(msgs));
     for (int i = 0; i < 10; i++) {
         msgs[i].role = SC_ROLE_USER;
         msgs[i].content = "x";
         msgs[i].content_len = 1;
-        msgs[i].name = NULL;
-        msgs[i].name_len = 0;
-        msgs[i].tool_call_id = NULL;
-        msgs[i].tool_call_id_len = 0;
-        msgs[i].tool_calls = NULL;
-        msgs[i].tool_calls_count = 0;
     }
     SC_ASSERT_TRUE(sc_should_compact(msgs, 10, &cfg));
 }
@@ -409,16 +400,11 @@ static void test_compaction_compact_history(void) {
     sc_owned_message_t *msgs =
         (sc_owned_message_t *)alloc.alloc(alloc.ctx, cap * sizeof(sc_owned_message_t));
     SC_ASSERT_NOT_NULL(msgs);
+    memset(msgs, 0, cap * sizeof(sc_owned_message_t));
     for (size_t i = 0; i < 5; i++) {
         msgs[i].role = (i % 2 == 0) ? SC_ROLE_USER : SC_ROLE_ASSISTANT;
         msgs[i].content = sc_strdup(&alloc, "message");
         msgs[i].content_len = 7;
-        msgs[i].name = NULL;
-        msgs[i].name_len = 0;
-        msgs[i].tool_call_id = NULL;
-        msgs[i].tool_call_id_len = 0;
-        msgs[i].tool_calls = NULL;
-        msgs[i].tool_calls_count = 0;
     }
     size_t count = 5;
     sc_error_t err = sc_compact_history(&alloc, msgs, &count, &cap, &cfg);

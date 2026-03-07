@@ -213,8 +213,12 @@ static void test_dispatcher_exists_handles_basic_input(void) {
     sc_dispatcher_default(&disp);
     SC_ASSERT_EQ(disp.max_parallel, 1u);
 
-    sc_tool_call_t calls[1] = {{.id = "x", .id_len = 1, .name = "nonexistent", .name_len = 10,
-                                .arguments = "{}", .arguments_len = 2}};
+    sc_tool_call_t calls[1] = {{.id = "x",
+                                .id_len = 1,
+                                .name = "nonexistent",
+                                .name_len = 10,
+                                .arguments = "{}",
+                                .arguments_len = 2}};
     sc_dispatch_result_t out;
     sc_error_t err = sc_dispatcher_dispatch(&disp, &alloc, NULL, 0, calls, 1, &out);
     SC_ASSERT_EQ(err, SC_OK);
@@ -264,6 +268,7 @@ static void test_compaction_message_compaction(void) {
     cfg.max_history_messages = 4;
 
     sc_owned_message_t msgs[6];
+    memset(msgs, 0, sizeof(msgs));
     for (int i = 0; i < 6; i++) {
         msgs[i].role = i == 0 ? SC_ROLE_SYSTEM : SC_ROLE_USER;
         msgs[i].content = alloc.alloc(alloc.ctx, 2);
@@ -271,12 +276,6 @@ static void test_compaction_message_compaction(void) {
         msgs[i].content[0] = 'x';
         msgs[i].content[1] = '\0';
         msgs[i].content_len = 1;
-        msgs[i].name = NULL;
-        msgs[i].name_len = 0;
-        msgs[i].tool_call_id = NULL;
-        msgs[i].tool_call_id_len = 0;
-        msgs[i].tool_calls = NULL;
-        msgs[i].tool_calls_count = 0;
     }
 
     SC_ASSERT_TRUE(sc_should_compact(msgs, 6, &cfg));
@@ -314,8 +313,8 @@ static void test_reflection_build_critique_prompt(void) {
     sc_allocator_t alloc = sc_system_allocator();
     char *prompt = NULL;
     size_t len = 0;
-    sc_error_t err = sc_reflection_build_critique_prompt(&alloc, "query", 5, "response", 8,
-                                                        &prompt, &len);
+    sc_error_t err =
+        sc_reflection_build_critique_prompt(&alloc, "query", 5, "response", 8, &prompt, &len);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_NOT_NULL(prompt);
     SC_ASSERT_TRUE(len > 0);

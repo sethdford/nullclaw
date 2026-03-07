@@ -116,6 +116,49 @@ sc_error_t sc_reflection_build_critique_prompt(sc_allocator_t *alloc, const char
     return SC_OK;
 }
 
+sc_reflection_quality_t sc_reflection_evaluate_llm(sc_allocator_t *alloc, sc_provider_t *provider,
+                                                   const char *user_query, size_t user_query_len,
+                                                   const char *response, size_t response_len,
+                                                   sc_reflection_quality_t heuristic_quality) {
+    if (!alloc || !provider || !provider->vtable || !provider->vtable->chat_with_system)
+        return heuristic_quality;
+
+    char *critique = NULL;
+    size_t critique_len = 0;
+    sc_error_t err = sc_reflection_build_critique_prompt(
+        alloc, user_query, user_query_len, response, response_len, &critique, &critique_len);
+    if (err != SC_OK || !critique)
+        return heuristic_quality;
+
+    static const char sys[] =
+        "You are a response quality evaluator. Respond with exactly one word: "
+        "GOOD, ACCEPTABLE, or NEEDS_RETRY. No other output.";
+
+    char *llm_out = NULL;
+    size_t llm_out_len = 0;
+    err = provider->vtable->chat_with_system(provider->ctx, alloc, sys, sizeof(sys) - 1, critique,
+                                             critique_len, "gpt-4o-mini", 11, 0.0, &llm_out,
+                                             &llm_out_len);
+    alloc->free(alloc->ctx, critique, critique_len + 1);
+
+    if (err != SC_OK || !llm_out || llm_out_len == 0) {
+        if (llm_out)
+            alloc->free(alloc->ctx, llm_out, llm_out_len + 1);
+        return heuristic_quality;
+    }
+
+    sc_reflection_quality_t result = heuristic_quality;
+    if (contains_ci(llm_out, llm_out_len, "needs_retry", 11))
+        result = SC_QUALITY_NEEDS_RETRY;
+    else if (contains_ci(llm_out, llm_out_len, "good", 4))
+        result = SC_QUALITY_GOOD;
+    else if (contains_ci(llm_out, llm_out_len, "acceptable", 10))
+        result = SC_QUALITY_ACCEPTABLE;
+
+    alloc->free(alloc->ctx, llm_out, llm_out_len + 1);
+    return result;
+}
+
 void sc_reflection_result_free(sc_allocator_t *alloc, sc_reflection_result_t *result) {
     if (!alloc || !result)
         return;

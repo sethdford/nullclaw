@@ -1362,6 +1362,9 @@ set(SC_TEST_SOURCES
     tests/test_qmd.c
     tests/test_terminal.c
     tests/test_tavily.c
+    tests/test_awareness.c
+    tests/test_episodic.c
+    tests/test_reflection.c
 )
 if(SC_ENABLE_PERSONA)
     list(APPEND SC_TEST_SOURCES tests/test_persona.c)

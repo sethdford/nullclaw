@@ -342,6 +342,43 @@ static sc_error_t gemini_chat(void *ctx, sc_allocator_t *alloc, const sc_chat_re
                     sc_json_array_push(alloc, parts_arr, fc);
                 }
             }
+        } else if (m->content_parts && m->content_parts_count > 0) {
+            for (size_t p = 0; p < m->content_parts_count; p++) {
+                const sc_content_part_t *cp = &m->content_parts[p];
+                if (cp->tag == SC_CONTENT_PART_TEXT) {
+                    sc_json_value_t *tp = sc_json_object_new(alloc);
+                    if (tp) {
+                        sc_json_object_set(
+                            alloc, tp, "text",
+                            sc_json_string_new(alloc, cp->data.text.ptr, cp->data.text.len));
+                        sc_json_array_push(alloc, parts_arr, tp);
+                    }
+                } else if (cp->tag == SC_CONTENT_PART_IMAGE_BASE64) {
+                    sc_json_value_t *ip = sc_json_object_new(alloc);
+                    if (ip) {
+                        sc_json_value_t *id = sc_json_object_new(alloc);
+                        if (id) {
+                            sc_json_object_set(
+                                alloc, id, "mimeType",
+                                sc_json_string_new(alloc, cp->data.image_base64.media_type,
+                                                   cp->data.image_base64.media_type_len));
+                            sc_json_object_set(alloc, id, "data",
+                                               sc_json_string_new(alloc, cp->data.image_base64.data,
+                                                                  cp->data.image_base64.data_len));
+                            sc_json_object_set(alloc, ip, "inlineData", id);
+                        }
+                        sc_json_array_push(alloc, parts_arr, ip);
+                    }
+                } else if (cp->tag == SC_CONTENT_PART_IMAGE_URL) {
+                    sc_json_value_t *tp = sc_json_object_new(alloc);
+                    if (tp) {
+                        sc_json_object_set(alloc, tp, "text",
+                                           sc_json_string_new(alloc, cp->data.image_url.url,
+                                                              cp->data.image_url.url_len));
+                        sc_json_array_push(alloc, parts_arr, tp);
+                    }
+                }
+            }
         } else if (m->content && m->content_len > 0) {
             sc_json_value_t *text_part = sc_json_object_new(alloc);
             if (text_part) {
@@ -677,7 +714,44 @@ static sc_error_t gemini_stream_chat(void *ctx, sc_allocator_t *alloc,
             sc_json_free(alloc, root);
             return SC_ERR_OUT_OF_MEMORY;
         }
-        if (m->content && m->content_len > 0) {
+        if (m->content_parts && m->content_parts_count > 0) {
+            for (size_t p = 0; p < m->content_parts_count; p++) {
+                const sc_content_part_t *cp = &m->content_parts[p];
+                if (cp->tag == SC_CONTENT_PART_TEXT) {
+                    sc_json_value_t *tp = sc_json_object_new(alloc);
+                    if (tp) {
+                        sc_json_object_set(
+                            alloc, tp, "text",
+                            sc_json_string_new(alloc, cp->data.text.ptr, cp->data.text.len));
+                        sc_json_array_push(alloc, parts_arr, tp);
+                    }
+                } else if (cp->tag == SC_CONTENT_PART_IMAGE_BASE64) {
+                    sc_json_value_t *ip = sc_json_object_new(alloc);
+                    if (ip) {
+                        sc_json_value_t *id = sc_json_object_new(alloc);
+                        if (id) {
+                            sc_json_object_set(
+                                alloc, id, "mimeType",
+                                sc_json_string_new(alloc, cp->data.image_base64.media_type,
+                                                   cp->data.image_base64.media_type_len));
+                            sc_json_object_set(alloc, id, "data",
+                                               sc_json_string_new(alloc, cp->data.image_base64.data,
+                                                                  cp->data.image_base64.data_len));
+                            sc_json_object_set(alloc, ip, "inlineData", id);
+                        }
+                        sc_json_array_push(alloc, parts_arr, ip);
+                    }
+                } else if (cp->tag == SC_CONTENT_PART_IMAGE_URL) {
+                    sc_json_value_t *tp = sc_json_object_new(alloc);
+                    if (tp) {
+                        sc_json_object_set(alloc, tp, "text",
+                                           sc_json_string_new(alloc, cp->data.image_url.url,
+                                                              cp->data.image_url.url_len));
+                        sc_json_array_push(alloc, parts_arr, tp);
+                    }
+                }
+            }
+        } else if (m->content && m->content_len > 0) {
             sc_json_value_t *text_part = sc_json_object_new(alloc);
             if (text_part) {
                 sc_json_object_set(alloc, text_part, "text",

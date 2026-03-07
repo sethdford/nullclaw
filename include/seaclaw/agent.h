@@ -45,6 +45,8 @@ typedef struct sc_owned_message {
     size_t tool_call_id_len;
     sc_tool_call_t *tool_calls; /* optional, owned; for assistant with tool_calls */
     size_t tool_calls_count;
+    sc_content_part_t *content_parts; /* optional, owned; for multimodal messages */
+    size_t content_parts_count;
 } sc_owned_message_t;
 
 typedef struct sc_agent sc_agent_t;

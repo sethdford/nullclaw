@@ -216,7 +216,64 @@ static sc_error_t openai_chat(void *ctx, sc_allocator_t *alloc, const sc_chat_re
         sc_json_value_t *role_val = sc_json_string_new(alloc, role_str, strlen(role_str));
         sc_json_object_set(alloc, obj, "role", role_val);
 
-        if (m->content && m->content_len > 0) {
+        if (m->content_parts && m->content_parts_count > 0) {
+            sc_json_value_t *parts_arr = sc_json_array_new(alloc);
+            if (parts_arr) {
+                for (size_t p = 0; p < m->content_parts_count; p++) {
+                    const sc_content_part_t *cp = &m->content_parts[p];
+                    sc_json_value_t *part = sc_json_object_new(alloc);
+                    if (!part)
+                        break;
+                    if (cp->tag == SC_CONTENT_PART_TEXT) {
+                        sc_json_object_set(alloc, part, "type",
+                                           sc_json_string_new(alloc, "text", 4));
+                        sc_json_object_set(
+                            alloc, part, "text",
+                            sc_json_string_new(alloc, cp->data.text.ptr, cp->data.text.len));
+                    } else if (cp->tag == SC_CONTENT_PART_IMAGE_URL) {
+                        sc_json_object_set(alloc, part, "type",
+                                           sc_json_string_new(alloc, "image_url", 9));
+                        sc_json_value_t *iu = sc_json_object_new(alloc);
+                        if (iu) {
+                            sc_json_object_set(alloc, iu, "url",
+                                               sc_json_string_new(alloc, cp->data.image_url.url,
+                                                                  cp->data.image_url.url_len));
+                            sc_json_object_set(alloc, part, "image_url", iu);
+                        }
+                    } else if (cp->tag == SC_CONTENT_PART_IMAGE_BASE64) {
+                        sc_json_object_set(alloc, part, "type",
+                                           sc_json_string_new(alloc, "image_url", 9));
+                        sc_json_value_t *iu = sc_json_object_new(alloc);
+                        if (iu) {
+                            /* Build data URI: data:<mime>;base64,<data> */
+                            size_t uri_len = 5 + cp->data.image_base64.media_type_len + 8 +
+                                             cp->data.image_base64.data_len;
+                            char *uri = (char *)alloc->alloc(alloc->ctx, uri_len + 1);
+                            if (uri) {
+                                size_t off = 0;
+                                memcpy(uri + off, "data:", 5);
+                                off += 5;
+                                memcpy(uri + off, cp->data.image_base64.media_type,
+                                       cp->data.image_base64.media_type_len);
+                                off += cp->data.image_base64.media_type_len;
+                                memcpy(uri + off, ";base64,", 8);
+                                off += 8;
+                                memcpy(uri + off, cp->data.image_base64.data,
+                                       cp->data.image_base64.data_len);
+                                off += cp->data.image_base64.data_len;
+                                uri[off] = '\0';
+                                sc_json_object_set(alloc, iu, "url",
+                                                   sc_json_string_new(alloc, uri, off));
+                                alloc->free(alloc->ctx, uri, uri_len + 1);
+                            }
+                            sc_json_object_set(alloc, part, "image_url", iu);
+                        }
+                    }
+                    sc_json_array_push(alloc, parts_arr, part);
+                }
+                sc_json_object_set(alloc, obj, "content", parts_arr);
+            }
+        } else if (m->content && m->content_len > 0) {
             sc_json_value_t *content_val = sc_json_string_new(alloc, m->content, m->content_len);
             sc_json_object_set(alloc, obj, "content", content_val);
         }

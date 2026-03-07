@@ -242,6 +242,53 @@ static sc_error_t anthropic_chat(void *ctx, sc_allocator_t *alloc, const sc_chat
                 }
                 sc_json_object_set(alloc, obj, "content", content_arr);
             }
+        } else if (m->content_parts && m->content_parts_count > 0) {
+            sc_json_value_t *parts_arr = sc_json_array_new(alloc);
+            if (parts_arr) {
+                for (size_t p = 0; p < m->content_parts_count; p++) {
+                    const sc_content_part_t *cp = &m->content_parts[p];
+                    sc_json_value_t *part = sc_json_object_new(alloc);
+                    if (!part)
+                        break;
+                    if (cp->tag == SC_CONTENT_PART_TEXT) {
+                        sc_json_object_set(alloc, part, "type",
+                                           sc_json_string_new(alloc, "text", 4));
+                        sc_json_object_set(
+                            alloc, part, "text",
+                            sc_json_string_new(alloc, cp->data.text.ptr, cp->data.text.len));
+                    } else if (cp->tag == SC_CONTENT_PART_IMAGE_BASE64) {
+                        sc_json_object_set(alloc, part, "type",
+                                           sc_json_string_new(alloc, "image", 5));
+                        sc_json_value_t *src_obj = sc_json_object_new(alloc);
+                        if (src_obj) {
+                            sc_json_object_set(alloc, src_obj, "type",
+                                               sc_json_string_new(alloc, "base64", 6));
+                            sc_json_object_set(
+                                alloc, src_obj, "media_type",
+                                sc_json_string_new(alloc, cp->data.image_base64.media_type,
+                                                   cp->data.image_base64.media_type_len));
+                            sc_json_object_set(alloc, src_obj, "data",
+                                               sc_json_string_new(alloc, cp->data.image_base64.data,
+                                                                  cp->data.image_base64.data_len));
+                            sc_json_object_set(alloc, part, "source", src_obj);
+                        }
+                    } else if (cp->tag == SC_CONTENT_PART_IMAGE_URL) {
+                        sc_json_object_set(alloc, part, "type",
+                                           sc_json_string_new(alloc, "image", 5));
+                        sc_json_value_t *src_obj = sc_json_object_new(alloc);
+                        if (src_obj) {
+                            sc_json_object_set(alloc, src_obj, "type",
+                                               sc_json_string_new(alloc, "url", 3));
+                            sc_json_object_set(alloc, src_obj, "url",
+                                               sc_json_string_new(alloc, cp->data.image_url.url,
+                                                                  cp->data.image_url.url_len));
+                            sc_json_object_set(alloc, part, "source", src_obj);
+                        }
+                    }
+                    sc_json_array_push(alloc, parts_arr, part);
+                }
+                sc_json_object_set(alloc, obj, "content", parts_arr);
+            }
         } else if (m->content && m->content_len > 0) {
             sc_json_value_t *content_val = sc_json_string_new(alloc, m->content, m->content_len);
             sc_json_object_set(alloc, obj, "content", content_val);
@@ -589,7 +636,54 @@ static sc_error_t anthropic_stream_chat(void *ctx, sc_allocator_t *alloc,
         const char *role_str = (m->role == SC_ROLE_ASSISTANT) ? "assistant" : "user";
         sc_json_object_set(alloc, obj, "role",
                            sc_json_string_new(alloc, role_str, strlen(role_str)));
-        if (m->content && m->content_len > 0) {
+        if (m->content_parts && m->content_parts_count > 0) {
+            sc_json_value_t *parts_arr = sc_json_array_new(alloc);
+            if (parts_arr) {
+                for (size_t p = 0; p < m->content_parts_count; p++) {
+                    const sc_content_part_t *cp = &m->content_parts[p];
+                    sc_json_value_t *part = sc_json_object_new(alloc);
+                    if (!part)
+                        break;
+                    if (cp->tag == SC_CONTENT_PART_TEXT) {
+                        sc_json_object_set(alloc, part, "type",
+                                           sc_json_string_new(alloc, "text", 4));
+                        sc_json_object_set(
+                            alloc, part, "text",
+                            sc_json_string_new(alloc, cp->data.text.ptr, cp->data.text.len));
+                    } else if (cp->tag == SC_CONTENT_PART_IMAGE_BASE64) {
+                        sc_json_object_set(alloc, part, "type",
+                                           sc_json_string_new(alloc, "image", 5));
+                        sc_json_value_t *src_obj = sc_json_object_new(alloc);
+                        if (src_obj) {
+                            sc_json_object_set(alloc, src_obj, "type",
+                                               sc_json_string_new(alloc, "base64", 6));
+                            sc_json_object_set(
+                                alloc, src_obj, "media_type",
+                                sc_json_string_new(alloc, cp->data.image_base64.media_type,
+                                                   cp->data.image_base64.media_type_len));
+                            sc_json_object_set(alloc, src_obj, "data",
+                                               sc_json_string_new(alloc, cp->data.image_base64.data,
+                                                                  cp->data.image_base64.data_len));
+                            sc_json_object_set(alloc, part, "source", src_obj);
+                        }
+                    } else if (cp->tag == SC_CONTENT_PART_IMAGE_URL) {
+                        sc_json_object_set(alloc, part, "type",
+                                           sc_json_string_new(alloc, "image", 5));
+                        sc_json_value_t *src_obj = sc_json_object_new(alloc);
+                        if (src_obj) {
+                            sc_json_object_set(alloc, src_obj, "type",
+                                               sc_json_string_new(alloc, "url", 3));
+                            sc_json_object_set(alloc, src_obj, "url",
+                                               sc_json_string_new(alloc, cp->data.image_url.url,
+                                                                  cp->data.image_url.url_len));
+                            sc_json_object_set(alloc, part, "source", src_obj);
+                        }
+                    }
+                    sc_json_array_push(alloc, parts_arr, part);
+                }
+                sc_json_object_set(alloc, obj, "content", parts_arr);
+            }
+        } else if (m->content && m->content_len > 0) {
             sc_json_object_set(alloc, obj, "content",
                                sc_json_string_new(alloc, m->content, m->content_len));
         }
