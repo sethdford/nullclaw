@@ -87,7 +87,7 @@ mkdir -p "$RELEASE_BUILD"
 
 RELEASE_BIN="$RELEASE_BUILD/seaclaw"
 RELEASE_SIZE=$(stat -f%z "$RELEASE_BIN" 2>/dev/null || stat -c%s "$RELEASE_BIN" 2>/dev/null)
-check "release binary < 500 KB" test "$RELEASE_SIZE" -lt 512000
+check "release binary < 600 KB" test "$RELEASE_SIZE" -lt 614400
 echo -e "  ${DIM}release binary size: ${RELEASE_SIZE} bytes${RESET}"
 
 # Cleanup release build

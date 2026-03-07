@@ -22,7 +22,7 @@ case "${1:-}" in
         ;;
 esac
 
-if [ $# -lt 2 ]; then
+if [ "$#" -lt 2 ]; then
     die "Usage: $0 before.json after.json"
 fi
 

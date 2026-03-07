@@ -450,10 +450,19 @@ export class ScConfigView extends GatewayAwareLitElement {
       <div class="header">
         <span class="status ${this.saveStatus}">${statusText}</span>
         <div class="header-actions">
-          <button class="toggle-btn" @click=${this.toggleRawMode}>
+          <button
+            class="toggle-btn"
+            @click=${this.toggleRawMode}
+            aria-label=${this.rawMode ? "Switch to form editor" : "Switch to raw JSON editor"}
+          >
             ${this.rawMode ? "Form" : "Raw JSON"}
           </button>
-          <button class="save-btn" ?disabled=${!this.hasChanges()} @click=${() => this.save()}>
+          <button
+            class="save-btn"
+            ?disabled=${!this.hasChanges()}
+            @click=${() => this.save()}
+            aria-label="Save configuration"
+          >
             Save
           </button>
         </div>
@@ -480,6 +489,7 @@ export class ScConfigView extends GatewayAwareLitElement {
                   role="button"
                   tabindex="0"
                   aria-expanded=${!this.sectionCollapsed}
+                  aria-label="General configuration"
                   @click=${() => (this.sectionCollapsed = !this.sectionCollapsed)}
                   @keydown=${(e: KeyboardEvent) => {
                     if (e.key === "Enter" || e.key === " ") {

@@ -198,7 +198,12 @@ export class ScNodesView extends GatewayAwareLitElement {
                 Updated ${this.stalenessLabel}
               </span>`
             : nothing}
-          <button class="refresh-btn" ?disabled=${this.loading} @click=${() => this.load()}>
+          <button
+            class="refresh-btn"
+            ?disabled=${this.loading}
+            @click=${() => this.load()}
+            aria-label="Refresh nodes"
+          >
             ${this.loading ? "Refreshing..." : "Refresh"}
           </button>
         </div>

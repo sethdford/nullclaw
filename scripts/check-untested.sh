@@ -8,21 +8,20 @@ cd "$(git rev-parse --show-toplevel)"
 SKIP_PATTERNS="^factory$|^meta_common$|^main$|^main_wasi$|_common$"
 FOUND=0
 
-for src in $(find src -name '*.c' | sort); do
+while IFS= read -r src; do
     base=$(basename "$src" .c)
 
     if echo "$base" | grep -qE "$SKIP_PATTERNS"; then
         continue
     fi
 
-    # Check if any test file references a function from this module
     if grep -rql "${base}" tests/ >/dev/null 2>&1; then
         continue
     fi
 
     echo "  NO TEST: $src"
     FOUND=$((FOUND + 1))
-done
+done < <(find src -name '*.c' | sort)
 
 if [ "$FOUND" -eq 0 ]; then
     echo "All source files have test references."

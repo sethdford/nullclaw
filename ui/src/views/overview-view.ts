@@ -137,7 +137,7 @@ export class ScOverviewView extends GatewayAwareLitElement {
     .status-dot.operational {
       background: var(--sc-success);
       box-shadow: 0 0 6px var(--sc-success);
-      animation: sc-status-pulse 2s ease-in-out infinite;
+      animation: sc-status-pulse var(--sc-duration-slow) ease-in-out infinite;
     }
 
     .status-dot.offline {

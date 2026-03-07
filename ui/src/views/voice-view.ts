@@ -60,7 +60,7 @@ export class ScVoiceView extends GatewayAwareLitElement {
       background: var(--sc-accent);
       border-color: var(--sc-accent);
       color: var(--sc-on-accent);
-      animation: sc-pulse-mic 1.5s ease-in-out infinite;
+      animation: sc-pulse-mic var(--sc-duration-slow) ease-in-out infinite;
     }
     @keyframes sc-pulse-mic {
       0%,

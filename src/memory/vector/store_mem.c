@@ -274,9 +274,7 @@ static void deinit_impl(void *ctx, sc_allocator_t *alloc) {
     }
     if (m->entries)
         alloc->free(alloc->ctx, m->entries, m->capacity * sizeof(mem_entry_t));
-    m->entries = NULL;
-    m->count = 0;
-    m->capacity = 0;
+    alloc->free(alloc->ctx, m, sizeof(mem_store_ctx_t));
 }
 
 static const sc_vector_store_vtable_t mem_vtable = {

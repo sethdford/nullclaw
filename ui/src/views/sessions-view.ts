@@ -657,7 +657,7 @@ export class ScSessionsView extends GatewayAwareLitElement {
 
   private focusSessionItem(): void {
     this.updateComplete.then(() => {
-      const items = this.renderRoot.querySelectorAll<HTMLElement>('.session-item[role="option"]');
+      const items = this.renderRoot.querySelectorAll<HTMLElement>('.session-item[role="listitem"]');
       items[this.focusedIndex]?.focus();
     });
   }
@@ -772,7 +772,7 @@ export class ScSessionsView extends GatewayAwareLitElement {
 
           <div
             class="session-list"
-            role="listbox"
+            role="list"
             aria-label="Sessions"
             @keydown=${this.onListKeyDown}
           >
@@ -819,9 +819,9 @@ export class ScSessionsView extends GatewayAwareLitElement {
     return html`
       <div
         class="session-item ${isActive ? "active" : ""}"
-        role="option"
+        role="listitem"
         tabindex=${isFocused || isActive ? "0" : "-1"}
-        aria-selected=${isActive}
+        aria-current=${isActive ? "true" : "false"}
         @click=${() => this.selectSession(s.key ?? "")}
         @contextmenu=${(e: MouseEvent) => this.onContextMenu(e, s.key ?? "")}
       >

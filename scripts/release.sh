@@ -80,10 +80,6 @@ fi
 
 info "Updating version to $VERSION..."
 
-if grep -q 'project(seaclaw VERSION' CMakeLists.txt; then
-    sed -i.bak "s/project(seaclaw VERSION [^ )]*)/project(seaclaw VERSION $VERSION)/" CMakeLists.txt && rm -f CMakeLists.txt.bak
-fi
-
 sed -i.bak "s/SeaClaw v[0-9][0-9.]*/SeaClaw v$VERSION/g" CMakeLists.txt && rm -f CMakeLists.txt.bak
 
 if grep -q '#define SC_VERSION' src/main.c; then
@@ -96,6 +92,19 @@ fi
 
 if [ -f flake.nix ] && grep -q 'version = ' flake.nix; then
     sed -i.bak "s/version = \"[^\"]*\"/version = \"$VERSION\"/" flake.nix && rm -f flake.nix.bak
+fi
+
+DEB_CHANGELOG="packaging/debian/changelog"
+if [ -f "$DEB_CHANGELOG" ]; then
+    DATE_RFC2822=$(date -R 2>/dev/null || date "+%a, %d %b %Y %H:%M:%S %z")
+    DEB_ENTRY="seaclaw (${VERSION}-1) unstable; urgency=medium
+
+  * Release ${VERSION}
+
+ -- SeaClaw Team <team@seaclaw.ai>  ${DATE_RFC2822}
+"
+    EXISTING=$(cat "$DEB_CHANGELOG")
+    printf '%s\n\n%s\n' "$DEB_ENTRY" "$EXISTING" > "$DEB_CHANGELOG"
 fi
 
 info "Generating changelog entry..."

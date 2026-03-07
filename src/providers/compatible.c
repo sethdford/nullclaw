@@ -68,13 +68,16 @@ static sc_error_t compatible_chat_with_system(void *ctx, sc_allocator_t *alloc,
 
     if (resp.content && resp.content_len > 0) {
         *out = sc_strndup(alloc, resp.content, resp.content_len);
-        if (!*out)
+        if (!*out) {
+            sc_chat_response_free(alloc, &resp);
             return SC_ERR_OUT_OF_MEMORY;
+        }
         *out_len = resp.content_len;
     } else {
         *out = NULL;
         *out_len = 0;
     }
+    sc_chat_response_free(alloc, &resp);
     return SC_OK;
 }
 

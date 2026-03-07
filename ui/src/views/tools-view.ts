@@ -161,10 +161,11 @@ export class ScToolsView extends GatewayAwareLitElement {
             description=${this.error}
           ></sc-empty-state>`
         : nothing}
-      <div class="search">
+      <div class="search" role="search" aria-label="Filter tools">
         <sc-input
           type="text"
           placeholder="Search tools..."
+          aria-label="Search tools"
           .value=${this.filter}
           @sc-input=${(e: CustomEvent<{ value: string }>) => {
             this.filter = e.detail.value;
@@ -192,6 +193,8 @@ export class ScToolsView extends GatewayAwareLitElement {
                         <button
                           class="schema-toggle"
                           @click=${() => this.toggleSchema(t.name ?? "")}
+                          aria-expanded=${this.expandedCards.has(t.name ?? "")}
+                          aria-label=${`${this.expandedCards.has(t.name ?? "") ? "Hide" : "Show"} parameters for ${t.name ?? "tool"}`}
                         >
                           ${this.expandedCards.has(t.name ?? "") ? "Hide params" : "Show params"}
                         </button>
