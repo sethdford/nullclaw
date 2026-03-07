@@ -503,7 +503,6 @@ export class ScApp extends LitElement {
       loadedViews.add(tab);
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
-      console.error(`[sc-app] failed to load view "${tab}":`, err);
       this._viewError = err;
     }
   }
