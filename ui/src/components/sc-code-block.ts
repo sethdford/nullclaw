@@ -48,6 +48,7 @@ export class ScCodeBlock extends LitElement {
   static override styles = css`
     :host {
       display: block;
+      position: relative;
       font-family: var(--sc-font-mono);
       font-size: var(--sc-text-sm);
       background: var(--sc-bg-inset);
@@ -59,7 +60,6 @@ export class ScCodeBlock extends LitElement {
     .header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
       padding: var(--sc-space-xs) var(--sc-space-sm);
       background: color-mix(in srgb, var(--sc-border) 20%, var(--sc-bg-inset));
       border-bottom: 1px solid var(--sc-border-subtle);
@@ -73,6 +73,9 @@ export class ScCodeBlock extends LitElement {
     }
 
     .copy-btn {
+      position: absolute;
+      top: var(--sc-space-sm);
+      right: var(--sc-space-sm);
       display: flex;
       align-items: center;
       gap: var(--sc-space-2xs);
@@ -80,19 +83,28 @@ export class ScCodeBlock extends LitElement {
       font-family: var(--sc-font);
       font-size: var(--sc-text-xs);
       color: var(--sc-text-muted);
-      background: transparent;
-      border: 1px solid var(--sc-border-subtle);
-      border-radius: var(--sc-radius-sm);
+      background: color-mix(in srgb, var(--sc-bg-surface) 65%, transparent);
+      backdrop-filter: blur(var(--sc-glass-subtle-blur, 12px));
+      -webkit-backdrop-filter: blur(var(--sc-glass-subtle-blur, 12px));
+      border: 1px solid color-mix(in srgb, white 8%, transparent);
+      border-radius: var(--sc-radius-full);
       cursor: pointer;
+      opacity: 0;
       transition:
+        opacity var(--sc-duration-fast) var(--sc-ease-out),
         color var(--sc-duration-fast) var(--sc-ease-out),
         border-color var(--sc-duration-fast) var(--sc-ease-out),
         background var(--sc-duration-fast) var(--sc-ease-out);
     }
 
+    :host:hover .copy-btn,
+    .copy-btn:focus,
+    .copy-btn.copied {
+      opacity: 1;
+    }
+
     .copy-btn:hover {
       color: var(--sc-text);
-      border-color: var(--sc-border);
     }
 
     .copy-btn:focus-visible {
@@ -120,6 +132,13 @@ export class ScCodeBlock extends LitElement {
       font-size: inherit;
     }
 
+    @media (prefers-reduced-transparency: reduce) {
+      .copy-btn {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: var(--sc-bg-elevated);
+      }
+    }
     @media (prefers-reduced-motion: reduce) {
       .copy-btn {
         transition: none;
@@ -228,15 +247,15 @@ export class ScCodeBlock extends LitElement {
       >
         <div class="header">
           <span class="lang-label">${langLabel}</span>
-          <button
-            type="button"
-            class="copy-btn ${this._copied ? "copied" : ""}"
-            aria-label=${this._copied ? "Copied" : "Copy code"}
-            @click=${this._onCopy}
-          >
-            ${this._copied ? "Copied!" : "Copy"}
-          </button>
         </div>
+        <button
+          type="button"
+          class="copy-btn ${this._copied ? "copied" : ""}"
+          aria-label=${this._copied ? "Copied" : "Copy code"}
+          @click=${this._onCopy}
+        >
+          ${this._copied ? "Copied!" : "Copy"}
+        </button>
         <div class="content">
           ${showHighlighted
             ? html`${unsafeHTML(DOMPurify.sanitize(this._highlighted))}`

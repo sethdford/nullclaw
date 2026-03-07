@@ -62,6 +62,7 @@ const AUTONOMY_LABELS: Record<number, { label: string; color: string; descriptio
 export class ScSecurityView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
+      view-transition-name: view-security;
       display: block;
       color: var(--sc-text);
     }

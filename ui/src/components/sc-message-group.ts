@@ -27,7 +27,7 @@ export class ScMessageGroup extends LitElement {
     .messages {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: var(--sc-space-xs);
     }
 
     .group-footer {

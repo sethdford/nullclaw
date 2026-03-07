@@ -90,12 +90,6 @@ export class ScMessageActions extends LitElement {
 
   private _onCopy(): void {
     if (!this.content) return;
-    navigator.clipboard?.writeText(this.content).catch(() => {});
-    ScToast.show({ message: "Copied to clipboard", variant: "success" });
-    this._copied = true;
-    setTimeout(() => {
-      this._copied = false;
-    }, 1500);
     this.dispatchEvent(
       new CustomEvent("sc-copy", {
         bubbles: true,
@@ -103,6 +97,18 @@ export class ScMessageActions extends LitElement {
         detail: { content: this.content },
       }),
     );
+    navigator.clipboard
+      ?.writeText(this.content)
+      .then(() => {
+        this._copied = true;
+        setTimeout(() => {
+          this._copied = false;
+        }, 1500);
+        ScToast.show({ message: "Copied to clipboard", variant: "success" });
+      })
+      .catch(() => {
+        /* clipboard API unavailable */
+      });
   }
 
   private _onRetry(): void {

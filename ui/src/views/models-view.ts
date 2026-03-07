@@ -48,6 +48,7 @@ interface UsageSummary {
 export class ScModelsView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
+      view-transition-name: view-models;
       display: block;
       max-width: 1200px;
     }

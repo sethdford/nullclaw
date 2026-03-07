@@ -24,19 +24,29 @@ static void set_defaults(sc_config_t *cfg, sc_allocator_t *a) {
     cfg->providers_len = 0;
     cfg->api_key = NULL;
     cfg->default_provider = sc_strdup(a, "gemini");
+    if (!cfg->default_provider)
+        return;
     cfg->default_model = sc_strdup(a, "gemini-3.1-flash-lite-preview");
+    if (!cfg->default_model)
+        return;
     cfg->default_temperature = 0.7;
     cfg->temperature = 0.7;
     cfg->max_tokens = 0;
     cfg->memory_backend = sc_strdup(a, "markdown");
+    if (!cfg->memory_backend)
+        return;
     cfg->memory_auto_save = true;
     cfg->heartbeat_enabled = false;
     cfg->heartbeat_interval_minutes = 30;
     cfg->gateway_host = sc_strdup(a, "127.0.0.1");
+    if (!cfg->gateway_host)
+        return;
     cfg->gateway_port = 3000;
     cfg->workspace_only = true;
     cfg->max_actions_per_hour = 20;
     cfg->autonomy.level = sc_strdup(a, "supervised");
+    if (!cfg->autonomy.level)
+        return;
     cfg->autonomy.workspace_only = true;
     cfg->autonomy.max_actions_per_hour = 20;
     cfg->autonomy.require_approval_for_medium_risk = true;
@@ -51,6 +61,8 @@ static void set_defaults(sc_config_t *cfg, sc_allocator_t *a) {
     cfg->autonomy.allowed_paths = NULL;
     cfg->autonomy.allowed_paths_len = 0;
     cfg->diagnostics.backend = sc_strdup(a, "none");
+    if (!cfg->diagnostics.backend)
+        return;
     cfg->diagnostics.otel_endpoint = NULL;
     cfg->diagnostics.otel_service_name = NULL;
     cfg->diagnostics.log_tool_calls = false;
@@ -62,6 +74,8 @@ static void set_defaults(sc_config_t *cfg, sc_allocator_t *a) {
     cfg->agent.max_history_messages = 100;
     cfg->agent.parallel_tools = false;
     cfg->agent.tool_dispatcher = sc_strdup(a, "auto");
+    if (!cfg->agent.tool_dispatcher)
+        return;
     cfg->agent.token_limit = SC_DEFAULT_AGENT_TOKEN_LIMIT;
     cfg->agent.session_idle_timeout_secs = 1800;
     cfg->agent.compaction_keep_recent = 20;
@@ -96,12 +110,18 @@ static void set_defaults(sc_config_t *cfg, sc_allocator_t *a) {
     cfg->router.complexity_low = 50;
     cfg->router.complexity_high = 500;
     cfg->runtime.kind = sc_strdup(a, "native");
+    if (!cfg->runtime.kind)
+        return;
     cfg->runtime.docker_image = NULL;
     cfg->runtime.gce_project = NULL;
     cfg->runtime.gce_zone = NULL;
     cfg->runtime.gce_instance = NULL;
     cfg->memory.profile = sc_strdup(a, "markdown_only");
+    if (!cfg->memory.profile)
+        return;
     cfg->memory.backend = sc_strdup(a, "markdown");
+    if (!cfg->memory.backend)
+        return;
     cfg->memory.auto_save = true;
     cfg->memory.sqlite_path = NULL;
     cfg->memory.max_entries = 0;
@@ -110,10 +130,14 @@ static void set_defaults(sc_config_t *cfg, sc_allocator_t *a) {
     cfg->channels.cli = true;
     cfg->channels.default_channel = NULL;
     cfg->tunnel.provider = sc_strdup(a, "none");
+    if (!cfg->tunnel.provider)
+        return;
     cfg->tunnel.domain = NULL;
     cfg->gateway.enabled = true;
     cfg->gateway.port = 3000;
     cfg->gateway.host = sc_strdup(a, "127.0.0.1");
+    if (!cfg->gateway.host)
+        return;
     cfg->gateway.require_pairing = true;
     cfg->gateway.auth_token = NULL;
     cfg->gateway.allow_public_bind = false;
@@ -123,6 +147,8 @@ static void set_defaults(sc_config_t *cfg, sc_allocator_t *a) {
     cfg->gateway.webhook_hmac_secret = NULL;
     cfg->secrets.encrypt = true;
     cfg->security.sandbox = sc_strdup(a, "auto");
+    if (!cfg->security.sandbox)
+        return;
     cfg->security.autonomy_level = 1;
     cfg->security.sandbox_config.enabled = false;
     cfg->security.sandbox_config.backend = SC_SANDBOX_AUTO;
@@ -143,6 +169,8 @@ static void set_defaults(sc_config_t *cfg, sc_allocator_t *a) {
     cfg->tools.max_file_size_bytes = 10485760;
     cfg->tools.web_fetch_max_chars = 100000;
     cfg->tools.web_search_provider = sc_strdup(a, "duckduckgo");
+    if (!cfg->tools.web_search_provider)
+        return;
     cfg->tools.enabled_tools = NULL;
     cfg->tools.enabled_tools_len = 0;
     cfg->tools.disabled_tools = NULL;
@@ -1257,8 +1285,7 @@ static void parse_nostr_channel(sc_allocator_t *a, sc_config_t *cfg, const sc_js
     const char *sk = sc_json_get_string(obj, "seckey_hex");
     if (nak) {
         if (cfg->channels.nostr.nak_path)
-            a->free(a->ctx, cfg->channels.nostr.nak_path,
-                    strlen(cfg->channels.nostr.nak_path) + 1);
+            a->free(a->ctx, cfg->channels.nostr.nak_path, strlen(cfg->channels.nostr.nak_path) + 1);
         cfg->channels.nostr.nak_path = sc_strdup(a, nak);
     }
     if (pk) {
@@ -1560,8 +1587,8 @@ static sc_error_t parse_agent(sc_allocator_t *a, sc_config_t *cfg, const sc_json
                     if (!p->key || !p->value || p->value->type != SC_JSON_STRING)
                         continue;
                     arr[count].channel = sc_strdup(a, p->key);
-                    arr[count].persona = sc_strndup(a, p->value->data.string.ptr,
-                                                    p->value->data.string.len);
+                    arr[count].persona =
+                        sc_strndup(a, p->value->data.string.ptr, p->value->data.string.len);
                     if (arr[count].channel && arr[count].persona)
                         count++;
                     else {

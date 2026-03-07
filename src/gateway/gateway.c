@@ -876,7 +876,15 @@ sc_error_t sc_gateway_run(sc_allocator_t *alloc, const char *host, uint16_t port
                 sc_ws_conn_t *conn = NULL;
                 sc_error_t ws_err = sc_ws_server_upgrade(&gw->ws, client, req, (size_t)n, &conn);
                 if (ws_err != SC_OK) {
-                    send_json(client, 429, "{\"error\":\"too many connections\"}");
+                    int status = (ws_err == SC_ERR_ALREADY_EXISTS)      ? 429
+                                 : (ws_err == SC_ERR_PERMISSION_DENIED) ? 401
+                                                                        : 503;
+                    const char *msg = (ws_err == SC_ERR_ALREADY_EXISTS)
+                                          ? "{\"error\":\"too many connections\"}"
+                                      : (ws_err == SC_ERR_PERMISSION_DENIED)
+                                          ? "{\"error\":\"unauthorized\"}"
+                                          : "{\"error\":\"websocket upgrade failed\"}";
+                    send_json(client, status, msg);
                     close(client);
                 } else {
                     if (!gw->config.require_pairing)

@@ -127,6 +127,7 @@ interface ChannelStatus {
 export class ScAutomationsView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
+      view-transition-name: view-automations;
       display: block;
       max-width: 960px;
       margin: 0 auto;

@@ -32,6 +32,7 @@ type FilterValue = "all" | "configured" | "unconfigured";
 export class ScChannelsView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
+      view-transition-name: view-channels;
       display: block;
       max-width: 1200px;
     }

@@ -72,6 +72,7 @@ function toRawConfig(edited: ConfigData): Record<string, unknown> {
 export class ScConfigView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
+      view-transition-name: view-config;
       display: block;
       max-width: 640px;
       margin: 0 auto;
@@ -458,8 +459,10 @@ export class ScConfigView extends GatewayAwareLitElement {
           description="Manage your SeaClaw instance settings"
         ></sc-section-header>
       </sc-page-hero>
-      <sc-skeleton variant="card" height="200px"></sc-skeleton>
-      <sc-skeleton variant="card" height="200px"></sc-skeleton>
+      <div class="form sc-stagger">
+        <sc-skeleton variant="card" height="200px"></sc-skeleton>
+        <sc-skeleton variant="card" height="200px"></sc-skeleton>
+      </div>
     `;
   }
 
@@ -574,7 +577,7 @@ export class ScConfigView extends GatewayAwareLitElement {
           </div>
         </sc-section-header>
       </sc-page-hero>
-      <div class="form">
+      <div class="form sc-stagger">
         <sc-card glass>
           <sc-form-group title="Provider Settings" description="Default AI provider and model">
             <sc-combobox

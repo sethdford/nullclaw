@@ -60,6 +60,7 @@ export class ScOverviewView extends GatewayAwareLitElement {
 
   static override styles = css`
     :host {
+      view-transition-name: view-overview;
       display: block;
       max-width: 1200px;
       padding: var(--sc-space-lg) var(--sc-space-xl);

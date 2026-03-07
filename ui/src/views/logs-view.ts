@@ -46,6 +46,7 @@ function formatRelativeTime(ts: string): string {
 export class ScLogsView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
+      view-transition-name: view-logs;
       display: flex;
       flex-direction: column;
       flex: 1;
@@ -416,7 +417,7 @@ export class ScLogsView extends GatewayAwareLitElement {
     const entries = this.filteredLogs;
     void this._relativeTimeKey;
     return html`
-      <sc-card class="log-card" glass>
+      <sc-card class="log-card sc-stagger" glass>
         <div class="log-area-wrapper">
           <div class="log-area" role="log" aria-live="polite">
             ${entries.length === 0

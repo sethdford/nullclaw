@@ -1720,6 +1720,17 @@ void sc_control_on_message(sc_ws_conn_t *conn, const char *data, size_t data_len
         return;
 
 #ifdef SC_GATEWAY_POSIX
+    /* Simple global RPC rate limit: max 60 calls per second across all connections */
+    uint64_t now_ms = (uint64_t)time(NULL) * 1000;
+    if (now_ms - proto->rpc_window_ms > 1000) {
+        proto->rpc_count = 0;
+        proto->rpc_window_ms = now_ms;
+    }
+    if (++proto->rpc_count > 60) {
+        sc_control_send_response(conn, "0", false, "{\"error\":\"rate limited\"}");
+        return;
+    }
+
     sc_json_value_t *root = NULL;
     if (sc_json_parse(proto->alloc, data, data_len, &root) != SC_OK)
         return;

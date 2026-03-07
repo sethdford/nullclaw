@@ -1,5 +1,5 @@
 import { html, css, nothing } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, query, state } from "lit/decorators.js";
 import type { GatewayClient } from "../gateway.js";
 import { GatewayClient as GatewayClientClass } from "../gateway.js";
 import type { GatewayStatus } from "../gateway.js";
@@ -26,6 +26,7 @@ export class ScVoiceView extends GatewayAwareLitElement {
 
   static override styles = css`
     :host {
+      view-transition-name: view-voice;
       display: flex;
       flex-direction: column;
       flex: 1;
@@ -555,6 +556,12 @@ export class ScVoiceView extends GatewayAwareLitElement {
   };
   private _boundGateway: GatewayClient | null = null;
 
+  @query("sc-message-thread") private _messageThread!: HTMLElement & { scrollToBottom: () => void };
+
+  private _scrollConversation(): void {
+    this._messageThread?.scrollToBottom();
+  }
+
   private get _cacheKey(): string {
     return `sc-voice-messages`;
   }
@@ -827,7 +834,7 @@ export class ScVoiceView extends GatewayAwareLitElement {
     this.transcript = "";
     this.voiceStatus = "processing";
     this._cacheMessages();
-    this._scrollConversation();
+    this.updateComplete.then(() => this._scrollConversation());
     try {
       await gw.request<{ status?: string; sessionKey?: string }>("chat.send", {
         message: text,

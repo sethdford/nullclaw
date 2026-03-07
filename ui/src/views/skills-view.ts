@@ -51,6 +51,7 @@ export class ScSkillsView extends GatewayAwareLitElement {
 
   static override styles = css`
     :host {
+      view-transition-name: view-skills;
       display: block;
       color: var(--sc-text);
     }

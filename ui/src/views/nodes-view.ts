@@ -41,6 +41,7 @@ export class ScNodesView extends GatewayAwareLitElement {
 
   static override styles = css`
     :host {
+      view-transition-name: view-nodes;
       display: block;
       max-width: 1200px;
     }

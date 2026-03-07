@@ -41,6 +41,8 @@ typedef struct sc_control_protocol {
     bool require_pairing;
     struct sc_pairing_guard *pairing_guard;
     const char *auth_token;
+    uint32_t rpc_count;     /* RPC calls in current window */
+    uint64_t rpc_window_ms; /* Window start timestamp */
 } sc_control_protocol_t;
 
 void sc_control_protocol_init(sc_control_protocol_t *proto, sc_allocator_t *alloc,

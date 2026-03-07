@@ -29,22 +29,22 @@ export class ScChatBubble extends LitElement {
     @keyframes sc-bubble-send {
       from {
         opacity: 0;
-        transform: scale(0.92);
+        transform: translateY(var(--sc-space-sm));
       }
       to {
         opacity: 1;
-        transform: scale(1);
+        transform: translateY(0);
       }
     }
 
     @keyframes sc-bubble-receive {
       from {
         opacity: 0;
-        transform: translateX(calc(-1 * var(--sc-space-sm)));
+        transform: translateY(var(--sc-space-sm));
       }
       to {
         opacity: 1;
-        transform: translateX(0);
+        transform: translateY(0);
       }
     }
 
@@ -71,8 +71,7 @@ export class ScChatBubble extends LitElement {
       );
       color: var(--sc-on-accent-text, var(--sc-on-accent));
       border-radius: 20px 20px 6px 20px;
-      animation: sc-bubble-send var(--sc-duration-moderate, 250ms)
-        var(--sc-ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) both;
+      animation: sc-bubble-send var(--sc-duration-fast) var(--sc-ease-out) both;
     }
 
     .bubble.role-user::after {
@@ -101,7 +100,7 @@ export class ScChatBubble extends LitElement {
       border: 1px solid color-mix(in srgb, white 8%, transparent);
       border-radius: 20px 20px 20px 6px;
       box-shadow: var(--sc-shadow-xs);
-      animation: sc-bubble-receive var(--sc-duration-normal) var(--sc-ease-out) both;
+      animation: sc-bubble-receive var(--sc-duration-fast) var(--sc-ease-out) both;
     }
 
     .bubble.role-assistant::after {

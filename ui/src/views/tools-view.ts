@@ -22,6 +22,7 @@ interface ToolDef {
 export class ScToolsView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
+      view-transition-name: view-tools;
       display: block;
       max-width: 1200px;
     }

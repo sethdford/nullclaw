@@ -60,6 +60,7 @@ const TIME_RANGE_OPTIONS = [
 export class ScUsageView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
+      view-transition-name: view-usage;
       display: block;
       color: var(--sc-text);
       max-width: 960px;

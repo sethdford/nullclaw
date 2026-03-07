@@ -19,6 +19,7 @@ import "../components/sc-context-menu.js";
 export class ScChatView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
+      view-transition-name: view-chat;
       display: flex;
       flex-direction: column;
       height: 100%;
@@ -310,6 +311,25 @@ export class ScChatView extends GatewayAwareLitElement {
           action: () => this._retryMessage(item),
           disabled: item.role === "assistant",
         },
+        {
+          label: "Add reaction",
+          icon: icons.heart,
+          action: () => {
+            const idx = this.chat.items.findIndex((i) => i === item);
+            this._messageThread.dispatchEvent(
+              new CustomEvent("sc-tapback", {
+                bubbles: true,
+                composed: true,
+                detail: {
+                  x: this._contextMenu.x,
+                  y: this._contextMenu.y,
+                  index: idx,
+                  content: item.type === "message" ? item.content : "",
+                },
+              }),
+            );
+          },
+        },
       ],
     };
   }
@@ -446,11 +466,45 @@ export class ScChatView extends GatewayAwareLitElement {
             @sc-abort=${() => this.handleAbort()}
             @sc-branch-navigate=${(e: CustomEvent<{ index: number; direction: number }>) => {
               const item = this.chat.items[e.detail.index];
-              if (item?.type === "message" && item.id) this.chat.getBranchMessages?.(item.id);
+              if (item?.type === "message" && item.id && item.branchCount && item.branchCount > 1) {
+                const newIndex = (item.branchIndex ?? 0) + e.detail.direction;
+                if (newIndex >= 0 && newIndex < item.branchCount) {
+                  this.chat.items = [
+                    ...this.chat.items.slice(0, e.detail.index),
+                    { ...item, branchIndex: newIndex },
+                    ...this.chat.items.slice(e.detail.index + 1),
+                  ];
+                  this.requestUpdate();
+                }
+              }
             }}
             @sc-toggle-reaction=${(e: CustomEvent<{ index: number; emoji: string }>) =>
               this.chat.toggleReaction?.(e.detail.index, e.detail.emoji)}
-            @sc-retry=${() => this._retry()}
+            @sc-retry=${(e: CustomEvent<{ content?: string }>) => {
+              if (e.detail?.content) this._handleSend(e.detail.content);
+              else this._retry();
+            }}
+            @sc-regenerate=${(e: CustomEvent<{ content: string; index: number }>) => {
+              const item = this.chat.items[e.detail.index];
+              if (item?.type === "message" && item.role === "assistant" && e.detail.index > 0) {
+                const prevUser = this.chat.items
+                  .slice(0, e.detail.index)
+                  .reverse()
+                  .find((i) => i.type === "message" && i.role === "user");
+                if (prevUser?.type === "message") this._handleSend(prevUser.content);
+              }
+            }}
+            @sc-tapback=${(
+              e: CustomEvent<{ x: number; y: number; index: number; content: string }>,
+            ) => {
+              this._tapback = {
+                open: true,
+                x: e.detail.x,
+                y: e.detail.y,
+                index: e.detail.index,
+                content: e.detail.content,
+              };
+            }}
           ></sc-message-thread>
           ${this._renderRetryButton()}
           <sc-chat-composer

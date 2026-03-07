@@ -34,6 +34,11 @@ describe("sc-message-actions", () => {
   });
 
   it("fires sc-copy event on copy click", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
     const onCopy = vi.fn();
     const el = document.createElement("sc-message-actions") as ActionsEl;
     el.content = "Test content";
@@ -42,7 +47,8 @@ describe("sc-message-actions", () => {
     await el.updateComplete;
     const copyBtn = el.shadowRoot?.querySelector('[aria-label="Copy"]') as HTMLButtonElement;
     copyBtn?.click();
-    expect(onCopy).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(onCopy).toHaveBeenCalledTimes(1));
+    expect(writeText).toHaveBeenCalledWith("Test content");
     el.remove();
   });
 });

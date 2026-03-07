@@ -53,6 +53,7 @@ export class ScAgentsView extends GatewayAwareLitElement {
 
   static override styles = css`
     :host {
+      view-transition-name: view-agents;
       display: block;
       color: var(--sc-text);
       max-width: 1200px;

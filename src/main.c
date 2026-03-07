@@ -166,6 +166,16 @@ typedef struct gw_agent_bridge {
 
 static bool gw_agent_on_message(sc_bus_event_type_t type, const sc_bus_event_t *ev, void *user_ctx);
 
+static pthread_mutex_t svc_agent_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static bool svc_agent_on_message_locked(sc_bus_event_type_t type, const sc_bus_event_t *ev,
+                                        void *user_ctx) {
+    pthread_mutex_lock(&svc_agent_mutex);
+    bool result = gw_agent_on_message(type, ev, user_ctx);
+    pthread_mutex_unlock(&svc_agent_mutex);
+    return result;
+}
+
 static const sc_command_t commands[] = {
     {"agent", "Start interactive agent (--demo: use local Ollama)", cmd_agent},
     {"init", "Initialize config file", cmd_init},
@@ -1248,7 +1258,8 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
         svc_agent_bridge.agent = &agent;
         svc_agent_bridge.bus = &svc_bus;
         svc_agent_bridge.thread_binding = NULL;
-        sc_bus_subscribe(&svc_bus, gw_agent_on_message, &svc_agent_bridge, SC_BUS_MESSAGE_RECEIVED);
+        sc_bus_subscribe(&svc_bus, svc_agent_on_message_locked, &svc_agent_bridge,
+                         SC_BUS_MESSAGE_RECEIVED);
 
         if (pthread_create(&gw_tid, NULL, svc_gateway_thread, &gw_tctx) == 0) {
             fprintf(stderr, "[%s] gateway listening on %s:%u\n", SC_CODENAME, gw_tctx.host,
@@ -1261,8 +1272,13 @@ static sc_error_t cmd_service_loop(sc_allocator_t *alloc, int argc, char **argv)
 
     err = sc_service_run(alloc, 1000, ch_count > 0 ? channels : NULL, ch_count, &agent, &cfg);
 
-    if (with_gateway)
-        sc_bus_unsubscribe(&svc_bus, gw_agent_on_message, &svc_agent_bridge);
+    if (with_gateway) {
+        sc_bus_unsubscribe(&svc_bus, svc_agent_on_message_locked, &svc_agent_bridge);
+        if (gw_tid) {
+            /* Gateway thread exits when sc_gateway_run returns (fd closed on signal) */
+            pthread_join(gw_tid, NULL);
+        }
+    }
 
     /* ── Cleanup ──────────────────────────────────────────────────────── */
 #if SC_HAS_EMAIL

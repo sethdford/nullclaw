@@ -67,7 +67,10 @@ export class ScChart extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this._chartLoadPromise = import("https://esm.sh/chart.js@4").catch(() => null);
+    this._chartLoadPromise = import("https://esm.sh/chart.js@4").catch((err) => {
+      console.warn("[sc-chart] Chart.js failed to load:", err);
+      return null;
+    });
   }
 
   override disconnectedCallback(): void {
@@ -145,7 +148,8 @@ export class ScChart extends LitElement {
     const fontFamily = cs.getPropertyValue("--sc-font").trim() || "Avenir, system-ui, sans-serif";
     const textMuted = cs.getPropertyValue("--sc-text-muted").trim() || "hsl(207 24% 47%)";
     const borderSubtle =
-      cs.getPropertyValue("--sc-border-subtle").trim() || "color-mix(in srgb, white 6%, transparent)";
+      cs.getPropertyValue("--sc-border-subtle").trim() ||
+      "color-mix(in srgb, white 6%, transparent)";
 
     const chartType = this.type === "area" ? "line" : this.type;
     const config = {

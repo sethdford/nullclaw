@@ -57,7 +57,7 @@ export class ScMessageThread extends LitElement {
       padding: var(--sc-space-md);
       display: flex;
       flex-direction: column;
-      gap: var(--sc-space-sm);
+      gap: var(--sc-space-lg);
       scroll-behavior: smooth;
     }
     .bubble-wrapper {

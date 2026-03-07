@@ -3,11 +3,11 @@ import { customElement, property } from "lit/decorators.js";
 import { icons } from "../icons.js";
 
 const REACTIONS = [
-  { key: "thumbs-up", label: "Thumbs up" },
-  { key: "thumbs-down", label: "Thumbs down" },
-  { key: "heart", label: "Heart" },
-  { key: "copy", label: "Copy" },
-  { key: "bookmark-simple", label: "Bookmark" },
+  { key: "👍", icon: "thumbs-up", label: "Thumbs up" },
+  { key: "👎", icon: "thumbs-down", label: "Thumbs down" },
+  { key: "❤️", icon: "heart", label: "Heart" },
+  { key: "📋", icon: "copy", label: "Copy" },
+  { key: "🔖", icon: "bookmark-simple", label: "Bookmark" },
 ] as const;
 
 @customElement("sc-tapback-menu")
@@ -85,13 +85,13 @@ export class ScTapbackMenu extends LitElement {
     }
   `;
 
-  private _onClick(key: string) {
-    if (key === "copy") navigator.clipboard?.writeText(this.messageContent);
+  private _onClick(reaction: (typeof REACTIONS)[number]) {
+    if (reaction.icon === "copy") navigator.clipboard?.writeText(this.messageContent);
     this.dispatchEvent(
       new CustomEvent("sc-react", {
         bubbles: true,
         composed: true,
-        detail: { emoji: key, index: this.messageIndex },
+        detail: { emoji: reaction.key, index: this.messageIndex },
       }),
     );
   }
@@ -134,10 +134,10 @@ export class ScTapbackMenu extends LitElement {
               aria-label=${r.label}
               @click=${(e: Event) => {
                 e.stopPropagation();
-                this._onClick(r.key);
+                this._onClick(r);
               }}
             >
-              ${icons[r.key]}
+              ${icons[r.icon]}
             </button>
           `,
         )}
