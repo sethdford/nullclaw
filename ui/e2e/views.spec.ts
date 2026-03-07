@@ -121,14 +121,10 @@ test.describe("Secondary Views", () => {
   test("navigation between views works", async ({ page }) => {
     await page.goto("/");
     await page.waitForTimeout(500);
-
-    // Navigate to chat
     await page.goto("/#chat");
     await page.waitForTimeout(300);
     const chatView = page.locator("sc-app >> sc-chat-view");
     await expect(chatView).toBeAttached({ timeout: 5000 });
-
-    // Navigate to config
     await page.goto("/#config");
     await page.waitForTimeout(300);
     const configView = page.locator("sc-app >> sc-config-view");
@@ -138,8 +134,193 @@ test.describe("Secondary Views", () => {
   test("unknown hash falls back gracefully", async ({ page }) => {
     await page.goto("/#nonexistent");
     await page.waitForTimeout(500);
-    // Should not crash, should show some view
     const app = page.locator("sc-app");
     await expect(app).toBeAttached({ timeout: 5000 });
+  });
+});
+
+test.describe("Skills View (Demo Mode)", () => {
+  test("skills view shows stat cards in demo mode", async ({ page }) => {
+    await page.goto("/?demo#skills");
+    await page.waitForTimeout(1500);
+    const view = page.locator("sc-app >> sc-skills-view");
+    await expect(view).toBeAttached({ timeout: 5000 });
+    await expect(async () => {
+      const count = await page.evaluate(() => {
+        const app = document.querySelector("sc-app");
+        const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+        return sv?.shadowRoot?.querySelectorAll("sc-stat-card").length ?? 0;
+      });
+      expect(count).toBe(4);
+    }).toPass({ timeout: 8000 });
+  });
+
+  test("skills view renders installed skill cards", async ({ page }) => {
+    await page.goto("/?demo#skills");
+    await page.waitForTimeout(1500);
+    await expect(async () => {
+      const count = await page.evaluate(() => {
+        const app = document.querySelector("sc-app");
+        const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+        return sv?.shadowRoot?.querySelectorAll("sc-card[glass].skill-card").length ?? 0;
+      });
+      expect(count).toBeGreaterThanOrEqual(6);
+    }).toPass({ timeout: 8000 });
+  });
+
+  test("skills view installed cards have switches", async ({ page }) => {
+    await page.goto("/?demo#skills");
+    await page.waitForTimeout(1500);
+    await expect(async () => {
+      const count = await page.evaluate(() => {
+        const app = document.querySelector("sc-app");
+        const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+        return sv?.shadowRoot?.querySelectorAll("sc-card[glass] sc-switch").length ?? 0;
+      });
+      expect(count).toBeGreaterThan(0);
+    }).toPass({ timeout: 8000 });
+  });
+
+  test("skills view renders registry section", async ({ page }) => {
+    await page.goto("/?demo#skills");
+    await page.waitForTimeout(1500);
+    await expect(async () => {
+      const count = await page.evaluate(() => {
+        const app = document.querySelector("sc-app");
+        const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+        return sv?.shadowRoot?.querySelectorAll("sc-card.skill-card:not([glass])").length ?? 0;
+      });
+      expect(count).toBeGreaterThan(0);
+    }).toPass({ timeout: 8000 });
+  });
+
+  test("skills view registry search input exists", async ({ page }) => {
+    await page.goto("/?demo#skills");
+    await page.waitForTimeout(1500);
+    await expect(async () => {
+      const exists = await page.evaluate(() => {
+        const app = document.querySelector("sc-app");
+        const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+        return !!sv?.shadowRoot?.querySelector(".registry-search-row sc-input");
+      });
+      expect(exists).toBe(true);
+    }).toPass({ timeout: 8000 });
+  });
+
+  test("skills view tag chips render", async ({ page }) => {
+    await page.goto("/?demo#skills");
+    await page.waitForTimeout(1500);
+    await expect(async () => {
+      const count = await page.evaluate(() => {
+        const app = document.querySelector("sc-app");
+        const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+        return sv?.shadowRoot?.querySelectorAll(".tag-chip").length ?? 0;
+      });
+      expect(count).toBeGreaterThanOrEqual(1);
+    }).toPass({ timeout: 8000 });
+  });
+
+  test("skills view detail sheet opens on card click", async ({ page }) => {
+    await page.goto("/?demo#skills");
+    await page.waitForTimeout(1500);
+    await expect(async () => {
+      const count = await page.evaluate(() => {
+        const app = document.querySelector("sc-app");
+        const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+        return sv?.shadowRoot?.querySelectorAll("sc-card[glass].skill-card").length ?? 0;
+      });
+      expect(count).toBeGreaterThan(0);
+    }).toPass({ timeout: 8000 });
+    await page.evaluate(() => {
+      const app = document.querySelector("sc-app");
+      const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+      const card = sv?.shadowRoot?.querySelector("sc-card[glass].skill-card") as HTMLElement;
+      card?.click();
+    });
+    await page.waitForTimeout(500);
+    const hasSheet = await page.evaluate(() => {
+      const app = document.querySelector("sc-app");
+      const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+      return !!sv?.shadowRoot?.querySelector("sc-sheet");
+    });
+    expect(hasSheet).toBe(true);
+  });
+
+  test("skills view detail sheet shows detail name", async ({ page }) => {
+    await page.goto("/?demo#skills");
+    await page.waitForTimeout(1500);
+    await expect(async () => {
+      const count = await page.evaluate(() => {
+        const app = document.querySelector("sc-app");
+        const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+        return sv?.shadowRoot?.querySelectorAll("sc-card[glass].skill-card").length ?? 0;
+      });
+      expect(count).toBeGreaterThan(0);
+    }).toPass({ timeout: 8000 });
+    await page.evaluate(() => {
+      const app = document.querySelector("sc-app");
+      const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+      const card = sv?.shadowRoot?.querySelector("sc-card[glass].skill-card") as HTMLElement;
+      card?.click();
+    });
+    await page.waitForTimeout(500);
+    const hasName = await page.evaluate(() => {
+      const app = document.querySelector("sc-app");
+      const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+      return !!sv?.shadowRoot?.querySelector(".detail-name");
+    });
+    expect(hasName).toBe(true);
+  });
+
+  test("skills view detail sheet has action buttons", async ({ page }) => {
+    await page.goto("/?demo#skills");
+    await page.waitForTimeout(1500);
+    await expect(async () => {
+      const count = await page.evaluate(() => {
+        const app = document.querySelector("sc-app");
+        const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+        return sv?.shadowRoot?.querySelectorAll("sc-card[glass].skill-card").length ?? 0;
+      });
+      expect(count).toBeGreaterThan(0);
+    }).toPass({ timeout: 8000 });
+    await page.evaluate(() => {
+      const app = document.querySelector("sc-app");
+      const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+      const card = sv?.shadowRoot?.querySelector("sc-card[glass].skill-card") as HTMLElement;
+      card?.click();
+    });
+    await page.waitForTimeout(500);
+    const btnCount = await page.evaluate(() => {
+      const app = document.querySelector("sc-app");
+      const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+      return sv?.shadowRoot?.querySelectorAll(".detail-actions sc-button").length ?? 0;
+    });
+    expect(btnCount).toBeGreaterThanOrEqual(2);
+  });
+
+  test("skills view registry card click opens sheet", async ({ page }) => {
+    await page.goto("/?demo#skills");
+    await page.waitForTimeout(1500);
+    await expect(async () => {
+      const count = await page.evaluate(() => {
+        const app = document.querySelector("sc-app");
+        const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+        return sv?.shadowRoot?.querySelectorAll("sc-card.skill-card:not([glass])").length ?? 0;
+      });
+      expect(count).toBeGreaterThan(0);
+    }).toPass({ timeout: 8000 });
+    await page.evaluate(() => {
+      const app = document.querySelector("sc-app");
+      const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+      const card = sv?.shadowRoot?.querySelector("sc-card.skill-card:not([glass])") as HTMLElement;
+      card?.click();
+    });
+    await page.waitForTimeout(500);
+    const hasSheet = await page.evaluate(() => {
+      const app = document.querySelector("sc-app");
+      const sv = app?.shadowRoot?.querySelector("sc-skills-view");
+      return !!sv?.shadowRoot?.querySelector("sc-sheet");
+    });
+    expect(hasSheet).toBe(true);
   });
 });
