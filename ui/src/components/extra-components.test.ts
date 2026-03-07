@@ -17,6 +17,8 @@ import "./sc-message-branch.js";
 import "./sc-reasoning-block.js";
 import "./sc-shortcut-overlay.js";
 import "./sc-context-menu.js";
+import "./sc-error-boundary.js";
+import "./sc-welcome-card.js";
 
 describe("sc-floating-mic", () => {
   it("should be defined as a custom element", () => {

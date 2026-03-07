@@ -608,8 +608,8 @@ export class ScApp extends LitElement {
   }
 
   private _renderWrappedView() {
+    if (this._viewError) return null;
     try {
-      this._viewError = null;
       return this._renderView();
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));

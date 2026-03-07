@@ -107,15 +107,6 @@ export class ScWelcomeCard extends LitElement {
       justify-content: center;
     }
 
-    .cta sc-button {
-      background: var(--sc-accent);
-      background-image: linear-gradient(
-        135deg,
-        var(--sc-accent),
-        color-mix(in srgb, var(--sc-accent-secondary, var(--sc-accent)) 80%, var(--sc-accent))
-      );
-    }
-
     @media (max-width: 480px) {
       .features {
         grid-template-columns: 1fr;
