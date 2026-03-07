@@ -51,37 +51,37 @@ describe("views", () => {
 });
 
 describe("sc-chat-view", () => {
-  it("renders sc-composer when no messages", async () => {
+  it("renders sc-chat-composer when no messages", async () => {
     const el = document.createElement("sc-chat-view") as HTMLElement & {
       updateComplete: Promise<boolean>;
     };
     document.body.appendChild(el);
     await el.updateComplete;
-    const composer = el.shadowRoot?.querySelector("sc-composer");
+    const composer = el.shadowRoot?.querySelector("sc-chat-composer");
     expect(composer).toBeTruthy();
     el.remove();
   });
 
-  it("has suggested bento cards in composer when empty", async () => {
+  it("has suggestion pills in composer when empty", async () => {
     const el = document.createElement("sc-chat-view") as HTMLElement & {
       updateComplete: Promise<boolean>;
     };
     document.body.appendChild(el);
     await el.updateComplete;
-    const composer = el.shadowRoot?.querySelector("sc-composer");
-    const cards = composer?.shadowRoot?.querySelectorAll(".bento-card") ?? [];
+    const composer = el.shadowRoot?.querySelector("sc-chat-composer");
+    const cards = composer?.shadowRoot?.querySelectorAll(".pill") ?? [];
     expect(cards.length).toBeGreaterThanOrEqual(1);
     el.remove();
   });
 
-  it("renders message list component", async () => {
+  it("renders message thread component", async () => {
     const el = document.createElement("sc-chat-view") as HTMLElement & {
       updateComplete: Promise<boolean>;
     };
     document.body.appendChild(el);
     await el.updateComplete;
-    const messageList = el.shadowRoot?.querySelector("sc-message-list");
-    expect(messageList).toBeTruthy();
+    const thread = el.shadowRoot?.querySelector("sc-message-thread");
+    expect(thread).toBeTruthy();
     el.remove();
   });
 
@@ -91,10 +91,10 @@ describe("sc-chat-view", () => {
     };
     document.body.appendChild(el);
     await el.updateComplete;
-    const composer = el.shadowRoot?.querySelector("sc-composer") as HTMLElement & {
+    const composer = el.shadowRoot?.querySelector("sc-chat-composer") as HTMLElement & {
       updateComplete: Promise<boolean>;
     };
-    const inputWrap = composer?.shadowRoot?.querySelector(".input-wrap");
+    const inputWrap = composer?.shadowRoot?.querySelector(".composer");
     expect(inputWrap?.classList.contains("drag-over")).toBe(false);
     inputWrap?.dispatchEvent(new DragEvent("dragover", { bubbles: true }));
     await composer?.updateComplete;

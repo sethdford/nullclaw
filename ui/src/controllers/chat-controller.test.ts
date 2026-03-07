@@ -379,6 +379,154 @@ describe("ChatController", () => {
     });
   });
 
+  describe("toggleReaction", () => {
+    it("adds a new reaction to a message", () => {
+      const host = createMockHost();
+      const getGateway = vi.fn().mockReturnValue(null);
+      const ctrl = new ChatController(host as unknown as ReactiveControllerHost, getGateway);
+      ctrl.items = [{ type: "message", role: "assistant", content: "Hi", ts: 1 }];
+
+      ctrl.toggleReaction(0, "👍");
+
+      const item = ctrl.items[0];
+      expect(item.type).toBe("message");
+      if (item.type === "message") {
+        expect(item.reactions).toHaveLength(1);
+        expect(item.reactions![0]).toEqual({ emoji: "👍", count: 1, mine: true });
+      }
+    });
+
+    it("removes own reaction when toggled again", () => {
+      const host = createMockHost();
+      const getGateway = vi.fn().mockReturnValue(null);
+      const ctrl = new ChatController(host as unknown as ReactiveControllerHost, getGateway);
+      ctrl.items = [
+        {
+          type: "message",
+          role: "assistant",
+          content: "Hi",
+          ts: 1,
+          reactions: [{ emoji: "❤️", count: 1, mine: true }],
+        },
+      ];
+
+      ctrl.toggleReaction(0, "❤️");
+
+      const item = ctrl.items[0];
+      if (item.type === "message") {
+        expect(item.reactions).toHaveLength(0);
+      }
+    });
+
+    it("does nothing for out-of-bounds index", () => {
+      const host = createMockHost();
+      const getGateway = vi.fn().mockReturnValue(null);
+      const ctrl = new ChatController(host as unknown as ReactiveControllerHost, getGateway);
+      ctrl.items = [{ type: "message", role: "user", content: "Hi", ts: 1 }];
+
+      ctrl.toggleReaction(5, "👍");
+      ctrl.toggleReaction(-1, "👍");
+
+      const item = ctrl.items[0];
+      if (item.type === "message") {
+        expect(item.reactions).toBeUndefined();
+      }
+    });
+
+    it("ignores non-message items", () => {
+      const host = createMockHost();
+      const getGateway = vi.fn().mockReturnValue(null);
+      const ctrl = new ChatController(host as unknown as ReactiveControllerHost, getGateway);
+      ctrl.items = [{ type: "tool_call", id: "t1", name: "shell", status: "running", ts: 1 }];
+
+      ctrl.toggleReaction(0, "👍");
+
+      expect(ctrl.items[0].type).toBe("tool_call");
+    });
+  });
+
+  describe("exportAsMarkdown", () => {
+    it("formats messages with role labels", () => {
+      const host = createMockHost();
+      const getGateway = vi.fn().mockReturnValue(null);
+      const ctrl = new ChatController(host as unknown as ReactiveControllerHost, getGateway);
+      ctrl.items = [
+        { type: "message", role: "user", content: "What is 2+2?", ts: 1 },
+        { type: "message", role: "assistant", content: "4", ts: 2 },
+      ];
+
+      const md = ctrl.exportAsMarkdown();
+
+      expect(md).toContain("**You**: What is 2+2?");
+      expect(md).toContain("**Assistant**: 4");
+    });
+
+    it("includes tool calls", () => {
+      const host = createMockHost();
+      const getGateway = vi.fn().mockReturnValue(null);
+      const ctrl = new ChatController(host as unknown as ReactiveControllerHost, getGateway);
+      ctrl.items = [
+        { type: "tool_call", id: "t1", name: "shell", status: "completed", result: "ok", ts: 1 },
+      ];
+
+      const md = ctrl.exportAsMarkdown();
+
+      expect(md).toContain("Tool: shell");
+      expect(md).toContain("ok");
+    });
+
+    it("returns empty string for empty items", () => {
+      const host = createMockHost();
+      const getGateway = vi.fn().mockReturnValue(null);
+      const ctrl = new ChatController(host as unknown as ReactiveControllerHost, getGateway);
+
+      expect(ctrl.exportAsMarkdown()).toBe("");
+    });
+  });
+
+  describe("exportAsJson", () => {
+    it("returns valid JSON of items", () => {
+      const host = createMockHost();
+      const getGateway = vi.fn().mockReturnValue(null);
+      const ctrl = new ChatController(host as unknown as ReactiveControllerHost, getGateway);
+      ctrl.items = [{ type: "message", role: "user", content: "Hi", ts: 1 }];
+
+      const json = ctrl.exportAsJson();
+      const parsed = JSON.parse(json);
+
+      expect(parsed).toHaveLength(1);
+      expect(parsed[0].content).toBe("Hi");
+    });
+  });
+
+  describe("getBranchMessages", () => {
+    it("returns messages matching the given id", () => {
+      const host = createMockHost();
+      const getGateway = vi.fn().mockReturnValue(null);
+      const ctrl = new ChatController(host as unknown as ReactiveControllerHost, getGateway);
+      ctrl.items = [
+        { type: "message", role: "user", content: "First", id: "m1", ts: 1 },
+        { type: "message", role: "assistant", content: "Reply", id: "m2", ts: 2 },
+        { type: "message", role: "user", content: "Branch", id: "m1", ts: 3 },
+      ];
+
+      const branches = ctrl.getBranchMessages("m1");
+
+      expect(branches).toHaveLength(2);
+      expect(branches[0]).toMatchObject({ content: "First" });
+      expect(branches[1]).toMatchObject({ content: "Branch" });
+    });
+
+    it("returns empty array for unknown id", () => {
+      const host = createMockHost();
+      const getGateway = vi.fn().mockReturnValue(null);
+      const ctrl = new ChatController(host as unknown as ReactiveControllerHost, getGateway);
+      ctrl.items = [{ type: "message", role: "user", content: "Hi", id: "m1", ts: 1 }];
+
+      expect(ctrl.getBranchMessages("nonexistent")).toEqual([]);
+    });
+  });
+
   describe("stream timer", () => {
     beforeEach(() => {
       vi.useFakeTimers();
