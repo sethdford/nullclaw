@@ -7,7 +7,9 @@ import "./sc-button.js";
 export class ScErrorBoundary extends LitElement {
   static override styles = css`
     :host {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
       min-height: 0;
     }
 

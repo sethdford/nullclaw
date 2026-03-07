@@ -126,6 +126,8 @@ export class ScApp extends LitElement {
     }
 
     main {
+      display: flex;
+      flex-direction: column;
       overflow: auto;
       padding: var(--sc-space-2xl);
       background: var(--sc-bg);
@@ -192,6 +194,10 @@ export class ScApp extends LitElement {
     }
 
     .view-enter {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
       animation: sc-view-enter var(--sc-duration-moderate) var(--sc-spring-out) both;
     }
     @keyframes sc-view-enter {

@@ -80,7 +80,14 @@ export class ChatController implements ReactiveController {
     const gw = this._getGateway();
     if (!gw) return;
 
-    this.items = [...this.items, { type: "message", role: "user", content: text, ts: Date.now() }];
+    const userMsg: ChatItem = {
+      type: "message",
+      role: "user",
+      content: text,
+      ts: Date.now(),
+      status: "sending",
+    };
+    this.items = [...this.items, userMsg];
     this.lastFailedMessage = "";
     this.isWaiting = true;
     this._startStreamTimer();
@@ -93,9 +100,11 @@ export class ChatController implements ReactiveController {
         sessionKey,
         ...(attachments?.length ? { attachments } : {}),
       });
+      this._setLastUserStatus("sent");
     } catch (err) {
       this.isWaiting = false;
       this._stopStreamTimer();
+      this._setLastUserStatus("failed");
       this.lastFailedMessage = text;
       this._requestUpdate();
       throw err;
@@ -117,9 +126,19 @@ export class ChatController implements ReactiveController {
   }
 
   async retry(sessionKey: string): Promise<void> {
-    if (!this.lastFailedMessage) return;
-    const msg = this.lastFailedMessage;
+    const msg = this.lastFailedMessage || this._findLastFailedContent();
+    if (!msg) return;
     await this.send(msg, sessionKey);
+  }
+
+  private _findLastFailedContent(): string {
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const item = this.items[i];
+      if (item.type === "message" && item.role === "user" && item.status === "failed") {
+        return item.content;
+      }
+    }
+    return "";
   }
 
   async loadHistory(sessionKey: string): Promise<void> {
@@ -235,6 +254,16 @@ export class ChatController implements ReactiveController {
       this._streamTimer = 0;
     }
     this.streamElapsed = "";
+  }
+
+  private _setLastUserStatus(status: MessageStatus): void {
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const item = this.items[i];
+      if (item.type === "message" && item.role === "user") {
+        this.items = [...this.items.slice(0, i), { ...item, status }, ...this.items.slice(i + 1)];
+        return;
+      }
+    }
   }
 
   private _requestUpdate(): void {

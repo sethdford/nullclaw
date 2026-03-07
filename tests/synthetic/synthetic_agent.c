@@ -103,7 +103,6 @@ sc_error_t sc_synth_run_agent(sc_allocator_t *alloc, const sc_synth_config_t *cf
         alloc->free(alloc->ctx, body, bl + 1);
         sc_http_response_free(alloc, &resp);
     }
-    sc_synth_report_category("Agent", metrics);
     sc_json_free(alloc, root);
     return SC_OK;
 }

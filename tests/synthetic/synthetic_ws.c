@@ -117,7 +117,6 @@ sc_error_t sc_synth_run_ws(sc_allocator_t *alloc, const sc_synth_config_t *cfg,
         }
         sc_ws_close(ws, alloc);
     }
-    sc_synth_report_category("WebSocket", metrics);
     sc_json_free(alloc, root);
     return SC_OK;
 }

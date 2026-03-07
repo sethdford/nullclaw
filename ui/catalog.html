@@ -91,6 +91,7 @@
       <a href="#sc-metric-row">sc-metric-row</a>
       <a href="#sc-timeline">sc-timeline</a>
       <a href="#sc-sparkline-enhanced">sc-sparkline-enhanced</a>
+      <a href="#sc-forecast-chart">sc-forecast-chart</a>
       <a href="#sc-page-hero">sc-page-hero</a>
       <a href="#sc-schedule-builder">sc-schedule-builder</a>
       <a href="#sc-message-actions">sc-message-actions</a>
@@ -1036,6 +1037,16 @@
         <div class="code-snippet"><code>&lt;sc-sparkline-enhanced .data=\${[10,20,15,25,30]} fillGradient showTooltip&gt;&lt;/sc-sparkline-enhanced&gt;</code></div>
       </section>
 
+      <section class="component-section" id="sc-forecast-chart">
+        <h2>sc-forecast-chart</h2>
+        <div class="playground">
+          <div class="preview" id="forecast-chart-preview" style="width:100%">
+            <sc-forecast-chart></sc-forecast-chart>
+          </div>
+        </div>
+        <div class="code-snippet"><code>&lt;sc-forecast-chart .history=\${[...]} .projectedTotal=\${81.53} .daysInMonth=\${31}&gt;&lt;/sc-forecast-chart&gt;</code></div>
+      </section>
+
       <section class="component-section" id="sc-page-hero">
         <h2>sc-page-hero</h2>
         <div class="playground">
@@ -1230,6 +1241,7 @@
       import "/src/components/sc-metric-row.js";
       import "/src/components/sc-timeline.js";
       import "/src/components/sc-sparkline-enhanced.js";
+      import "/src/components/sc-forecast-chart.js";
       import "/src/components/sc-page-hero.js";
       import "/src/components/sc-schedule-builder.js";
       import "/src/components/sc-message-actions.js";
@@ -1661,6 +1673,22 @@
       const sparklineEnhPreview = document.getElementById("sparkline-enhanced-preview")?.querySelector("sc-sparkline-enhanced");
       if (sparklineEnhPreview) {
         sparklineEnhPreview.data = [10, 20, 15, 25, 18, 30, 28];
+      }
+
+      // Forecast chart
+      const forecastPreview = document.getElementById("forecast-chart-preview")?.querySelector("sc-forecast-chart");
+      if (forecastPreview) {
+        forecastPreview.history = [
+          { date: "2026-03-01", cost: 1.83 },
+          { date: "2026-03-02", cost: 2.14 },
+          { date: "2026-03-03", cost: 3.07 },
+          { date: "2026-03-04", cost: 2.51 },
+          { date: "2026-03-05", cost: 2.89 },
+          { date: "2026-03-06", cost: 2.11 },
+          { date: "2026-03-07", cost: 3.87 },
+        ];
+        forecastPreview.projectedTotal = 81.53;
+        forecastPreview.daysInMonth = 31;
       }
     </script>
   </body>

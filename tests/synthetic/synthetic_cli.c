@@ -117,7 +117,6 @@ sc_error_t sc_synth_run_cli(sc_allocator_t *alloc, const sc_synth_config_t *cfg,
         }
         sc_run_result_free(alloc, &result);
     }
-    sc_synth_report_category("CLI", metrics);
     sc_json_free(alloc, root);
     return SC_OK;
 }

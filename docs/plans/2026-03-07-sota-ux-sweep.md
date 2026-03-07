@@ -19,6 +19,7 @@
 ### Task 1: Create sc-chart component
 
 **Files:**
+
 - Create: `ui/src/components/sc-chart.ts`
 - Modify: `ui/src/components/extra-components.test.ts` (append tests)
 
@@ -97,7 +98,8 @@ export interface ChartData {
 
 @customElement("sc-chart")
 export class ScChart extends LitElement {
-  @property({ type: String }) type: "bar" | "line" | "area" | "doughnut" = "bar";
+  @property({ type: String }) type: "bar" | "line" | "area" | "doughnut" =
+    "bar";
   @property({ type: Object }) data: ChartData = { labels: [], datasets: [] };
   @property({ type: Number }) height = 200;
   @property({ type: Boolean }) horizontal = false;
@@ -163,11 +165,16 @@ export class ScChart extends LitElement {
     if (!this._canvas) return;
     this._destroyChart();
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     const style = getComputedStyle(this);
-    const font = style.getPropertyValue("--sc-font").trim() || "Avenir, sans-serif";
-    const textMuted = style.getPropertyValue("--sc-text-muted").trim() || "#888";
-    const border = style.getPropertyValue("--sc-border-subtle").trim() || "#333";
+    const font =
+      style.getPropertyValue("--sc-font").trim() || "Avenir, sans-serif";
+    const textMuted =
+      style.getPropertyValue("--sc-text-muted").trim() || "#888";
+    const border =
+      style.getPropertyValue("--sc-border-subtle").trim() || "#333";
 
     const categoricalColors = [
       style.getPropertyValue("--sc-chart-categorical-1").trim(),
@@ -180,8 +187,18 @@ export class ScChart extends LitElement {
       style.getPropertyValue("--sc-chart-categorical-8").trim(),
     ].filter(Boolean);
 
-    const fallbackColors = ["#4caf50", "#5c6bc0", "#ffa726", "#ef5350", "#26a69a", "#7986cb", "#ffca28", "#66bb6a"];
-    const palette = categoricalColors.length >= 2 ? categoricalColors : fallbackColors;
+    const fallbackColors = [
+      "#4caf50",
+      "#5c6bc0",
+      "#ffa726",
+      "#ef5350",
+      "#26a69a",
+      "#7986cb",
+      "#ffca28",
+      "#66bb6a",
+    ];
+    const palette =
+      categoricalColors.length >= 2 ? categoricalColors : fallbackColors;
 
     try {
       const { Chart, registerables } = await import(
@@ -193,7 +210,8 @@ export class ScChart extends LitElement {
       const datasets = this.data.datasets.map((ds, i) => ({
         label: ds.label || `Series ${i + 1}`,
         data: ds.data,
-        backgroundColor: ds.backgroundColor || ds.color || palette[i % palette.length],
+        backgroundColor:
+          ds.backgroundColor || ds.color || palette[i % palette.length],
         borderColor: ds.color || palette[i % palette.length],
         borderWidth: chartType === "line" ? 2 : 0,
         fill: this.type === "area",
@@ -223,16 +241,25 @@ export class ScChart extends LitElement {
               padding: 8,
             },
           },
-          scales: chartType === "doughnut" ? {} : {
-            x: {
-              grid: { color: border },
-              ticks: { font: { family: font, size: 11 }, color: textMuted },
-            },
-            y: {
-              grid: { color: border },
-              ticks: { font: { family: font, size: 11 }, color: textMuted },
-            },
-          },
+          scales:
+            chartType === "doughnut"
+              ? {}
+              : {
+                  x: {
+                    grid: { color: border },
+                    ticks: {
+                      font: { family: font, size: 11 },
+                      color: textMuted,
+                    },
+                  },
+                  y: {
+                    grid: { color: border },
+                    ticks: {
+                      font: { family: font, size: 11 },
+                      color: textMuted,
+                    },
+                  },
+                },
         },
       });
     } catch {
@@ -241,14 +268,20 @@ export class ScChart extends LitElement {
   }
 
   private _destroyChart() {
-    if (this._chartInstance && typeof (this._chartInstance as any).destroy === "function") {
+    if (
+      this._chartInstance &&
+      typeof (this._chartInstance as any).destroy === "function"
+    ) {
       (this._chartInstance as any).destroy();
       this._chartInstance = null;
     }
   }
 
   private _resize() {
-    if (this._chartInstance && typeof (this._chartInstance as any).resize === "function") {
+    if (
+      this._chartInstance &&
+      typeof (this._chartInstance as any).resize === "function"
+    ) {
       (this._chartInstance as any).resize();
     }
   }
@@ -278,6 +311,7 @@ git commit -m "feat(ui): add sc-chart component with Chart.js integration"
 ### Task 2: Create sc-json-viewer component
 
 **Files:**
+
 - Create: `ui/src/components/sc-json-viewer.ts`
 - Modify: `ui/src/components/extra-components.test.ts` (append tests)
 
@@ -367,6 +401,7 @@ git commit -m "feat(ui): add sc-json-viewer collapsible tree component"
 ### Task 3: Rewrite usage-view
 
 **Files:**
+
 - Modify: `ui/src/views/usage-view.ts`
 - Modify: `ui/src/views/views.test.ts` (update usage view tests)
 
@@ -391,6 +426,7 @@ it("should show empty state when no data", async () => {
 **Step 2: Rewrite usage-view.ts**
 
 Full rewrite:
+
 - Import `sc-chart`, `sc-segmented-control`
 - Top: 3 stat cards with inline trend sparklines
 - Middle: `sc-chart type="area"` for token usage over time, time range toggle (24h/7d/30d)
@@ -415,12 +451,14 @@ git commit -m "feat(ui): rewrite usage view with real charts and time range sele
 ### Task 4: Rewrite logs-view
 
 **Files:**
+
 - Modify: `ui/src/views/logs-view.ts`
 - Modify: `ui/src/views/views.test.ts` (update logs tests)
 
 **Step 1: Rewrite logs-view.ts**
 
 Full rewrite:
+
 - Import `sc-json-viewer`, `sc-segmented-control`
 - Full-height layout (flex: 1, no fixed 400px)
 - `sc-json-viewer` for payload display instead of `JSON.stringify`
@@ -448,6 +486,7 @@ git commit -m "feat(ui): rewrite logs view with json-viewer, level filters, paus
 ### Task 5: Upgrade overview-view
 
 **Files:**
+
 - Modify: `ui/src/views/overview-view.ts`
 - Modify: `ui/src/views/views.test.ts`
 
@@ -477,6 +516,7 @@ git commit -m "feat(ui): add charts and clickable sessions to overview"
 ### Task 6: Create sc-pagination component
 
 **Files:**
+
 - Create: `ui/src/components/sc-pagination.ts`
 - Modify: `ui/src/components/extra-components.test.ts`
 
@@ -499,6 +539,7 @@ git commit -m "feat(ui): add sc-pagination component"
 ### Task 7: Create sc-data-table-v2 component
 
 **Files:**
+
 - Create: `ui/src/components/sc-data-table-v2.ts`
 - Modify: `ui/src/components/extra-components.test.ts`
 
@@ -521,6 +562,7 @@ git commit -m "feat(ui): add sc-data-table-v2 with sort, filter, pagination"
 ### Task 8: Rewrite tools-view with data table
 
 **Files:**
+
 - Modify: `ui/src/views/tools-view.ts`
 - Modify: `ui/src/views/views.test.ts`
 
@@ -535,6 +577,7 @@ git commit -m "feat(ui): rewrite tools view with interactive data table"
 ### Task 9: Rewrite channels-view with data table
 
 **Files:**
+
 - Modify: `ui/src/views/channels-view.ts`
 - Modify: `ui/src/views/views.test.ts`
 
@@ -549,6 +592,7 @@ git commit -m "feat(ui): rewrite channels view with interactive data table"
 ### Task 10: Rewrite nodes-view with data table
 
 **Files:**
+
 - Modify: `ui/src/views/nodes-view.ts`
 - Modify: `ui/src/views/views.test.ts`
 
@@ -563,6 +607,7 @@ git commit -m "feat(ui): rewrite nodes view with interactive data table"
 ### Task 11: Upgrade agents-view
 
 **Files:**
+
 - Modify: `ui/src/views/agents-view.ts`
 - Modify: `ui/src/views/views.test.ts`
 
@@ -579,6 +624,7 @@ git commit -m "feat(ui): upgrade agents view with data table and chart"
 ### Task 12: Create sc-checkbox component
 
 **Files:**
+
 - Create: `ui/src/components/sc-checkbox.ts`
 - Modify: `ui/src/components/extra-components.test.ts`
 
@@ -593,6 +639,7 @@ git commit -m "feat(ui): add sc-checkbox component"
 ### Task 13: Create sc-combobox component
 
 **Files:**
+
 - Create: `ui/src/components/sc-combobox.ts`
 - Modify: `ui/src/components/extra-components.test.ts`
 
@@ -607,6 +654,7 @@ git commit -m "feat(ui): add sc-combobox autocomplete component"
 ### Task 14: Create sc-form-group component
 
 **Files:**
+
 - Create: `ui/src/components/sc-form-group.ts`
 - Modify: `ui/src/components/extra-components.test.ts`
 
@@ -621,6 +669,7 @@ git commit -m "feat(ui): add sc-form-group validation coordinator"
 ### Task 15: Rewrite config-view
 
 **Files:**
+
 - Modify: `ui/src/views/config-view.ts`
 - Modify: `ui/src/views/views.test.ts`
 
@@ -635,6 +684,7 @@ git commit -m "feat(ui): rewrite config view with form validation and combobox"
 ### Task 16: Rewrite security-view
 
 **Files:**
+
 - Modify: `ui/src/views/security-view.ts`
 - Modify: `ui/src/views/views.test.ts`
 
@@ -649,6 +699,7 @@ git commit -m "feat(ui): rewrite security view with risk indicators and editable
 ### Task 17: Upgrade automations-view
 
 **Files:**
+
 - Modify: `ui/src/views/automations-view.ts`
 - Modify: `ui/src/views/views.test.ts`
 
@@ -665,6 +716,7 @@ git commit -m "feat(ui): upgrade automations view with validation and run histor
 ### Task 18: Rewrite models-view
 
 **Files:**
+
 - Modify: `ui/src/views/models-view.ts`
 - Modify: `ui/src/views/views.test.ts`
 
@@ -679,6 +731,7 @@ git commit -m "feat(ui): rewrite models view with proper hero, actions, and char
 ### Task 19: Upgrade voice-view
 
 **Files:**
+
 - Modify: `ui/src/views/voice-view.ts`
 - Modify: `ui/src/views/views.test.ts`
 
@@ -693,6 +746,7 @@ git commit -m "feat(ui): upgrade voice view with thread, export, and session man
 ### Task 20: Upgrade skills-view
 
 **Files:**
+
 - Modify: `ui/src/views/skills-view.ts`
 - Modify: `ui/src/views/views.test.ts`
 
@@ -707,9 +761,11 @@ git commit -m "feat(ui): upgrade skills view with json-viewer and tag filtering"
 ### Task 21: Cross-view consistency pass
 
 **Files:**
+
 - Audit and touch all 14 view files
 
 Checklist:
+
 - [ ] Every view: stagger animation on load (`sc-stagger` class)
 - [ ] Every view: skeleton shapes matching content layout
 - [ ] Every view: empty state with actionable CTA

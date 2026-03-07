@@ -397,6 +397,20 @@ function handleRequest(method: string, _params?: Record<string, unknown>): unkno
           { provider: "anthropic", tokens: 245_732, cost: 4.92 },
           { provider: "ollama", tokens: 110_000, cost: 0 },
         ],
+        daily_cost_history: [
+          { date: "2026-03-01", cost: 1.83 },
+          { date: "2026-03-02", cost: 2.14 },
+          { date: "2026-03-03", cost: 3.07 },
+          { date: "2026-03-04", cost: 2.51 },
+          { date: "2026-03-05", cost: 2.89 },
+          { date: "2026-03-06", cost: 2.11 },
+          { date: "2026-03-07", cost: 3.87 },
+        ],
+        projected_monthly_usd: 81.53,
+        previous_month_cost_usd: 72.4,
+        cost_per_request: 0.045,
+        tokens_per_turn: 18625,
+        days_in_month: 31,
       };
     case "nodes.list":
       return {

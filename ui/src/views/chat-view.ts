@@ -450,6 +450,7 @@ export class ScChatView extends GatewayAwareLitElement {
             }}
             @sc-toggle-reaction=${(e: CustomEvent<{ index: number; emoji: string }>) =>
               this.chat.toggleReaction?.(e.detail.index, e.detail.emoji)}
+            @sc-retry=${() => this._retry()}
           ></sc-message-thread>
           ${this._renderRetryButton()}
           <sc-chat-composer

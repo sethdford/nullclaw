@@ -14,14 +14,14 @@ export interface ChartData {
 }
 
 const CATEGORICAL_FALLBACKS = [
-  "#7ab648",
-  "#6366f1",
-  "#f59e0b",
-  "#f87171",
-  "#14b8a6",
-  "#a5b4fc",
-  "#fcd34d",
-  "#a3d46a",
+  "var(--sc-chart-categorical-1, hsl(90 45% 50%))",
+  "var(--sc-chart-categorical-2, hsl(239 84% 67%))",
+  "var(--sc-chart-categorical-3, hsl(38 92% 50%))",
+  "var(--sc-chart-categorical-4, hsl(0 91% 71%))",
+  "var(--sc-chart-categorical-5, hsl(168 76% 42%))",
+  "var(--sc-chart-categorical-6, hsl(235 90% 82%))",
+  "var(--sc-chart-categorical-7, hsl(48 96% 59%))",
+  "var(--sc-chart-categorical-8, hsl(90 45% 62%))",
 ];
 
 @customElement("sc-chart")
@@ -159,7 +159,9 @@ export class ScChart extends LitElement {
           legend: {
             labels: {
               font: { family: "var(--sc-font)" },
-              color: getComputedStyle(this).getPropertyValue("--sc-text-muted").trim() || "#5e7a94",
+              color:
+                getComputedStyle(this).getPropertyValue("--sc-text-muted").trim() ||
+                "hsl(207 24% 47%)",
             },
           },
         },
@@ -176,7 +178,7 @@ export class ScChart extends LitElement {
                     font: { family: "var(--sc-font)" },
                     color:
                       getComputedStyle(this).getPropertyValue("--sc-text-muted").trim() ||
-                      "#5e7a94",
+                      "hsl(207 24% 47%)",
                   },
                 },
                 y: {
@@ -189,7 +191,7 @@ export class ScChart extends LitElement {
                     font: { family: "var(--sc-font)" },
                     color:
                       getComputedStyle(this).getPropertyValue("--sc-text-muted").trim() ||
-                      "#5e7a94",
+                      "hsl(207 24% 47%)",
                   },
                 },
               }

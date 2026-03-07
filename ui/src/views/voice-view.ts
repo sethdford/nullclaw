@@ -28,9 +28,11 @@ export class ScVoiceView extends GatewayAwareLitElement {
     :host {
       display: flex;
       flex-direction: column;
-      height: 100%;
+      flex: 1;
+      min-height: 0;
       color: var(--sc-text);
       max-width: 720px;
+      width: 100%;
       margin: 0 auto;
       padding: var(--sc-space-lg) var(--sc-space-xl);
       box-sizing: border-box;

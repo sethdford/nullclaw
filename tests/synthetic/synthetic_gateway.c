@@ -107,7 +107,6 @@ sc_error_t sc_synth_run_gateway(sc_allocator_t *alloc, const sc_synth_config_t *
         }
         sc_http_response_free(alloc, &resp);
     }
-    sc_synth_report_category("Gateway", metrics);
     sc_json_free(alloc, root);
     return SC_OK;
 }
