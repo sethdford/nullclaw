@@ -99,6 +99,7 @@
       <a href="#sc-automation-card">sc-automation-card</a>
       <a href="#sc-chat-sessions-panel">sc-chat-sessions-panel</a>
       <a href="#sc-file-preview">sc-file-preview</a>
+      <a href="#sc-json-viewer">sc-json-viewer</a>
       <a href="#sc-chat-bubble">sc-chat-bubble</a>
       <a href="#sc-typing-indicator">sc-typing-indicator</a>
       <a href="#sc-delivery-status">sc-delivery-status</a>
@@ -1124,6 +1125,17 @@
         <div class="code-snippet"><code>&lt;sc-file-preview .files=${"[{ name: 'doc.pdf', size: 1024, type: 'application/pdf' }]"}&gt;&lt;/sc-file-preview&gt;</code></div>
       </section>
 
+      <section class="component-section" id="sc-json-viewer">
+        <h2>sc-json-viewer</h2>
+        <p>Collapsible tree for structured JSON data with syntax highlighting and copy-to-clipboard.</p>
+        <div class="playground">
+          <div class="preview" style="width: 100%; max-width: 480px;">
+            <sc-json-viewer id="json-viewer-preview"></sc-json-viewer>
+          </div>
+        </div>
+        <div class="code-snippet"><pre><code>&lt;sc-json-viewer .data=\${data} expanded-depth="2"&gt;&lt;/sc-json-viewer&gt;</code></pre></div>
+      </section>
+
       <section class="component-section" id="sc-chat-bubble">
         <h2>sc-chat-bubble</h2>
         <p>Chat message bubble with markdown support, user/assistant roles, streaming cursor, and optional tail.</p>
@@ -1249,6 +1261,7 @@
       import "/src/components/sc-automation-card.js";
       import "/src/components/sc-chat-sessions-panel.js";
       import "/src/components/sc-file-preview.js";
+      import "/src/components/sc-json-viewer.js";
       import "/src/components/sc-chat-bubble.js";
       import "/src/components/sc-typing-indicator.js";
       import "/src/components/sc-delivery-status.js";
@@ -1689,6 +1702,12 @@
         ];
         forecastPreview.projectedTotal = 81.53;
         forecastPreview.daysInMonth = 31;
+      }
+
+      // JSON viewer
+      const jsonViewerPreview = document.getElementById("json-viewer-preview");
+      if (jsonViewerPreview) {
+        jsonViewerPreview.data = { name: "SeaClaw", version: "1.0", features: ["AI", "Channels", "Tools"] };
       }
     </script>
   </body>

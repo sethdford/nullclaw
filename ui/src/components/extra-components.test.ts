@@ -42,6 +42,79 @@ import "./sc-tapback-menu.js";
 import "./sc-chat-composer.js";
 import "./sc-message-thread.js";
 import "./sc-chart.js";
+import "./sc-json-viewer.js";
+
+describe("sc-json-viewer", () => {
+  it("should be defined as a custom element", () => {
+    expect(customElements.get("sc-json-viewer")).toBeDefined();
+  });
+
+  it("should be creatable", () => {
+    const el = document.createElement("sc-json-viewer");
+    expect(el).toBeInstanceOf(HTMLElement);
+  });
+
+  it("should accept data property", () => {
+    const el = document.createElement("sc-json-viewer") as any;
+    el.data = { key: "value" };
+    expect(el.data).toEqual({ key: "value" });
+  });
+
+  it("should default expandedDepth to 2", () => {
+    const el = document.createElement("sc-json-viewer") as any;
+    expect(el.expandedDepth).toBe(2);
+  });
+
+  it("should render primitive string value", async () => {
+    const el = document.createElement("sc-json-viewer") as any;
+    el.data = "hello";
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const text = el.shadowRoot?.textContent;
+    expect(text).toContain('"hello"');
+    el.remove();
+  });
+
+  it("should render object keys", async () => {
+    const el = document.createElement("sc-json-viewer") as any;
+    el.data = { name: "test" };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const text = el.shadowRoot?.textContent;
+    expect(text).toContain("name");
+    el.remove();
+  });
+
+  it("should render array length indicator", async () => {
+    const el = document.createElement("sc-json-viewer") as any;
+    el.data = [1, 2, 3];
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const text = el.shadowRoot?.textContent;
+    expect(text).toContain("3");
+    el.remove();
+  });
+
+  it("should render null value", async () => {
+    const el = document.createElement("sc-json-viewer") as any;
+    el.data = null;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const text = el.shadowRoot?.textContent;
+    expect(text).toContain("null");
+    el.remove();
+  });
+
+  it("should use tree role for accessibility", async () => {
+    const el = document.createElement("sc-json-viewer") as any;
+    el.data = { a: 1 };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const tree = el.shadowRoot?.querySelector('[role="tree"]');
+    expect(tree).toBeTruthy();
+    el.remove();
+  });
+});
 
 describe("sc-floating-mic", () => {
   it("should be defined as a custom element", () => {
