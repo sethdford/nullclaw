@@ -1528,6 +1528,215 @@ static sc_error_t handle_push_unregister(sc_allocator_t *alloc, sc_app_context_t
 
 #endif /* SC_HAS_PUSH */
 
+/* ── auth.oauth.start ────────────────────────────────────────────────── */
+
+static sc_error_t handle_oauth_start(sc_allocator_t *alloc, const sc_control_protocol_t *proto,
+                                     const sc_json_value_t *root, char **out, size_t *out_len) {
+    sc_oauth_ctx_t *ctx = (sc_oauth_ctx_t *)proto->oauth_ctx;
+    if (!ctx || !proto->oauth_pending_store || !proto->oauth_pending_lookup ||
+        !proto->oauth_pending_remove) {
+        sc_json_value_t *obj = sc_json_object_new(alloc);
+        if (!obj)
+            return SC_ERR_OUT_OF_MEMORY;
+        json_set_str(alloc, obj, "error", "OAuth not configured");
+        sc_error_t err = sc_json_stringify(alloc, obj, out, out_len);
+        sc_json_free(alloc, obj);
+        return err;
+    }
+    const char *provider = NULL;
+    const char *redirect_uri = NULL;
+    if (root) {
+        sc_json_value_t *params = sc_json_object_get(root, "params");
+        if (params) {
+            provider = sc_json_get_string(params, "provider");
+            redirect_uri = sc_json_get_string(params, "redirect_uri");
+        }
+    }
+    if (!provider || !provider[0]) {
+        sc_json_value_t *obj = sc_json_object_new(alloc);
+        if (!obj)
+            return SC_ERR_OUT_OF_MEMORY;
+        json_set_str(alloc, obj, "error", "provider is required");
+        sc_error_t err = sc_json_stringify(alloc, obj, out, out_len);
+        sc_json_free(alloc, obj);
+        return err;
+    }
+    if (ctx->config.provider && strcmp(ctx->config.provider, provider) != 0) {
+        sc_json_value_t *obj = sc_json_object_new(alloc);
+        if (!obj)
+            return SC_ERR_OUT_OF_MEMORY;
+        json_set_str(alloc, obj, "error", "unsupported provider");
+        sc_error_t err = sc_json_stringify(alloc, obj, out, out_len);
+        sc_json_free(alloc, obj);
+        return err;
+    }
+    char verifier[64];
+    char challenge[64];
+    char state[48];
+    if (sc_oauth_generate_pkce(ctx, verifier, sizeof(verifier), challenge, sizeof(challenge)) !=
+        SC_OK)
+        return SC_ERR_OUT_OF_MEMORY;
+    {
+        static const char b64[] =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+        unsigned int seed = (unsigned int)time(NULL) ^ (unsigned int)(uintptr_t)ctx;
+        for (int i = 0; i < 43; i++) {
+            seed = seed * 1103515245u + 12345u;
+            state[i] = b64[(seed >> 16) & 63];
+        }
+        state[43] = '\0';
+    }
+    proto->oauth_pending_store(proto->oauth_pending_ctx, state, verifier);
+    char url[1024];
+    sc_error_t err = sc_oauth_build_auth_url(ctx, challenge, strlen(challenge), state,
+                                             strlen(state), url, sizeof(url));
+    if (err != SC_OK) {
+        proto->oauth_pending_remove(proto->oauth_pending_ctx, state);
+        return err;
+    }
+    sc_json_value_t *obj = sc_json_object_new(alloc);
+    if (!obj)
+        return SC_ERR_OUT_OF_MEMORY;
+    json_set_str(alloc, obj, "url", url);
+    json_set_str(alloc, obj, "state", state);
+    (void)redirect_uri;
+    err = sc_json_stringify(alloc, obj, out, out_len);
+    sc_json_free(alloc, obj);
+    return err;
+}
+
+/* ── auth.oauth.callback ─────────────────────────────────────────────── */
+
+static sc_error_t handle_oauth_callback(sc_allocator_t *alloc, const sc_control_protocol_t *proto,
+                                        const sc_json_value_t *root, char **out, size_t *out_len) {
+    sc_oauth_ctx_t *ctx = (sc_oauth_ctx_t *)proto->oauth_ctx;
+    if (!ctx || !proto->oauth_pending_lookup || !proto->oauth_pending_remove) {
+        sc_json_value_t *obj = sc_json_object_new(alloc);
+        if (!obj)
+            return SC_ERR_OUT_OF_MEMORY;
+        json_set_str(alloc, obj, "error", "OAuth not configured");
+        sc_error_t err = sc_json_stringify(alloc, obj, out, out_len);
+        sc_json_free(alloc, obj);
+        return err;
+    }
+    const char *code = NULL;
+    const char *state = NULL;
+    if (root) {
+        sc_json_value_t *params = sc_json_object_get(root, "params");
+        if (params) {
+            code = sc_json_get_string(params, "code");
+            state = sc_json_get_string(params, "state");
+        }
+    }
+    if (!code || !code[0] || !state || !state[0]) {
+        sc_json_value_t *obj = sc_json_object_new(alloc);
+        if (!obj)
+            return SC_ERR_OUT_OF_MEMORY;
+        json_set_str(alloc, obj, "error", "code and state are required");
+        sc_error_t err = sc_json_stringify(alloc, obj, out, out_len);
+        sc_json_free(alloc, obj);
+        return err;
+    }
+    const char *verifier = proto->oauth_pending_lookup(proto->oauth_pending_ctx, state);
+    if (!verifier) {
+        sc_json_value_t *obj = sc_json_object_new(alloc);
+        if (!obj)
+            return SC_ERR_OUT_OF_MEMORY;
+        json_set_str(alloc, obj, "error", "invalid or expired state");
+        sc_error_t err = sc_json_stringify(alloc, obj, out, out_len);
+        sc_json_free(alloc, obj);
+        return err;
+    }
+    sc_oauth_session_t session = {0};
+#if SC_IS_TEST
+    sc_error_t err =
+        sc_oauth_exchange_code(ctx, code, strlen(code), verifier, strlen(verifier), &session);
+#else
+    sc_error_t err =
+        sc_oauth_exchange_code(ctx, code, strlen(code), verifier, strlen(verifier), &session);
+#endif
+    proto->oauth_pending_remove(proto->oauth_pending_ctx, state);
+    if (err != SC_OK) {
+        sc_json_value_t *obj = sc_json_object_new(alloc);
+        if (!obj)
+            return SC_ERR_OUT_OF_MEMORY;
+        json_set_str(alloc, obj, "error", "token exchange failed");
+        sc_error_t serr = sc_json_stringify(alloc, obj, out, out_len);
+        sc_json_free(alloc, obj);
+        return serr;
+    }
+    sc_json_value_t *obj = sc_json_object_new(alloc);
+    if (!obj)
+        return SC_ERR_OUT_OF_MEMORY;
+    json_set_str(alloc, obj, "token", session.access_token);
+    sc_json_value_t *user = sc_json_object_new(alloc);
+    if (user) {
+        json_set_str(alloc, user, "id", session.user_id);
+        sc_json_object_set(alloc, obj, "user", user);
+    }
+    err = sc_json_stringify(alloc, obj, out, out_len);
+    sc_json_free(alloc, obj);
+    return err;
+}
+
+/* ── auth.oauth.refresh ──────────────────────────────────────────────── */
+
+static sc_error_t handle_oauth_refresh(sc_allocator_t *alloc, const sc_control_protocol_t *proto,
+                                       const sc_json_value_t *root, char **out, size_t *out_len) {
+    sc_oauth_ctx_t *ctx = (sc_oauth_ctx_t *)proto->oauth_ctx;
+    if (!ctx) {
+        sc_json_value_t *obj = sc_json_object_new(alloc);
+        if (!obj)
+            return SC_ERR_OUT_OF_MEMORY;
+        json_set_str(alloc, obj, "error", "OAuth not configured");
+        sc_error_t err = sc_json_stringify(alloc, obj, out, out_len);
+        sc_json_free(alloc, obj);
+        return err;
+    }
+    const char *refresh_token = NULL;
+    if (root) {
+        sc_json_value_t *params = sc_json_object_get(root, "params");
+        if (params)
+            refresh_token = sc_json_get_string(params, "refresh_token");
+    }
+    if (!refresh_token || !refresh_token[0]) {
+        sc_json_value_t *obj = sc_json_object_new(alloc);
+        if (!obj)
+            return SC_ERR_OUT_OF_MEMORY;
+        json_set_str(alloc, obj, "error", "refresh_token is required");
+        sc_error_t err = sc_json_stringify(alloc, obj, out, out_len);
+        sc_json_free(alloc, obj);
+        return err;
+    }
+    sc_oauth_session_t session = {0};
+    size_t rt_len = strlen(refresh_token);
+    if (rt_len >= sizeof(session.refresh_token))
+        rt_len = sizeof(session.refresh_token) - 1;
+    memcpy(session.refresh_token, refresh_token, rt_len);
+    session.refresh_token[rt_len] = '\0';
+    sc_error_t err = sc_oauth_refresh_token(ctx, &session);
+    if (err != SC_OK) {
+        sc_json_value_t *obj = sc_json_object_new(alloc);
+        if (!obj)
+            return SC_ERR_OUT_OF_MEMORY;
+        json_set_str(alloc, obj, "error", "refresh failed");
+        sc_error_t serr = sc_json_stringify(alloc, obj, out, out_len);
+        sc_json_free(alloc, obj);
+        return serr;
+    }
+    sc_json_value_t *obj = sc_json_object_new(alloc);
+    if (!obj)
+        return SC_ERR_OUT_OF_MEMORY;
+    json_set_str(alloc, obj, "access_token", session.access_token);
+    int64_t expires_in = session.expires_at - (int64_t)time(NULL);
+    if (expires_in < 0)
+        expires_in = 0;
+    sc_json_object_set(alloc, obj, "expires_in", sc_json_number_new(alloc, (double)expires_in));
+    err = sc_json_stringify(alloc, obj, out, out_len);
+    sc_json_free(alloc, obj);
+    return err;
+}
+
 /* ── RPC dispatch table ──────────────────────────────────────────────── */
 
 static sc_error_t handle_auth_token(sc_allocator_t *alloc, sc_ws_conn_t *conn,

@@ -100,6 +100,7 @@ typedef struct sc_gateway_state {
     sc_pairing_guard_t *pairing_guard;
     sc_oauth_pending_entry_t oauth_pending[SC_OAUTH_PENDING_MAX];
     size_t oauth_pending_count;
+    sc_thread_pool_t *http_pool;
 } sc_gateway_state_t;
 
 static void trim_crlf(char *s) {
@@ -408,9 +409,50 @@ static bool serve_static_file(int fd, const char *base_dir, const char *url_path
 }
 #endif
 
-/* ── HTTP request handling ──────────────────────────────────────────────── */
+/* ── HTTP request handling (thread pool worker) ───────────────────────────── */
 
 #ifdef SC_GATEWAY_POSIX
+#define SC_HTTP_WORK_ORIGIN_MAX 256
+#define SC_HTTP_WORK_SIG_MAX    128
+
+typedef struct {
+    sc_gateway_state_t *gw;
+    int fd;
+    char method[16];
+    char path[256];
+    char *body;
+    size_t body_len;
+    char client_ip[64];
+    char sig_header[SC_HTTP_WORK_SIG_MAX];
+    char origin[SC_HTTP_WORK_ORIGIN_MAX];
+} sc_http_work_t;
+
+static void http_worker_fn(void *arg) {
+    sc_http_work_t *work = (sc_http_work_t *)arg;
+    sc_gateway_state_t *gw = work->gw;
+    sc_allocator_t *alloc = gw->alloc;
+
+    s_request_origin = work->origin[0] != '\0' ? work->origin : NULL;
+    handle_http_request(gw, work->fd, work->method, work->path, work->body, work->body_len,
+                        work->client_ip, work->sig_header[0] != '\0' ? work->sig_header : NULL);
+    s_request_origin = NULL;
+
+    {
+        struct linger sl = {1, 5};
+        (void)setsockopt(work->fd, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl));
+        shutdown(work->fd, SHUT_WR);
+        char drain[256];
+        struct timeval tv = {1, 0};
+        (void)setsockopt(work->fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        while (recv(work->fd, drain, sizeof(drain), 0) > 0) {}
+    }
+    close(work->fd);
+
+    if (work->body)
+        alloc->free(alloc->ctx, work->body, work->body_len + 1);
+    alloc->free(alloc->ctx, work, sizeof(sc_http_work_t));
+}
+
 static void handle_http_request(sc_gateway_state_t *gw, int fd, const char *method,
                                 const char *path, const char *body, size_t body_len,
                                 const char *client_ip, const char *sig_header) {
