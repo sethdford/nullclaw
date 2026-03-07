@@ -140,6 +140,8 @@ static void free_contact_profile(sc_allocator_t *alloc, sc_contact_profile_t *cp
     free_string_array(alloc, cp->recent_topics, cp->recent_topics_count);
     free_string_array(alloc, cp->sensitive_topics, cp->sensitive_topics_count);
     free_string_array(alloc, cp->allowed_behaviors, cp->allowed_behaviors_count);
+    free_contact_string(alloc, cp->proactive_channel);
+    free_contact_string(alloc, cp->proactive_schedule);
 }
 
 void sc_persona_deinit(sc_allocator_t *alloc, sc_persona_t *persona) {
@@ -613,6 +615,18 @@ sc_error_t sc_persona_load_json(sc_allocator_t *alloc, const char *json, size_t 
                 cp->prefers_short_texts = sc_json_get_bool(comm, "prefers_short_texts", false);
                 cp->sends_links_often = sc_json_get_bool(comm, "sends_links_often", false);
                 cp->uses_emoji = sc_json_get_bool(comm, "uses_emoji", false);
+            }
+
+            /* Proactive engagement config */
+            sc_json_value_t *proactive = sc_json_object_get(cval, "proactive");
+            if (proactive && proactive->type == SC_JSON_OBJECT) {
+                cp->proactive_checkin = sc_json_get_bool(proactive, "enabled", false);
+                s = sc_json_get_string(proactive, "channel");
+                if (s)
+                    cp->proactive_channel = sc_strdup(alloc, s);
+                s = sc_json_get_string(proactive, "schedule");
+                if (s)
+                    cp->proactive_schedule = sc_strdup(alloc, s);
             }
             count++;
         }

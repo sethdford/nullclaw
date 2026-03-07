@@ -56,6 +56,9 @@ typedef struct sc_contact_profile {
     bool prefers_short_texts;
     bool sends_links_often;
     bool uses_emoji;
+    bool proactive_checkin;
+    char *proactive_channel;
+    char *proactive_schedule;
 } sc_contact_profile_t;
 
 typedef struct sc_persona {
