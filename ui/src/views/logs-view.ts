@@ -10,6 +10,9 @@ import "../components/sc-input.js";
 import "../components/sc-button.js";
 import "../components/sc-empty-state.js";
 import "../components/sc-card.js";
+import "../components/sc-json-viewer.js";
+import "../components/sc-segmented-control.js";
+import "../components/sc-badge.js";
 
 interface LogEntry {
   ts: string;
@@ -17,26 +20,67 @@ interface LogEntry {
   payload: Record<string, unknown>;
 }
 
+const LEVEL_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: EVENT_NAMES.CHAT, label: "Chat" },
+  { value: EVENT_NAMES.TOOL_CALL, label: "Tool" },
+  { value: EVENT_NAMES.ERROR, label: "Error" },
+  { value: EVENT_NAMES.HEALTH, label: "Health" },
+];
+
+function formatRelativeTime(ts: string): string {
+  try {
+    const diff = Date.now() - new Date(ts).getTime();
+    const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+    if (diff < 0) return "now";
+    if (diff < 60_000) return rtf.format(-Math.floor(diff / 1000), "second");
+    if (diff < 3_600_000) return rtf.format(-Math.floor(diff / 60_000), "minute");
+    if (diff < 86_400_000) return rtf.format(-Math.floor(diff / 3_600_000), "hour");
+    return rtf.format(-Math.floor(diff / 86_400_000), "day");
+  } catch {
+    return ts;
+  }
+}
+
 @customElement("sc-logs-view")
 export class ScLogsView extends GatewayAwareLitElement {
   static override styles = css`
     :host {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
       color: var(--sc-text);
       max-width: 960px;
+    }
+    .layout {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
     }
     .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: var(--sc-space-xl);
+      margin-bottom: var(--sc-space-md);
       flex-wrap: wrap;
       gap: var(--sc-space-sm);
+    }
+    .controls-sticky {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--sc-bg);
+      padding: var(--sc-space-md) 0;
+      margin-bottom: var(--sc-space-sm);
+      border-bottom: 1px solid var(--sc-border-subtle);
     }
     .controls {
       display: flex;
       gap: var(--sc-space-sm);
       align-items: center;
+      flex-wrap: wrap;
     }
     .filter-input {
       padding: var(--sc-space-sm) var(--sc-space-md);
@@ -71,26 +115,25 @@ export class ScLogsView extends GatewayAwareLitElement {
     .event.health {
       color: var(--sc-warning);
     }
-    .log-area-wrapper {
-      position: relative;
+    .log-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
-    .log-area-wrapper::after {
-      content: "";
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 2rem;
-      background: linear-gradient(to top, var(--sc-bg-inset) 20%, transparent);
-      pointer-events: none;
-      border-radius: 0 0 var(--sc-radius) var(--sc-radius);
+    .log-area-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
     .log-area {
+      flex: 1;
+      min-height: 0;
       background: var(--sc-bg-inset);
       border: 1px solid var(--sc-border);
       border-radius: var(--sc-radius);
       padding: var(--sc-space-md);
-      height: 400px;
       overflow-y: auto;
       font-family: var(--sc-font-mono);
       font-size: var(--sc-text-sm);
@@ -113,10 +156,10 @@ export class ScLogsView extends GatewayAwareLitElement {
       background: var(--sc-text-muted);
     }
     .log-line {
-      margin-bottom: var(--sc-space-sm);
-      padding: var(--sc-space-xs) var(--sc-space-sm);
+      margin-bottom: var(--sc-space-md);
+      padding: var(--sc-space-sm);
       border-radius: var(--sc-radius-sm);
-      word-break: break-all;
+      word-break: break-word;
     }
     .log-line:nth-child(odd) {
       background: var(--sc-bg-surface);
@@ -124,16 +167,24 @@ export class ScLogsView extends GatewayAwareLitElement {
     .log-line:nth-child(even) {
       background: var(--sc-bg-inset);
     }
+    .log-line-header {
+      display: flex;
+      align-items: center;
+      gap: var(--sc-space-sm);
+      margin-bottom: var(--sc-space-xs);
+    }
     .log-ts {
       color: var(--sc-text-muted);
-      margin-right: var(--sc-space-sm);
       font-variant-numeric: tabular-nums;
+      font-size: var(--sc-text-xs);
     }
     .event {
       font-weight: var(--sc-weight-semibold);
-      margin-right: var(--sc-space-sm);
     }
-    @media (max-width: 768px) /* --sc-breakpoint-lg */ {
+    .json-wrapper {
+      margin-top: var(--sc-space-xs);
+    }
+    @media (max-width: 768px) {
       .header {
         flex-wrap: wrap;
       }
@@ -141,7 +192,7 @@ export class ScLogsView extends GatewayAwareLitElement {
         flex-wrap: wrap;
       }
     }
-    @media (max-width: 480px) /* --sc-breakpoint-sm */ {
+    @media (max-width: 480px) {
       .filter-input {
         width: 100%;
       }
@@ -155,13 +206,31 @@ export class ScLogsView extends GatewayAwareLitElement {
   `;
 
   @state() private logs: LogEntry[] = [];
+  @state() private _buffer: LogEntry[] = [];
   @state() private filter = "";
+  @state() private _level: string = "all";
+  @state() private _paused = false;
+  @state() private _relativeTimeKey = 0;
+
+  private _tsInterval: ReturnType<typeof setInterval> | null = null;
 
   protected override async load(): Promise<void> {
     this.setupListener();
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this._tsInterval = setInterval(() => {
+      this._relativeTimeKey++;
+      this.requestUpdate();
+    }, 10_000);
+  }
+
   override disconnectedCallback(): void {
+    if (this._tsInterval) {
+      clearInterval(this._tsInterval);
+      this._tsInterval = null;
+    }
     this.removeListener();
     super.disconnectedCallback();
   }
@@ -180,17 +249,29 @@ export class ScLogsView extends GatewayAwareLitElement {
 
   private handleGatewayEvent = (e: Event): void => {
     const ev = (e as CustomEvent<{ event: string; payload: Record<string, unknown> }>).detail;
-    this.logs = [
-      ...this.logs,
-      {
-        ts: new Date().toISOString(),
-        event: ev.event,
-        payload: ev.payload ?? {},
-      },
-    ];
+    const entry: LogEntry = {
+      ts: new Date().toISOString(),
+      event: ev.event,
+      payload: ev.payload ?? {},
+    };
+    if (this._paused) {
+      this._buffer = [...this._buffer, entry];
+    } else {
+      this.logs = [...this.logs, entry];
+      this.scrollToBottom();
+    }
     this.requestUpdate();
-    this.scrollToBottom();
   };
+
+  private togglePause(): void {
+    this._paused = !this._paused;
+    if (!this._paused && this._buffer.length > 0) {
+      this.logs = [...this.logs, ...this._buffer];
+      this._buffer = [];
+      this.scrollToBottom();
+    }
+    this.requestUpdate();
+  }
 
   private eventClass(event: string): string {
     switch (event) {
@@ -216,15 +297,22 @@ export class ScLogsView extends GatewayAwareLitElement {
 
   private clearLogs(): void {
     this.logs = [];
+    this._buffer = [];
   }
 
   private get filteredLogs(): LogEntry[] {
-    if (!this.filter.trim()) return this.logs;
-    const q = this.filter.toLowerCase();
-    return this.logs.filter(
-      (l) =>
-        l.event.toLowerCase().includes(q) || JSON.stringify(l.payload).toLowerCase().includes(q),
-    );
+    let list = this.logs;
+    if (this._level !== "all") {
+      list = list.filter((l) => l.event === this._level);
+    }
+    if (this.filter.trim()) {
+      const q = this.filter.toLowerCase();
+      list = list.filter(
+        (l) =>
+          l.event.toLowerCase().includes(q) || JSON.stringify(l.payload).toLowerCase().includes(q),
+      );
+    }
+    return list;
   }
 
   private _renderHeader(): ReturnType<typeof html> {
@@ -235,8 +323,18 @@ export class ScLogsView extends GatewayAwareLitElement {
           description="System event log and debugging output"
         ></sc-section-header>
       </sc-page-hero>
-      <div class="header">
+    `;
+  }
+
+  private _renderControls(): ReturnType<typeof html> {
+    return html`
+      <div class="controls-sticky">
         <div class="controls">
+          <sc-segmented-control
+            .value=${this._level}
+            .options=${LEVEL_OPTIONS}
+            @sc-change=${(e: CustomEvent<{ value: string }>) => (this._level = e.detail.value)}
+          ></sc-segmented-control>
           <sc-input
             type="text"
             placeholder="Filter..."
@@ -244,6 +342,15 @@ export class ScLogsView extends GatewayAwareLitElement {
             .value=${this.filter}
             @sc-input=${(e: CustomEvent<{ value: string }>) => (this.filter = e.detail.value)}
           ></sc-input>
+          <sc-badge variant="neutral">${this.filteredLogs.length}</sc-badge>
+          <sc-button
+            variant="ghost"
+            size="sm"
+            @click=${this.togglePause}
+            aria-label=${this._paused ? "Resume" : "Pause"}
+          >
+            ${this._paused ? icons.play : icons.pause} ${this._paused ? "Resume" : "Pause"}
+          </sc-button>
           <sc-button variant="ghost" size="sm" @click=${this.clearLogs} aria-label="Clear all logs">
             Clear
           </sc-button>
@@ -254,24 +361,31 @@ export class ScLogsView extends GatewayAwareLitElement {
 
   private _renderLogArea(): ReturnType<typeof html> {
     const entries = this.filteredLogs;
+    void this._relativeTimeKey;
     return html`
       <sc-card class="log-card">
         <div class="log-area-wrapper">
-          <div class="log-area sc-stagger" role="log" aria-live="polite">
+          <div class="log-area" role="log" aria-live="polite">
             ${entries.length === 0
               ? html`
                   <sc-empty-state
                     .icon=${icons["file-text"]}
-                    heading="No logs yet"
-                    description="Logs will appear here when the system starts processing."
+                    heading="Waiting for events..."
+                    description="Logs will stream here in real-time as the system processes requests."
                   ></sc-empty-state>
                 `
               : entries.map(
                   (l) => html`
                     <div class="log-line">
-                      <span class="log-ts">${l.ts}</span>
-                      <span class="event ${this.eventClass(l.event)}">[${l.event}]</span>
-                      ${JSON.stringify(l.payload)}
+                      <div class="log-line-header">
+                        <span class="log-ts" title=${l.ts} aria-label=${`Timestamp: ${l.ts}`}
+                          >${formatRelativeTime(l.ts)}</span
+                        >
+                        <span class="event ${this.eventClass(l.event)}">[${l.event}]</span>
+                      </div>
+                      <div class="json-wrapper">
+                        <sc-json-viewer .data=${l.payload} expandedDepth=${1}></sc-json-viewer>
+                      </div>
                     </div>
                   `,
                 )}
@@ -282,6 +396,10 @@ export class ScLogsView extends GatewayAwareLitElement {
   }
 
   override render() {
-    return html` ${this._renderHeader()} ${this._renderLogArea()} `;
+    return html`
+      <div class="layout">
+        ${this._renderHeader()} ${this._renderControls()} ${this._renderLogArea()}
+      </div>
+    `;
   }
 }

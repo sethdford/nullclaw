@@ -319,6 +319,15 @@ describe("sc-logs-view", () => {
     expect(logCard).toBeTruthy();
     el.remove();
   });
+
+  it("should render controls header", async () => {
+    const el = document.createElement("sc-logs-view") as any;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const controls = el.shadowRoot?.querySelector(".controls-sticky, .controls");
+    expect(controls).toBeTruthy();
+    el.remove();
+  });
 });
 
 /* ── Accessibility: all views ─────────────────────────────── */
