@@ -1319,6 +1319,12 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
     if (agent->awareness)
         awareness_ctx = sc_awareness_context(agent->awareness, agent->alloc, &awareness_ctx_len);
 
+    /* Build outcome tracking summary */
+    char *outcome_ctx = NULL;
+    size_t outcome_ctx_len = 0;
+    if (agent->outcomes)
+        outcome_ctx = sc_outcome_build_summary(agent->outcomes, agent->alloc, &outcome_ctx_len);
+
     /* Build persona prompt fresh each turn (channel-dependent; no caching) */
     char *persona_prompt = NULL;
     size_t persona_prompt_len = 0;
@@ -1335,6 +1341,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
                 agent->alloc->free(agent->alloc->ctx, memory_ctx, memory_ctx_len + 1);
             if (awareness_ctx)
                 agent->alloc->free(agent->alloc->ctx, awareness_ctx, awareness_ctx_len + 1);
+            if (outcome_ctx)
+                agent->alloc->free(agent->alloc->ctx, outcome_ctx, outcome_ctx_len + 1);
             sc_agent_clear_current_for_tools();
             return perr;
         }
@@ -1381,6 +1389,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
             .tone_hint_len = tone_hint_len,
             .awareness_context = awareness_ctx,
             .awareness_context_len = awareness_ctx_len,
+            .outcome_context = outcome_ctx,
+            .outcome_context_len = outcome_ctx_len,
         };
         err = sc_prompt_build_system(agent->alloc, &cfg, &system_prompt, &system_prompt_len);
         if (persona_prompt)
@@ -1390,6 +1400,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
             agent->alloc->free(agent->alloc->ctx, memory_ctx, memory_ctx_len + 1);
         if (awareness_ctx)
             agent->alloc->free(agent->alloc->ctx, awareness_ctx, awareness_ctx_len + 1);
+        if (outcome_ctx)
+            agent->alloc->free(agent->alloc->ctx, outcome_ctx, outcome_ctx_len + 1);
         if (err != SC_OK) {
             if (pref_ctx)
                 agent->alloc->free(agent->alloc->ctx, pref_ctx, pref_ctx_len + 1);
@@ -2047,6 +2059,12 @@ sc_error_t sc_agent_turn_stream(sc_agent_t *agent, const char *msg, size_t msg_l
     if (agent->awareness)
         awareness_ctx = sc_awareness_context(agent->awareness, agent->alloc, &awareness_ctx_len);
 
+    /* Build outcome tracking summary */
+    char *outcome_ctx = NULL;
+    size_t outcome_ctx_len = 0;
+    if (agent->outcomes)
+        outcome_ctx = sc_outcome_build_summary(agent->outcomes, agent->alloc, &outcome_ctx_len);
+
     /* Build persona prompt fresh each turn (channel-dependent; no caching) */
     char *persona_prompt = NULL;
     size_t persona_prompt_len = 0;
@@ -2061,6 +2079,8 @@ sc_error_t sc_agent_turn_stream(sc_agent_t *agent, const char *msg, size_t msg_l
                 agent->alloc->free(agent->alloc->ctx, memory_ctx, memory_ctx_len + 1);
             if (awareness_ctx)
                 agent->alloc->free(agent->alloc->ctx, awareness_ctx, awareness_ctx_len + 1);
+            if (outcome_ctx)
+                agent->alloc->free(agent->alloc->ctx, outcome_ctx, outcome_ctx_len + 1);
             sc_agent_clear_current_for_tools();
             return perr;
         }
@@ -2098,6 +2118,8 @@ sc_error_t sc_agent_turn_stream(sc_agent_t *agent, const char *msg, size_t msg_l
             .persona_prompt_len = persona_prompt_len,
             .awareness_context = awareness_ctx,
             .awareness_context_len = awareness_ctx_len,
+            .outcome_context = outcome_ctx,
+            .outcome_context_len = outcome_ctx_len,
         };
         err = sc_prompt_build_system(agent->alloc, &cfg, &system_prompt, &system_prompt_len);
         if (persona_prompt)
@@ -2107,6 +2129,8 @@ sc_error_t sc_agent_turn_stream(sc_agent_t *agent, const char *msg, size_t msg_l
             agent->alloc->free(agent->alloc->ctx, memory_ctx, memory_ctx_len + 1);
         if (awareness_ctx)
             agent->alloc->free(agent->alloc->ctx, awareness_ctx, awareness_ctx_len + 1);
+        if (outcome_ctx)
+            agent->alloc->free(agent->alloc->ctx, outcome_ctx, outcome_ctx_len + 1);
         if (err != SC_OK) {
             sc_agent_clear_current_for_tools();
             return err;

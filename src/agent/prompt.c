@@ -164,6 +164,16 @@ sc_error_t sc_prompt_build_system(sc_allocator_t *alloc, const sc_prompt_config_
             goto fail;
     }
 
+    /* Outcome tracking summary */
+    if (config->outcome_context && config->outcome_context_len > 0) {
+        err = append(alloc, &buf, &len, &cap, config->outcome_context, config->outcome_context_len);
+        if (err != SC_OK)
+            goto fail;
+        err = append(alloc, &buf, &len, &cap, "\n\n", 2);
+        if (err != SC_OK)
+            goto fail;
+    }
+
     /* Memory context */
     err = append(alloc, &buf, &len, &cap, "## Memory Context\n\n", 19);
     if (err != SC_OK)
