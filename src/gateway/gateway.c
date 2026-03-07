@@ -273,6 +273,10 @@ static void send_response(int fd, int status, const char *content_type, const ch
                      "%s"
                      "\r\n",
                      status_str, content_type, body_len, cors_line, retry_line);
+    if (n < 0)
+        return;
+    if ((size_t)n >= sizeof(hdr))
+        n = (int)(sizeof(hdr) - 1);
     send_all(fd, hdr, (size_t)n);
     if (body && body_len > 0)
         send_all(fd, body, body_len);
@@ -329,7 +333,9 @@ static bool serve_static_file(int fd, const char *base_dir, const char *url_path
     if (rel[0] == '\0')
         rel = "index.html";
 
-    snprintf(filepath, sizeof(filepath), "%s/%s", base_dir, rel);
+    int written = snprintf(filepath, sizeof(filepath), "%s/%s", base_dir, rel);
+    if (written < 0 || (size_t)written >= sizeof(filepath))
+        return false;
 
     int file_fd = open(filepath, O_RDONLY | O_NOFOLLOW);
     struct stat st;

@@ -68,6 +68,8 @@ static sc_error_t docker_wrap_command(void *ctx, const char **argv_in, size_t ar
 
     static char mount_arg[2048];
     if (d->mount_workspace && d->workspace[0]) {
+        if (strchr(d->workspace, ':'))
+            return SC_ERR_INVALID_ARGUMENT;
         snprintf(mount_arg, sizeof(mount_arg), "%s:/workspace", d->workspace);
         argv_out[idx++] = "-v";
         argv_out[idx++] = mount_arg;

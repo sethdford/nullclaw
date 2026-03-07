@@ -66,10 +66,14 @@ typedef struct write_ctx {
     sc_allocator_t *alloc;
 } write_ctx_t;
 
+#define SC_HTTP_MAX_RESPONSE_BODY (16u * 1024u * 1024u)
+
 static size_t write_cb(void *ptr, size_t size, size_t nmemb, void *userdata) {
     write_ctx_t *w = (write_ctx_t *)userdata;
     size_t n = size * nmemb;
     if (n == 0)
+        return 0;
+    if (w->len + n + 1 > SC_HTTP_MAX_RESPONSE_BODY)
         return 0;
     if (w->len + n + 1 > w->cap) {
         size_t new_cap = w->cap ? w->cap * 2 : 4096;
@@ -93,7 +97,7 @@ static void add_header(struct curl_slist **list, const char *header) {
 }
 
 /* ── Connection pool: reuse curl handles to avoid TCP/TLS handshake ── */
-#define SC_CURL_POOL_SIZE 4
+#define SC_CURL_POOL_SIZE         4
 
 static CURL *curl_pool[SC_CURL_POOL_SIZE];
 static int curl_pool_count = 0;
