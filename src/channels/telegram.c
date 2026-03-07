@@ -976,11 +976,11 @@ sc_error_t sc_telegram_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel
                                                         ? sc_json_get_string(res, "file_path")
                                                         : NULL;
                             if (file_path) {
-                                char url_buf[768];
-                                int ub = snprintf(url_buf, sizeof(url_buf),
+                                char file_url_buf[768];
+                                int ub = snprintf(file_url_buf, sizeof(file_url_buf),
                                                   "https://api.telegram.org/file/bot%.*s/%s",
                                                   (int)c->token_len, c->token, file_path);
-                                if (ub > 0 && (size_t)ub < sizeof(url_buf)) {
+                                if (ub > 0 && (size_t)ub < sizeof(file_url_buf)) {
                                     size_t prefix_len = is_photo ? 7 : 6;
                                     const char *prefix = is_photo ? "[IMAGE:" : "[FILE:";
                                     size_t need = prefix_len + (size_t)ub + 2 +
@@ -990,7 +990,7 @@ sc_error_t sc_telegram_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel
                                         size_t pos = 0;
                                         memcpy(built + pos, prefix, prefix_len);
                                         pos += prefix_len;
-                                        memcpy(built + pos, url_buf, (size_t)ub);
+                                        memcpy(built + pos, file_url_buf, (size_t)ub);
                                         pos += (size_t)ub;
                                         built[pos++] = ']';
                                         if (text_len > 0) {

@@ -652,8 +652,8 @@ sc_error_t sc_ws_recv(sc_ws_client_t *ws, sc_allocator_t *alloc, char **data_out
                 continue;
             }
             if (hdr.payload_len > 0 && payload) {
-                size_t need = ws->frag_len + hdr.payload_len;
-                if (need > SC_WS_MAX_MSG) {
+                size_t need_total = ws->frag_len + hdr.payload_len;
+                if (need_total > SC_WS_MAX_MSG) {
                     alloc->free(alloc->ctx, ws->frag_buf, ws->frag_cap);
                     ws->frag_buf = NULL;
                     ws->frag_len = 0;
@@ -661,9 +661,9 @@ sc_error_t sc_ws_recv(sc_ws_client_t *ws, sc_allocator_t *alloc, char **data_out
                     alloc->free(alloc->ctx, payload, hdr.payload_len + 1);
                     return SC_ERR_IO;
                 }
-                if (need + 1 > ws->frag_cap) {
+                if (need_total + 1 > ws->frag_cap) {
                     size_t new_cap = ws->frag_cap * 2;
-                    while (new_cap < need + 1)
+                    while (new_cap < need_total + 1)
                         new_cap *= 2;
                     char *nb =
                         (char *)alloc->realloc(alloc->ctx, ws->frag_buf, ws->frag_cap, new_cap);

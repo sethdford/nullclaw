@@ -541,10 +541,10 @@ sc_error_t sc_persona_load(sc_allocator_t *alloc, const char *name, size_t name_
 #if !(defined(SC_IS_TEST) && SC_IS_TEST) && (defined(__unix__) || defined(__APPLE__))
     /* Load example banks from <base>/examples/<name>/<channel>/examples.json */
     {
-        char base[SC_PERSONA_PATH_MAX];
-        if (sc_persona_base_dir(base, sizeof(base)) && out->name && out->name_len > 0) {
+        char base_dir[SC_PERSONA_PATH_MAX];
+        if (sc_persona_base_dir(base_dir, sizeof(base_dir)) && out->name && out->name_len > 0) {
             char ex_base[SC_PERSONA_PATH_MAX];
-            int bn = snprintf(ex_base, sizeof(ex_base), "%s/examples/%.*s", base,
+            int bn = snprintf(ex_base, sizeof(ex_base), "%s/examples/%.*s", base_dir,
                               (int)out->name_len, out->name);
             if (bn > 0 && (size_t)bn < sizeof(ex_base)) {
                 DIR *d = opendir(ex_base);

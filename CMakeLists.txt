@@ -1249,7 +1249,7 @@ if(SC_ENABLE_TUI)
     endif()
 endif()
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-    target_compile_options(seaclaw_core_test PRIVATE -ffunction-sections -fdata-sections -Wall -Wextra -Wpedantic)
+    target_compile_options(seaclaw_core_test PRIVATE -ffunction-sections -fdata-sections -Wall -Wextra -Wpedantic -Wshadow -Wformat-security)
 endif()
 if(SC_ENABLE_ASAN)
     target_compile_options(seaclaw_core_test PRIVATE -fsanitize=address -fno-omit-frame-pointer)
@@ -1510,9 +1510,9 @@ if(SC_BUILD_WASM)
 endif()
 
 # Compiler warnings
-target_compile_options(seaclaw_core PRIVATE -Wall -Wextra -Wpedantic -Werror)
-target_compile_options(seaclaw PRIVATE -Wall -Wextra -Wpedantic -Werror)
-target_compile_options(seaclaw_tests PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_options(seaclaw_core PRIVATE -Wall -Wextra -Wpedantic -Wshadow -Wformat-security -Werror)
+target_compile_options(seaclaw PRIVATE -Wall -Wextra -Wpedantic -Wshadow -Wformat-security -Werror)
+target_compile_options(seaclaw_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow -Wformat-security)
 
 # Install targets
 install(TARGETS seaclaw RUNTIME DESTINATION bin)

@@ -59,6 +59,8 @@ static const char *detail_truncate(const char *detail) {
 static void log_record_event(void *ctx, const sc_observer_event_t *event) {
     FILE *f =
         ((sc_log_observer_ctx_t *)ctx)->output ? ((sc_log_observer_ctx_t *)ctx)->output : stderr;
+    if (event->trace_id && event->trace_id[0])
+        fprintf(f, "[trace_id=%s] ", event->trace_id);
     switch (event->tag) {
     case SC_OBSERVER_EVENT_AGENT_START:
         fprintf(f, "agent.start provider=%s model=%s\n", SC_STR(event->data.agent_start.provider),

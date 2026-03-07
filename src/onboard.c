@@ -166,16 +166,16 @@ sc_error_t sc_onboard_run(sc_allocator_t *alloc) {
     /* Scaffold workspace templates (write only if missing) */
     {
         char tmpl_path[SC_MAX_PATH];
-        int n = snprintf(tmpl_path, sizeof(tmpl_path), "%s/AGENTS.md", ws_dir);
-        if (n > 0 && (size_t)n < sizeof(tmpl_path) &&
+        int nr = snprintf(tmpl_path, sizeof(tmpl_path), "%s/AGENTS.md", ws_dir);
+        if (nr > 0 && (size_t)nr < sizeof(tmpl_path) &&
             write_template_if_missing(tmpl_path, SC_AGENTS_TEMPLATE))
             printf("  Created %s\n", tmpl_path);
-        n = snprintf(tmpl_path, sizeof(tmpl_path), "%s/USER.md", ws_dir);
-        if (n > 0 && (size_t)n < sizeof(tmpl_path) &&
+        nr = snprintf(tmpl_path, sizeof(tmpl_path), "%s/USER.md", ws_dir);
+        if (nr > 0 && (size_t)nr < sizeof(tmpl_path) &&
             write_template_if_missing(tmpl_path, SC_USER_TEMPLATE))
             printf("  Created %s\n", tmpl_path);
-        n = snprintf(tmpl_path, sizeof(tmpl_path), "%s/IDENTITY.md", ws_dir);
-        if (n > 0 && (size_t)n < sizeof(tmpl_path) &&
+        nr = snprintf(tmpl_path, sizeof(tmpl_path), "%s/IDENTITY.md", ws_dir);
+        if (nr > 0 && (size_t)nr < sizeof(tmpl_path) &&
             write_template_if_missing(tmpl_path, SC_IDENTITY_TEMPLATE))
             printf("  Created %s\n", tmpl_path);
     }

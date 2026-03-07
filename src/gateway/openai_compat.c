@@ -374,8 +374,8 @@ void sc_openai_compat_handle_chat_completions(const char *body, size_t body_len,
             return;
         }
 #endif
-        size_t body_len = buf.len;
-        size_t n = body_len + 1;
+        size_t resp_len = buf.len;
+        size_t n = resp_len + 1;
         char *resp_body = (char *)alloc->alloc(alloc->ctx, n);
         if (!resp_body) {
             sc_json_buf_free(&buf);
@@ -383,12 +383,12 @@ void sc_openai_compat_handle_chat_completions(const char *body, size_t body_len,
             *out_body_len = 0;
             return;
         }
-        memcpy(resp_body, buf.ptr, body_len);
-        resp_body[body_len] = '\0';
+        memcpy(resp_body, buf.ptr, resp_len);
+        resp_body[resp_len] = '\0';
         sc_json_buf_free(&buf);
         *out_status = 200;
         *out_body = resp_body;
-        *out_body_len = body_len;
+        *out_body_len = resp_len;
         if (out_content_type)
             *out_content_type = "text/event-stream";
         return;

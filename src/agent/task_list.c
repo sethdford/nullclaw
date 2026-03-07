@@ -215,9 +215,9 @@ static sc_error_t task_list_load(sc_task_list_t *list) {
                 goto load_fail;
         }
         if (desc) {
-            size_t dlen = strlen(desc);
-            t->description = sc_strndup(list->alloc, desc, dlen);
-            if (!t->description && dlen > 0)
+            size_t desc_len = strlen(desc);
+            t->description = sc_strndup(list->alloc, desc, desc_len);
+            if (!t->description && desc_len > 0)
                 goto load_fail;
         }
         sc_json_value_t *blocked = sc_json_object_get(item, "blocked_by");

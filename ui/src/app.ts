@@ -10,6 +10,7 @@ import "./components/floating-mic.js";
 import "./components/sidebar.js";
 import "./components/command-palette.js";
 import "./components/sc-shortcut-overlay.js";
+import "./components/sc-error-boundary.js";
 import "./views/overview-view.js";
 
 type TabId =
@@ -369,6 +370,7 @@ export class ScApp extends LitElement {
   @state() private commandPaletteOpen = false;
   @state() private shortcutOverlayOpen = false;
   @state() private moreSheetOpen = false;
+  @state() private _viewError: Error | null = null;
 
   gateway: GatewayClient | null = null;
   private _keyHandler = this._onGlobalKey.bind(this);
@@ -530,7 +532,13 @@ export class ScApp extends LitElement {
           @toggle-collapse=${() => this._toggleSidebar()}
         ></sc-sidebar>
 
-        <main tabindex="0"><div class="view-enter">${this._renderView()}</div></main>
+        <main tabindex="0">
+          <div class="view-enter">
+            <sc-error-boundary .error=${this._viewError} @retry=${this._onViewRetry}>
+              ${this._renderWrappedView()}
+            </sc-error-boundary>
+          </div>
+        </main>
 
         <nav class="mobile-nav" aria-label="Mobile navigation">
           ${MOBILE_TABS.map(
@@ -597,6 +605,22 @@ export class ScApp extends LitElement {
 
       <sc-floating-mic></sc-floating-mic>
     `;
+  }
+
+  private _renderWrappedView() {
+    try {
+      this._viewError = null;
+      return this._renderView();
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e));
+      this._viewError = err;
+      return null;
+    }
+  }
+
+  private _onViewRetry(): void {
+    this._viewError = null;
+    this.requestUpdate();
   }
 
   private _reconnect(): void {

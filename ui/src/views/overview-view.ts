@@ -13,6 +13,7 @@ import "../components/sc-button.js";
 import "../components/sc-sparkline.js";
 import "../components/sc-animated-number.js";
 import "../components/sc-welcome.js";
+import "../components/sc-welcome-card.js";
 import "../components/sc-tooltip.js";
 import "../components/sc-activity-feed.js";
 
@@ -415,6 +416,7 @@ export class ScOverviewView extends GatewayAwareLitElement {
     }
 
     return html`
+      <sc-welcome-card></sc-welcome-card>
       <sc-welcome></sc-welcome>
 
       <div class="header">

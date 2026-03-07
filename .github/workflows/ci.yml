@@ -162,7 +162,7 @@ jobs:
       - name: Build
         run: cd ui && npm run build
       - name: E2E tests
-        run: cd ui && npx playwright test --update-snapshots || true
+        run: cd ui && npx playwright test
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
@@ -171,7 +171,7 @@ jobs:
           retention-days: 7
 
   visual-regression:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
@@ -180,19 +180,18 @@ jobs:
           cache: npm
           cache-dependency-path: ui/package-lock.json
       - run: cd ui && npm ci
+      - run: cd ui && npm run build
       - name: Install Playwright browsers
         run: cd ui && npx playwright install --with-deps chromium
-      - name: Install ImageMagick
-        run: sudo apt-get update && sudo apt-get install -y imagemagick
-      - name: Capture screenshots
-        run: cd ui && bash scripts/visual-regression.sh
+      - name: Visual regression tests
+        run: cd ui && npx playwright test visual
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: failure()
         with:
           name: visual-regression
           path: |
-            ui/visual-regression/*.png
-            ui/visual-regression/diff/
+            ui/test-results/
+            ui/playwright-report/
           retention-days: 14
 
   build-deb:
