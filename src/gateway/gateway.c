@@ -887,6 +887,25 @@ sc_error_t sc_gateway_run(sc_allocator_t *alloc, const char *host, uint16_t port
                 continue;
             }
 
+            /* Save body bytes already read (recv may have pulled headers+body together) */
+            size_t body_prefix_len = 0;
+            {
+                char *sep = strstr(req, "\r\n\r\n");
+                size_t sep_skip = 4;
+                if (!sep) {
+                    sep = strstr(req, "\n\n");
+                    sep_skip = 2;
+                }
+                if (sep) {
+                    size_t hdr_end = (size_t)(sep - req) + sep_skip;
+                    if (total > hdr_end) {
+                        body_prefix_len = total - hdr_end;
+                        if (body_prefix_len <= cfg.max_body_size)
+                            memcpy(body_buf, req + hdr_end, body_prefix_len);
+                    }
+                }
+            }
+
             /* Regular HTTP request */
             char *line = strtok(req, "\n");
             char method[16] = {0}, path[256] = {0};
@@ -950,14 +969,14 @@ sc_error_t sc_gateway_run(sc_allocator_t *alloc, const char *host, uint16_t port
 
             if (!rejected) {
                 if (body_len > 0 && body_len <= cfg.max_body_size) {
-                    size_t got = 0;
+                    size_t got = body_prefix_len < body_len ? body_prefix_len : body_len;
                     while (got < body_len) {
                         ssize_t r = recv(client, body_buf + got, body_len - got, 0);
                         if (r <= 0)
                             break;
                         got += (size_t)r;
                     }
-                    body_buf[body_len] = '\0';
+                    body_buf[got < body_len ? got : body_len] = '\0';
                 }
 
                 handle_http_request(gw, client, method, path, body_buf, body_len, client_ip,
