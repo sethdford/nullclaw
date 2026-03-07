@@ -29,37 +29,34 @@ export class ScChatSessionsPanel extends LitElement {
   static override styles = css`
     :host {
       display: block;
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
       width: 0;
       overflow: hidden;
-      z-index: 10;
-      opacity: 0;
-      transform: translateX(-20px);
-      transition:
-        width var(--sc-duration-normal) var(--sc-ease-out),
-        opacity var(--sc-duration-normal) var(--sc-ease-out),
-        transform var(--sc-duration-normal) var(--sc-ease-spring, cubic-bezier(0.22, 1, 0.36, 1));
+      flex-shrink: 0;
+      transition: width var(--sc-duration-normal) var(--sc-ease-spring);
     }
 
     :host([open]) {
-      width: 280px;
-      opacity: 1;
-      transform: translateX(0);
+      width: 260px;
     }
 
     .panel {
-      width: 280px;
+      width: 260px;
       height: 100%;
       display: flex;
       flex-direction: column;
-      background: color-mix(in srgb, var(--sc-bg-surface) 85%, transparent);
-      backdrop-filter: blur(24px) saturate(180%);
-      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      background: var(--sc-bg-surface);
       border-right: 1px solid var(--sc-border-subtle);
-      box-shadow: var(--sc-shadow-lg);
+    }
+
+    @media (max-width: 768px) /* --sc-breakpoint-md */ {
+      :host([open]) {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 20;
+        width: 280px;
+      }
     }
 
     .new-chat-btn {
@@ -269,8 +266,6 @@ export class ScChatSessionsPanel extends LitElement {
 
     @media (prefers-reduced-motion: reduce) {
       :host {
-        opacity: 1;
-        transform: none;
         transition: none;
       }
       .new-chat-btn,

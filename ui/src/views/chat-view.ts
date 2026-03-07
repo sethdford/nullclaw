@@ -21,25 +21,34 @@ export class ScChatView extends GatewayAwareLitElement {
       display: flex;
       flex-direction: column;
       height: 100%;
-      max-height: calc(100vh - 120px);
+      overflow: hidden;
     }
     .main-wrap {
       display: flex;
-      flex-direction: row;
       flex: 1;
-      min-width: 0;
-      position: relative;
-      width: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+    sc-chat-sessions-panel {
+      flex-shrink: 0;
+      height: 100%;
     }
     .container {
       display: flex;
       flex-direction: column;
       flex: 1;
+      min-width: 0;
       height: 100%;
-      max-width: 720px;
-      margin: 0 auto;
       position: relative;
+    }
+    .content-wrap {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      max-width: 800px;
       width: 100%;
+      margin: 0 auto;
     }
     .status-bar {
       display: flex;
@@ -448,41 +457,43 @@ export class ScChatView extends GatewayAwareLitElement {
         ></sc-chat-sessions-panel>
         <div class="container">
           ${this._renderStatusBar()} ${this._renderErrorBanner()} ${this._renderSearch()}
-          <sc-message-list
-            .items=${this.chat.items}
-            .isWaiting=${this.chat.isWaiting}
-            .streamElapsed=${this.chat.streamElapsed}
-            .historyLoading=${this.chat.historyLoading}
-            @sc-context-menu=${(e: CustomEvent<{ event: MouseEvent; item: ChatItem }>) =>
-              this._onMessageContextMenu(e.detail.event, e.detail.item)}
-            @sc-abort=${() => this.handleAbort()}
-            @sc-retry=${(e: CustomEvent<{ content: string; index: number }>) =>
-              this._handleSend(e.detail.content)}
-            @sc-regenerate=${(e: CustomEvent<{ content: string; index: number }>) =>
-              this._handleRegenerate(e.detail.index)}
-          ></sc-message-list>
-          ${this._renderRetryButton()}
-          <sc-composer
-            .value=${this.inputValue}
-            .waiting=${this.chat.isWaiting}
-            .disabled=${this.connectionStatus === "disconnected"}
-            .showSuggestions=${this.chat.items.length === 0}
-            .streamElapsed=${this.chat.streamElapsed}
-            .placeholder=${this.connectionStatus === "disconnected"
-              ? "Disconnected — reconnect to send messages"
-              : "Type a message... (Enter to send, Shift+Enter for newline)"}
-            @sc-send=${(
-              e: CustomEvent<{
-                message: string;
-                files?: Array<{ name: string; size: number; type: string; dataUrl?: string }>;
-              }>,
-            ) => this._handleSend(e.detail.message, e.detail.files)}
-            @sc-use-suggestion=${(e: CustomEvent<{ text: string }>) =>
-              this._handleSend(e.detail.text)}
-            @sc-input-change=${(e: CustomEvent<{ value: string }>) => {
-              this.inputValue = e.detail.value;
-            }}
-          ></sc-composer>
+          <div class="content-wrap">
+            <sc-message-list
+              .items=${this.chat.items}
+              .isWaiting=${this.chat.isWaiting}
+              .streamElapsed=${this.chat.streamElapsed}
+              .historyLoading=${this.chat.historyLoading}
+              @sc-context-menu=${(e: CustomEvent<{ event: MouseEvent; item: ChatItem }>) =>
+                this._onMessageContextMenu(e.detail.event, e.detail.item)}
+              @sc-abort=${() => this.handleAbort()}
+              @sc-retry=${(e: CustomEvent<{ content: string; index: number }>) =>
+                this._handleSend(e.detail.content)}
+              @sc-regenerate=${(e: CustomEvent<{ content: string; index: number }>) =>
+                this._handleRegenerate(e.detail.index)}
+            ></sc-message-list>
+            ${this._renderRetryButton()}
+            <sc-composer
+              .value=${this.inputValue}
+              .waiting=${this.chat.isWaiting}
+              .disabled=${this.connectionStatus === "disconnected"}
+              .showSuggestions=${this.chat.items.length === 0}
+              .streamElapsed=${this.chat.streamElapsed}
+              .placeholder=${this.connectionStatus === "disconnected"
+                ? "Disconnected — reconnect to send messages"
+                : "Type a message... (Enter to send, Shift+Enter for newline)"}
+              @sc-send=${(
+                e: CustomEvent<{
+                  message: string;
+                  files?: Array<{ name: string; size: number; type: string; dataUrl?: string }>;
+                }>,
+              ) => this._handleSend(e.detail.message, e.detail.files)}
+              @sc-use-suggestion=${(e: CustomEvent<{ text: string }>) =>
+                this._handleSend(e.detail.text)}
+              @sc-input-change=${(e: CustomEvent<{ value: string }>) => {
+                this.inputValue = e.detail.value;
+              }}
+            ></sc-composer>
+          </div>
           ${this._contextMenu.open
             ? html`
                 <sc-context-menu
