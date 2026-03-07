@@ -1091,12 +1091,18 @@ if(NOT SC_ENABLE_CRON)
         src/tools/cron_run.c src/tools/cron_runs.c src/tools/cron_update.c
         src/tools/schedule.c)
 endif()
+if(NOT SC_ENABLE_PERSONA)
+    list(APPEND SC_TEST_EXTRA_MODULES
+        src/persona/persona.c src/persona/examples.c src/persona/sampler.c
+        src/persona/analyzer.c src/persona/creator.c src/persona/cli.c src/persona/feedback.c
+        src/tools/persona.c)
+endif()
 add_library(seaclaw_core_test STATIC ${SC_CORE_SOURCES} ${SC_TEST_EXTRA_CHANNELS} ${SC_TEST_EXTRA_MODULES} ${SC_CRYPTO_SOURCES} ${SC_ASM_SOURCES})
 target_include_directories(seaclaw_core_test PUBLIC ${SC_ROOT}/include)
 target_include_directories(seaclaw_core_test PRIVATE ${SC_ROOT}/asm/generic)
 target_compile_definitions(seaclaw_core_test PRIVATE SC_IS_TEST=1)
 # Tests always have all module groups available
-target_compile_definitions(seaclaw_core_test PRIVATE SC_HAS_PERIPHERALS=1 SC_HAS_TUNNELS=1 SC_HAS_RUNTIME_EXOTIC=1 SC_HAS_TOOLS_BROWSER=1 SC_HAS_TOOLS_ADVANCED=1 SC_HAS_OTEL=1 SC_HAS_CRON=1 SC_HAS_PUSH=1 SC_HAS_UPDATE=1 SC_HAS_SKILLS=1)
+target_compile_definitions(seaclaw_core_test PRIVATE SC_HAS_PERIPHERALS=1 SC_HAS_TUNNELS=1 SC_HAS_RUNTIME_EXOTIC=1 SC_HAS_TOOLS_BROWSER=1 SC_HAS_TOOLS_ADVANCED=1 SC_HAS_OTEL=1 SC_HAS_CRON=1 SC_HAS_PUSH=1 SC_HAS_UPDATE=1 SC_HAS_SKILLS=1 SC_HAS_PERSONA=1)
 if(Threads_FOUND)
     target_link_libraries(seaclaw_core_test PUBLIC Threads::Threads)
 endif()

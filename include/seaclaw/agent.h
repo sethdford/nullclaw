@@ -15,7 +15,9 @@
 #include "seaclaw/memory.h"
 #include "seaclaw/memory/retrieval.h"
 #include "seaclaw/observer.h"
+#ifdef SC_HAS_PERSONA
 #include "seaclaw/persona.h"
+#endif
 #include "seaclaw/provider.h"
 #include "seaclaw/security.h"
 #include "seaclaw/security/audit.h"
@@ -136,7 +138,9 @@ struct sc_agent {
     const char *active_channel;
     size_t active_channel_len;
 
+#ifdef SC_HAS_PERSONA
     sc_persona_t *persona; /* loaded from config; owned */
+#endif
     char *persona_name;
     size_t persona_name_len;
 };

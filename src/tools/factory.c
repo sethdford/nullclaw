@@ -70,7 +70,9 @@
 #ifdef SC_HAS_CRON
 #include "seaclaw/tools/schedule.h"
 #endif
+#ifdef SC_HAS_PERSONA
 #include "seaclaw/tools/persona.h"
+#endif
 #include "seaclaw/tools/schema.h"
 #include "seaclaw/tools/send_message.h"
 #include "seaclaw/tools/shell.h"
@@ -85,7 +87,12 @@
 #else
 #define SC_TOOLS_CRON_COUNT 0
 #endif
-#define SC_TOOLS_COUNT_BASE (41 + SC_TOOLS_CRON_COUNT) /* 41 base tools + cron tools */
+#ifdef SC_HAS_PERSONA
+#define SC_TOOLS_PERSONA_COUNT 1
+#else
+#define SC_TOOLS_PERSONA_COUNT 0
+#endif
+#define SC_TOOLS_COUNT_BASE (41 + SC_TOOLS_CRON_COUNT - 1 + SC_TOOLS_PERSONA_COUNT) /* 40 base + persona(0|1) + cron */
 #ifdef SC_HAS_TOOLS_BROWSER
 #define SC_TOOLS_BROWSER_COUNT 3
 #else
@@ -364,10 +371,12 @@ sc_error_t sc_tools_create_default(sc_allocator_t *alloc, const char *workspace_
         goto fail;
     idx++;
 
+#ifdef SC_HAS_PERSONA
     err = sc_persona_tool_create(alloc, &tools[idx]);
     if (err != SC_OK)
         goto fail;
     idx++;
+#endif
 
     err = sc_send_message_create(alloc, mailbox, &tools[idx]);
     if (err != SC_OK)
