@@ -159,6 +159,15 @@ jobs:
       - run: npm run build
       - name: Enforce bundle size budget (350KB)
         run: bash scripts/check-bundle-size.sh
+      - name: UI test count regression guard
+        run: |
+          COUNT=$(npm run test 2>&1 | grep -oP '\d+ passed' | head -1 | grep -oP '\d+')
+          echo "UI test count: $COUNT"
+          BASELINE=460
+          if [ -n "$COUNT" ] && [ "$COUNT" -lt "$BASELINE" ]; then
+            echo "::error::UI test count regression: $COUNT < $BASELINE baseline"
+            exit 1
+          fi
 
   ui-e2e:
     runs-on: ubuntu-latest

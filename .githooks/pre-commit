@@ -72,3 +72,14 @@ if [ -x "scripts/lint-raw-colors.sh" ]; then
         fi
     fi
 fi
+
+# Lint for raw values (rgba, durations, breakpoints) in staged UI TS files
+staged_ui_ts=$(git diff --cached --name-only --diff-filter=ACM -- 'ui/src/**/*.ts' | grep -v '.test.' | grep -v 'demo-gateway' || true)
+if [ -n "$staged_ui_ts" ] && [ -x "ui/scripts/lint-raw-values.sh" ]; then
+    echo "Checking design token usage in staged UI files..."
+    (cd ui && bash scripts/lint-raw-values.sh)
+    if [ $? -ne 0 ]; then
+        echo "Token lint failed. Use --sc-* design tokens instead of raw hex/rgba/durations."
+        exit 1
+    fi
+fi
