@@ -1527,6 +1527,416 @@ static sc_error_t handle_push_unregister(sc_allocator_t *alloc, sc_app_context_t
 
 #endif /* SC_HAS_PUSH */
 
+/* ── RPC dispatch table ──────────────────────────────────────────────── */
+
+static sc_error_t handle_auth_token(sc_allocator_t *alloc, sc_ws_conn_t *conn,
+                                    const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                    char **out, size_t *out_len);
+
+typedef sc_error_t (*sc_rpc_handler_fn)(sc_allocator_t *alloc, sc_app_context_t *app,
+                                        sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                        const sc_json_value_t *root, char **out, size_t *out_len);
+
+typedef struct {
+    const char *method;
+    sc_rpc_handler_fn handler;
+} sc_rpc_entry_t;
+
+static sc_error_t rpc_auth_token(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                 const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                 char **out, size_t *out_len) {
+    (void)app;
+    return handle_auth_token(alloc, conn, proto, root, out, out_len);
+}
+
+static sc_error_t rpc_connect(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                              const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                              char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return build_connect_response(alloc, app, out, out_len);
+}
+
+static sc_error_t rpc_health(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                             const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                             char **out, size_t *out_len) {
+    (void)app;
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_health(alloc, out, out_len);
+}
+
+static sc_error_t rpc_config_get(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                 const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                 char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_config_get(alloc, app, out, out_len);
+}
+
+static sc_error_t rpc_config_schema(sc_allocator_t *alloc, sc_app_context_t *app,
+                                    sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                    const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)app;
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_config_schema(alloc, out, out_len);
+}
+
+static sc_error_t rpc_capabilities(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                   const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                   char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_capabilities(alloc, app, out, out_len);
+}
+
+static sc_error_t rpc_chat_send(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_chat_send(alloc, app, root, out, out_len);
+}
+
+static sc_error_t rpc_chat_history(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                   const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                   char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_chat_history(alloc, app, root, out, out_len);
+}
+
+static sc_error_t rpc_chat_abort(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                 const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                 char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_chat_abort(alloc, app, out, out_len);
+}
+
+static sc_error_t rpc_config_set(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                 const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                 char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_config_set(alloc, app, root, out, out_len);
+}
+
+static sc_error_t rpc_config_apply(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                   const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                   char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_config_apply(alloc, app, root, out, out_len);
+}
+
+static sc_error_t rpc_sessions_list(sc_allocator_t *alloc, sc_app_context_t *app,
+                                    sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                    const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_sessions_list(alloc, app, out, out_len);
+}
+
+static sc_error_t rpc_sessions_patch(sc_allocator_t *alloc, sc_app_context_t *app,
+                                     sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                     const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_sessions_patch(alloc, app, root, out, out_len);
+}
+
+static sc_error_t rpc_sessions_delete(sc_allocator_t *alloc, sc_app_context_t *app,
+                                      sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                      const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_sessions_delete(alloc, app, root, out, out_len);
+}
+
+static sc_error_t rpc_persona_set(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                  const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                  char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_persona_set(alloc, app, root, out, out_len);
+}
+
+static sc_error_t rpc_tools_catalog(sc_allocator_t *alloc, sc_app_context_t *app,
+                                    sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                    const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_tools_catalog(alloc, app, out, out_len);
+}
+
+static sc_error_t rpc_channels_status(sc_allocator_t *alloc, sc_app_context_t *app,
+                                      sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                      const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_channels_status(alloc, app, out, out_len);
+}
+
+#ifdef SC_HAS_CRON
+static sc_error_t rpc_cron_list(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_cron_list(alloc, app, out, out_len);
+}
+
+static sc_error_t rpc_cron_add(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                               const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                               char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_cron_add(alloc, app, root, out, out_len);
+}
+
+static sc_error_t rpc_cron_remove(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                  const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                  char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_cron_remove(alloc, app, root, out, out_len);
+}
+
+static sc_error_t rpc_cron_run(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                               const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                               char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_cron_run(alloc, app, root, out, out_len);
+}
+
+static sc_error_t rpc_cron_update(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                  const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                  char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_cron_update(alloc, app, root, out, out_len);
+}
+
+static sc_error_t rpc_cron_runs(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_cron_runs(alloc, app, root, out, out_len);
+}
+#endif
+
+#ifdef SC_HAS_SKILLS
+static sc_error_t rpc_skills_list(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                  const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                  char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_skills_list(alloc, app, out, out_len);
+}
+
+static sc_error_t rpc_skills_enable(sc_allocator_t *alloc, sc_app_context_t *app,
+                                    sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                    const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_skill_toggle(alloc, app, root, true, out, out_len);
+}
+
+static sc_error_t rpc_skills_disable(sc_allocator_t *alloc, sc_app_context_t *app,
+                                     sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                     const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_skill_toggle(alloc, app, root, false, out, out_len);
+}
+
+static sc_error_t rpc_skills_install(sc_allocator_t *alloc, sc_app_context_t *app,
+                                     sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                     const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_skills_install(alloc, app, root, out, out_len);
+}
+
+static sc_error_t rpc_skills_search(sc_allocator_t *alloc, sc_app_context_t *app,
+                                    sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                    const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)app;
+    (void)conn;
+    (void)proto;
+    return handle_skills_search(alloc, root, out, out_len);
+}
+
+static sc_error_t rpc_skills_uninstall(sc_allocator_t *alloc, sc_app_context_t *app,
+                                       sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                       const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_skills_uninstall(alloc, app, root, out, out_len);
+}
+
+static sc_error_t rpc_skills_update(sc_allocator_t *alloc, sc_app_context_t *app,
+                                    sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                    const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)app;
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_skills_update(alloc, out, out_len);
+}
+#endif
+
+static sc_error_t rpc_models_list(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                  const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                  char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_models_list(alloc, app, out, out_len);
+}
+
+static sc_error_t rpc_nodes_list(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                 const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                 char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_nodes_list(alloc, app, out, out_len);
+}
+
+#ifdef SC_HAS_UPDATE
+static sc_error_t rpc_update_check(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                   const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                   char **out, size_t *out_len) {
+    (void)app;
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_update_check(alloc, out, out_len);
+}
+
+static sc_error_t rpc_update_run(sc_allocator_t *alloc, sc_app_context_t *app, sc_ws_conn_t *conn,
+                                 const sc_control_protocol_t *proto, const sc_json_value_t *root,
+                                 char **out, size_t *out_len) {
+    (void)app;
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_update_run(alloc, out, out_len);
+}
+#endif
+
+static sc_error_t rpc_exec_approval_resolve(sc_allocator_t *alloc, sc_app_context_t *app,
+                                            sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                            const sc_json_value_t *root, char **out,
+                                            size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_exec_approval(alloc, app, root, out, out_len);
+}
+
+static sc_error_t rpc_usage_summary(sc_allocator_t *alloc, sc_app_context_t *app,
+                                    sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                    const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_usage_summary(alloc, app, out, out_len);
+}
+
+static sc_error_t rpc_activity_recent(sc_allocator_t *alloc, sc_app_context_t *app,
+                                      sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                      const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    (void)root;
+    return handle_activity_recent(alloc, app, out, out_len);
+}
+
+#ifdef SC_HAS_PUSH
+static sc_error_t rpc_push_register(sc_allocator_t *alloc, sc_app_context_t *app,
+                                    sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                    const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_push_register(alloc, app, root, out, out_len);
+}
+
+static sc_error_t rpc_push_unregister(sc_allocator_t *alloc, sc_app_context_t *app,
+                                      sc_ws_conn_t *conn, const sc_control_protocol_t *proto,
+                                      const sc_json_value_t *root, char **out, size_t *out_len) {
+    (void)conn;
+    (void)proto;
+    return handle_push_unregister(alloc, app, root, out, out_len);
+}
+#endif
+
+static const sc_rpc_entry_t s_rpc_table[] = {
+    {"auth.token", rpc_auth_token},
+    {"connect", rpc_connect},
+    {"health", rpc_health},
+    {"config.get", rpc_config_get},
+    {"config.schema", rpc_config_schema},
+    {"capabilities", rpc_capabilities},
+    {"chat.send", rpc_chat_send},
+    {"chat.history", rpc_chat_history},
+    {"chat.abort", rpc_chat_abort},
+    {"config.set", rpc_config_set},
+    {"config.apply", rpc_config_apply},
+    {"sessions.list", rpc_sessions_list},
+    {"sessions.patch", rpc_sessions_patch},
+    {"sessions.delete", rpc_sessions_delete},
+    {"persona.set", rpc_persona_set},
+    {"tools.catalog", rpc_tools_catalog},
+    {"channels.status", rpc_channels_status},
+#ifdef SC_HAS_CRON
+    {"cron.list", rpc_cron_list},
+    {"cron.add", rpc_cron_add},
+    {"cron.remove", rpc_cron_remove},
+    {"cron.run", rpc_cron_run},
+    {"cron.update", rpc_cron_update},
+    {"cron.runs", rpc_cron_runs},
+#endif
+#ifdef SC_HAS_SKILLS
+    {"skills.list", rpc_skills_list},
+    {"skills.enable", rpc_skills_enable},
+    {"skills.disable", rpc_skills_disable},
+    {"skills.install", rpc_skills_install},
+    {"skills.search", rpc_skills_search},
+    {"skills.uninstall", rpc_skills_uninstall},
+    {"skills.update", rpc_skills_update},
+#endif
+    {"models.list", rpc_models_list},
+    {"nodes.list", rpc_nodes_list},
+#ifdef SC_HAS_UPDATE
+    {"update.check", rpc_update_check},
+    {"update.run", rpc_update_run},
+#endif
+    {"exec.approval.resolve", rpc_exec_approval_resolve},
+    {"usage.summary", rpc_usage_summary},
+    {"activity.recent", rpc_activity_recent},
+#ifdef SC_HAS_PUSH
+    {"push.register", rpc_push_register},
+    {"push.unregister", rpc_push_unregister},
+#endif
+    {NULL, NULL},
+};
+
 /* ── Auth helpers ───────────────────────────────────────────────────── */
 
 static bool is_public_method(const char *method) {
@@ -1587,93 +1997,11 @@ static sc_error_t build_method_response(sc_allocator_t *alloc, const char *metho
     *payload_out = NULL;
     *payload_len_out = 0;
 
-    if (strcmp(method, "auth.token") == 0)
-        return handle_auth_token(alloc, conn, proto, root, payload_out, payload_len_out);
-    if (strcmp(method, "connect") == 0)
-        return build_connect_response(alloc, app, payload_out, payload_len_out);
-    if (strcmp(method, "health") == 0)
-        return handle_health(alloc, payload_out, payload_len_out);
-    if (strcmp(method, "config.get") == 0)
-        return handle_config_get(alloc, app, payload_out, payload_len_out);
-    if (strcmp(method, "config.schema") == 0)
-        return handle_config_schema(alloc, payload_out, payload_len_out);
-    if (strcmp(method, "capabilities") == 0)
-        return handle_capabilities(alloc, app, payload_out, payload_len_out);
-    if (strcmp(method, "chat.send") == 0)
-        return handle_chat_send(alloc, app, root, payload_out, payload_len_out);
-    if (strcmp(method, "chat.history") == 0)
-        return handle_chat_history(alloc, app, root, payload_out, payload_len_out);
-    if (strcmp(method, "chat.abort") == 0)
-        return handle_chat_abort(alloc, app, payload_out, payload_len_out);
-    if (strcmp(method, "config.set") == 0)
-        return handle_config_set(alloc, app, root, payload_out, payload_len_out);
-    if (strcmp(method, "config.apply") == 0)
-        return handle_config_apply(alloc, app, root, payload_out, payload_len_out);
-    if (strcmp(method, "sessions.list") == 0)
-        return handle_sessions_list(alloc, app, payload_out, payload_len_out);
-    if (strcmp(method, "sessions.patch") == 0)
-        return handle_sessions_patch(alloc, app, root, payload_out, payload_len_out);
-    if (strcmp(method, "sessions.delete") == 0)
-        return handle_sessions_delete(alloc, app, root, payload_out, payload_len_out);
-    if (strcmp(method, "persona.set") == 0)
-        return handle_persona_set(alloc, app, root, payload_out, payload_len_out);
-    if (strcmp(method, "tools.catalog") == 0)
-        return handle_tools_catalog(alloc, app, payload_out, payload_len_out);
-    if (strcmp(method, "channels.status") == 0)
-        return handle_channels_status(alloc, app, payload_out, payload_len_out);
-#ifdef SC_HAS_CRON
-    if (strcmp(method, "cron.list") == 0)
-        return handle_cron_list(alloc, app, payload_out, payload_len_out);
-    if (strcmp(method, "cron.add") == 0)
-        return handle_cron_add(alloc, app, root, payload_out, payload_len_out);
-    if (strcmp(method, "cron.remove") == 0)
-        return handle_cron_remove(alloc, app, root, payload_out, payload_len_out);
-    if (strcmp(method, "cron.run") == 0)
-        return handle_cron_run(alloc, app, root, payload_out, payload_len_out);
-    if (strcmp(method, "cron.update") == 0)
-        return handle_cron_update(alloc, app, root, payload_out, payload_len_out);
-    if (strcmp(method, "cron.runs") == 0)
-        return handle_cron_runs(alloc, app, root, payload_out, payload_len_out);
-#endif
-#ifdef SC_HAS_SKILLS
-    if (strcmp(method, "skills.list") == 0)
-        return handle_skills_list(alloc, app, payload_out, payload_len_out);
-    if (strcmp(method, "skills.enable") == 0)
-        return handle_skill_toggle(alloc, app, root, true, payload_out, payload_len_out);
-    if (strcmp(method, "skills.disable") == 0)
-        return handle_skill_toggle(alloc, app, root, false, payload_out, payload_len_out);
-    if (strcmp(method, "skills.install") == 0)
-        return handle_skills_install(alloc, app, root, payload_out, payload_len_out);
-    if (strcmp(method, "skills.search") == 0)
-        return handle_skills_search(alloc, root, payload_out, payload_len_out);
-    if (strcmp(method, "skills.uninstall") == 0)
-        return handle_skills_uninstall(alloc, app, root, payload_out, payload_len_out);
-    if (strcmp(method, "skills.update") == 0)
-        return handle_skills_update(alloc, payload_out, payload_len_out);
-#endif
-#ifdef SC_HAS_UPDATE
-    if (strcmp(method, "update.check") == 0)
-        return handle_update_check(alloc, payload_out, payload_len_out);
-    if (strcmp(method, "update.run") == 0)
-        return handle_update_run(alloc, payload_out, payload_len_out);
-#endif
-    if (strcmp(method, "exec.approval.resolve") == 0)
-        return handle_exec_approval(alloc, app, root, payload_out, payload_len_out);
-    if (strcmp(method, "usage.summary") == 0)
-        return handle_usage_summary(alloc, app, payload_out, payload_len_out);
-    if (strcmp(method, "models.list") == 0)
-        return handle_models_list(alloc, app, payload_out, payload_len_out);
-    if (strcmp(method, "nodes.list") == 0)
-        return handle_nodes_list(alloc, app, payload_out, payload_len_out);
-    if (strcmp(method, "activity.recent") == 0)
-        return handle_activity_recent(alloc, app, payload_out, payload_len_out);
-#ifdef SC_HAS_PUSH
-    if (strcmp(method, "push.register") == 0)
-        return handle_push_register(alloc, app, root, payload_out, payload_len_out);
-    if (strcmp(method, "push.unregister") == 0)
-        return handle_push_unregister(alloc, app, root, payload_out, payload_len_out);
-#endif
-
+    for (const sc_rpc_entry_t *e = s_rpc_table; e->method; e++) {
+        if (strcmp(method, e->method) == 0) {
+            return e->handler(alloc, app, conn, proto, root, payload_out, payload_len_out);
+        }
+    }
     return SC_ERR_NOT_FOUND;
 }
 

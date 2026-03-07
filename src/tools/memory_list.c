@@ -28,7 +28,7 @@ static sc_error_t memory_list_execute(void *ctx, sc_allocator_t *alloc, const sc
     char *msg = sc_strndup(alloc, "(memory_list stub)", 18);
     if (!msg) {
         *out = sc_tool_result_fail("out of memory", 12);
-        return SC_ERR_OUT_OF_MEMORY;
+        return SC_OK;
     }
     *out = sc_tool_result_ok_owned(msg, 18);
     return SC_OK;
@@ -53,7 +53,7 @@ static sc_error_t memory_list_execute(void *ctx, sc_allocator_t *alloc, const sc
             alloc->free(alloc->ctx, entries, count * sizeof(sc_memory_entry_t));
         }
         *out = sc_tool_result_fail("out of memory", 12);
-        return SC_ERR_OUT_OF_MEMORY;
+        return SC_OK;
     }
     if (entries) {
         for (size_t i = 0; i < count; i++)

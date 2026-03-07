@@ -1,9 +1,13 @@
 #include "seaclaw/daemon.h"
 #include "seaclaw/agent.h"
 #include "seaclaw/config.h"
+#include "seaclaw/context/conversation.h"
 #include "seaclaw/core/error.h"
 #include "seaclaw/core/process_util.h"
 #include "seaclaw/core/string.h"
+#ifdef SC_HAS_PERSONA
+#include "seaclaw/persona.h"
+#endif
 #ifdef SC_HAS_CRON
 #include "seaclaw/cron.h"
 #include "seaclaw/crontab.h"
@@ -15,9 +19,7 @@
 #include <string.h>
 #include <time.h>
 
-#if defined(__APPLE__) && defined(__MACH__) && defined(SC_ENABLE_SQLITE) && !defined(SC_IS_TEST)
-#include <sqlite3.h>
-#endif
+/* sqlite3.h no longer needed in daemon — moved to channel vtable implementations */
 
 #if !defined(_WIN32) && !defined(__CYGWIN__)
 #include <errno.h>
@@ -296,233 +298,6 @@ static void service_signal_handler(int sig) {
 #endif
 
 /* ── Streaming callback for channels with send_event ─────────────────────── */
-
-/* ---- iMessage conversation history loader ---- */
-
-#if defined(__APPLE__) && defined(__MACH__) && defined(SC_ENABLE_SQLITE) && !defined(SC_IS_TEST)
-static char *load_imessage_context(sc_allocator_t *alloc, const char *handle, size_t *out_len) {
-    *out_len = 0;
-    const char *home = getenv("HOME");
-    if (!home)
-        return NULL;
-
-    char db_path[512];
-    int n = snprintf(db_path, sizeof(db_path), "%s/Library/Messages/chat.db", home);
-    if (n < 0 || (size_t)n >= sizeof(db_path))
-        return NULL;
-
-    sqlite3 *db = NULL;
-    if (sqlite3_open_v2(db_path, &db, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK) {
-        if (db)
-            sqlite3_close(db);
-        return NULL;
-    }
-
-    const char *sql = "SELECT m.is_from_me, m.text, "
-                      "  datetime(m.date/1000000000 + 978307200, 'unixepoch', 'localtime') as ts "
-                      "FROM message m "
-                      "JOIN handle h ON m.handle_id = h.ROWID "
-                      "WHERE h.id = ?1 AND m.associated_message_type = 0 "
-                      "ORDER BY m.date DESC LIMIT 25";
-
-    sqlite3_stmt *stmt = NULL;
-    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
-        sqlite3_close(db);
-        return NULL;
-    }
-    sqlite3_bind_text(stmt, 1, handle, -1, NULL);
-
-    typedef struct {
-        int from_me;
-        char text[512];
-        char ts[32];
-    } msg_row_t;
-    msg_row_t rows[25];
-    size_t row_count = 0;
-
-    while (sqlite3_step(stmt) == SQLITE_ROW && row_count < 25) {
-        rows[row_count].from_me = sqlite3_column_int(stmt, 0);
-        const char *txt = (const char *)sqlite3_column_text(stmt, 1);
-        const char *ts = (const char *)sqlite3_column_text(stmt, 2);
-        if (txt && strlen(txt) > 0) {
-            size_t tlen = strlen(txt);
-            if (tlen >= sizeof(rows[0].text))
-                tlen = sizeof(rows[0].text) - 1;
-            memcpy(rows[row_count].text, txt, tlen);
-            rows[row_count].text[tlen] = '\0';
-        } else if (rows[row_count].from_me) {
-            snprintf(rows[row_count].text, sizeof(rows[0].text), "[you replied]");
-        } else {
-            snprintf(rows[row_count].text, sizeof(rows[0].text), "[image or attachment]");
-        }
-        if (ts) {
-            size_t tslen = strlen(ts);
-            if (tslen >= sizeof(rows[0].ts))
-                tslen = sizeof(rows[0].ts) - 1;
-            memcpy(rows[row_count].ts, ts, tslen);
-            rows[row_count].ts[tslen] = '\0';
-        } else {
-            rows[row_count].ts[0] = '\0';
-        }
-        row_count++;
-    }
-    sqlite3_finalize(stmt);
-    sqlite3_close(db);
-
-    if (row_count == 0)
-        return NULL;
-
-    size_t buf_cap = 16384;
-    char *buf = (char *)alloc->alloc(alloc->ctx, buf_cap);
-    if (!buf)
-        return NULL;
-
-    size_t pos = 0;
-    int w = snprintf(buf + pos, buf_cap - pos, "\n--- Recent conversation thread ---\n");
-    if (w > 0)
-        pos += (size_t)w;
-
-    for (size_t i = row_count; i > 0; i--) {
-        msg_row_t *r = &rows[i - 1];
-        const char *who = r->from_me ? "You" : "Them";
-        w = snprintf(buf + pos, buf_cap - pos, "[%s] %s: %s\n", r->ts, who, r->text);
-        if (w > 0 && pos + (size_t)w < buf_cap)
-            pos += (size_t)w;
-    }
-
-    w = snprintf(buf + pos, buf_cap - pos, "--- End of recent thread ---\n\n");
-    if (w > 0)
-        pos += (size_t)w;
-
-    /*
-     * Analyze conversation state: extract emotional tone, active topics,
-     * and relationship dynamics from the thread. This gives the model
-     * structured awareness beyond raw messages.
-     */
-    {
-        /* Detect if last message from them was emotional */
-        bool they_seem_frustrated = false;
-        bool they_seem_excited = false;
-        bool they_seem_sad = false;
-        bool open_question = false;
-        bool they_sent_link = false;
-        bool logistics_thread = false;
-        const char *last_them_msg = NULL;
-
-        for (size_t i = 0; i < row_count; i++) {
-            /* rows[0] is most recent */
-            if (!rows[i].from_me) {
-                if (!last_them_msg)
-                    last_them_msg = rows[i].text;
-                char *t = rows[i].text;
-                size_t tl = strlen(t);
-                for (size_t j = 0; j < tl; j++) {
-                    if (t[j] == '?' && !rows[i].from_me)
-                        open_question = true;
-                    if (t[j] == '!' && tl > 3)
-                        they_seem_excited = true;
-                }
-                /* Check for frustration words */
-                for (size_t j = 0; j + 3 < tl; j++) {
-                    char a = t[j];
-                    if (a >= 'A' && a <= 'Z')
-                        a += 32;
-                    char b = t[j + 1];
-                    if (b >= 'A' && b <= 'Z')
-                        b += 32;
-                    char c = t[j + 2];
-                    if (c >= 'A' && c <= 'Z')
-                        c += 32;
-                    char d = t[j + 3];
-                    if (d >= 'A' && d <= 'Z')
-                        d += 32;
-                    if (a == 'd' && b == 'a' && c == 'm' && d == 'n')
-                        they_seem_frustrated = true;
-                    if (a == 'u' && b == 'g' && c == 'h')
-                        they_seem_frustrated = true;
-                }
-                /* Check for link */
-                for (size_t j = 0; j + 4 < tl; j++) {
-                    if (memcmp(t + j, "http", 4) == 0)
-                        they_sent_link = true;
-                }
-            }
-            /* Check for logistics keywords */
-            char *t2 = rows[i].text;
-            size_t t2l = strlen(t2);
-            for (size_t j = 0; j + 5 < t2l; j++) {
-                char lo[6];
-                for (int k = 0; k < 5; k++) {
-                    lo[k] = t2[j + k];
-                    if (lo[k] >= 'A' && lo[k] <= 'Z')
-                        lo[k] += 32;
-                }
-                lo[5] = 0;
-                if (strcmp(lo, "fligh") == 0 || strcmp(lo, "airpo") == 0 ||
-                    strcmp(lo, "leavi") == 0 || strcmp(lo, "booke") == 0 ||
-                    strcmp(lo, "arriv") == 0 || strcmp(lo, "monda") == 0 ||
-                    strcmp(lo, "frida") == 0)
-                    logistics_thread = true;
-            }
-        }
-
-        /* Build situational awareness block */
-        w = snprintf(buf + pos, buf_cap - pos, "--- Conversation awareness ---\n");
-        if (w > 0)
-            pos += (size_t)w;
-
-        if (they_seem_frustrated) {
-            w = snprintf(buf + pos, buf_cap - pos,
-                         "They seem frustrated. Be calm, acknowledge it, don't be dismissive.\n");
-            if (w > 0)
-                pos += (size_t)w;
-        }
-        if (they_seem_excited) {
-            w = snprintf(buf + pos, buf_cap - pos,
-                         "They seem excited about something. Be genuinely happy for them.\n");
-            if (w > 0)
-                pos += (size_t)w;
-        }
-        if (they_seem_sad) {
-            w = snprintf(
-                buf + pos, buf_cap - pos,
-                "They seem sad or down. Be present and gentle. Don't try to fix it immediately.\n");
-            if (w > 0)
-                pos += (size_t)w;
-        }
-        if (open_question) {
-            w = snprintf(buf + pos, buf_cap - pos,
-                         "They asked a question. Make sure you actually answer it.\n");
-            if (w > 0)
-                pos += (size_t)w;
-        }
-        if (they_sent_link) {
-            w = snprintf(
-                buf + pos, buf_cap - pos,
-                "They shared a link. Acknowledge it, say you'll look at it, or comment on it.\n");
-            if (w > 0)
-                pos += (size_t)w;
-        }
-        if (logistics_thread) {
-            w = snprintf(
-                buf + pos, buf_cap - pos,
-                "There's an active logistics/travel thread. Stay on topic with specifics.\n");
-            if (w > 0)
-                pos += (size_t)w;
-        }
-
-        w = snprintf(buf + pos, buf_cap - pos,
-                     "\nUse this context naturally. Reference specific details they mentioned. "
-                     "Do NOT summarize or acknowledge this context aloud.\n");
-        if (w > 0)
-            pos += (size_t)w;
-    }
-
-    buf[pos] = '\0';
-    *out_len = pos;
-    return buf;
-}
-#endif
 
 /* ---- Response Decision Engine ---- */
 
@@ -838,8 +613,8 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                     sc_message_entry_t *entries = NULL;
                     size_t entry_count = 0;
                     if (agent->session_store->vtable->load_messages(
-                            agent->session_store->ctx, alloc, msgs[m].session_key, key_len,
-                            &entries, &entry_count) == SC_OK &&
+                            agent->session_store->ctx, alloc, batch_key, key_len, &entries,
+                            &entry_count) == SC_OK &&
                         entries && entry_count > 0) {
                         for (size_t e = 0; e < entry_count; e++) {
                             if (!entries[e].content || entries[e].content_len == 0)
@@ -886,45 +661,80 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                 char *response = NULL;
                 size_t response_len = 0;
 
-                /* Temporarily inject iMessage conversation history as context */
-                char *saved_ci = agent->custom_instructions;
-                size_t saved_ci_len = agent->custom_instructions_len;
+                /* Build per-turn context via proper architecture:
+                 * 1. Contact profile from persona (sc_persona_find_contact)
+                 * 2. Conversation history from channel vtable (load_conversation_history)
+                 * 3. Awareness from shared analyzer (sc_conversation_build_awareness)
+                 * 4. Response constraints from channel vtable (get_response_constraints)
+                 */
+                char *contact_ctx = NULL;
+                size_t contact_ctx_len = 0;
                 char *convo_ctx = NULL;
                 size_t convo_ctx_len = 0;
+                sc_channel_history_entry_t *history_entries = NULL;
+                size_t history_count = 0;
 
-#if defined(__APPLE__) && defined(__MACH__) && defined(SC_ENABLE_SQLITE) && !defined(SC_IS_TEST)
-                convo_ctx = load_imessage_context(alloc, batch_key, &convo_ctx_len);
-                if (convo_ctx && convo_ctx_len > 0) {
-                    size_t merged_len = convo_ctx_len + (saved_ci_len ? saved_ci_len + 1 : 0);
-                    char *merged = (char *)alloc->alloc(alloc->ctx, merged_len + 1);
-                    if (merged) {
-                        size_t mpos = 0;
-                        if (saved_ci && saved_ci_len > 0) {
-                            memcpy(merged, saved_ci, saved_ci_len);
-                            mpos = saved_ci_len;
-                            merged[mpos++] = '\n';
-                        }
-                        memcpy(merged + mpos, convo_ctx, convo_ctx_len);
-                        mpos += convo_ctx_len;
-                        merged[mpos] = '\0';
-                        agent->custom_instructions = merged;
-                        agent->custom_instructions_len = mpos;
+#ifndef SC_IS_TEST
+                /* 1. Per-contact profile via persona struct */
+#ifdef SC_HAS_PERSONA
+                if (agent->persona) {
+                    const sc_contact_profile_t *cp =
+                        sc_persona_find_contact(agent->persona, batch_key, key_len);
+                    if (cp) {
+                        sc_contact_profile_build_context(alloc, cp, &contact_ctx, &contact_ctx_len);
                     }
                 }
+#endif
+
+                /* 2. Conversation history via channel vtable */
+                if (ch->channel->vtable->load_conversation_history) {
+                    ch->channel->vtable->load_conversation_history(
+                        ch->channel->ctx, alloc, batch_key, key_len, 25, &history_entries,
+                        &history_count);
+                }
+
+                /* 3. Build awareness context from history via shared analyzer */
+                if (history_entries && history_count > 0) {
+                    convo_ctx = sc_conversation_build_awareness(alloc, history_entries,
+                                                                history_count, &convo_ctx_len);
+                }
+
+                /* 4. Response constraints via channel vtable */
+                uint32_t max_chars = 0;
+                if (ch->channel->vtable->get_response_constraints) {
+                    sc_channel_response_constraints_t constraints = {0};
+                    if (ch->channel->vtable->get_response_constraints(ch->channel->ctx,
+                                                                      &constraints) == SC_OK) {
+                        max_chars = constraints.max_chars;
+                    }
+                }
+
+                /* Set agent per-turn context fields (prompt builder reads these) */
+                agent->contact_context = contact_ctx;
+                agent->contact_context_len = contact_ctx_len;
+                agent->conversation_context = convo_ctx;
+                agent->conversation_context_len = convo_ctx_len;
+                agent->max_response_chars = max_chars;
 #endif
 
                 sc_error_t err =
                     sc_agent_turn(agent, combined, combined_len, &response, &response_len);
 
-                /* Restore original custom_instructions */
-                if (convo_ctx) {
-                    if (agent->custom_instructions != saved_ci)
-                        alloc->free(alloc->ctx, agent->custom_instructions,
-                                    agent->custom_instructions_len + 1);
-                    agent->custom_instructions = saved_ci;
-                    agent->custom_instructions_len = saved_ci_len;
+                /* Clear per-turn context and free */
+#ifndef SC_IS_TEST
+                agent->contact_context = NULL;
+                agent->contact_context_len = 0;
+                agent->conversation_context = NULL;
+                agent->conversation_context_len = 0;
+                agent->max_response_chars = 0;
+                if (contact_ctx)
+                    alloc->free(alloc->ctx, contact_ctx, contact_ctx_len + 1);
+                if (convo_ctx)
                     alloc->free(alloc->ctx, convo_ctx, convo_ctx_len + 1);
-                }
+                if (history_entries)
+                    alloc->free(alloc->ctx, history_entries,
+                                history_count * sizeof(sc_channel_history_entry_t));
+#endif
 
                 /* Persist each individual message + the single response */
                 if (agent->session_store && agent->session_store->vtable &&

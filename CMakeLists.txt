@@ -353,6 +353,7 @@ set(SC_CORE_SOURCES
     src/agent/preferences.c
     src/agent/awareness.c
     src/agent/outcomes.c
+    src/context/conversation.c
     src/agent/episodic.c
     src/agent/reflection.c
     src/agent/input_guard.c
@@ -940,7 +941,7 @@ if(SC_ENABLE_ASAN)
 endif()
 
 # --- Main executable ---
-add_executable(seaclaw src/main.c)
+add_executable(seaclaw src/main.c src/bootstrap.c)
 target_link_libraries(seaclaw seaclaw_core)
 if(SC_ENABLE_SKILLS)
     target_compile_definitions(seaclaw PRIVATE SC_HAS_SKILLS=1)

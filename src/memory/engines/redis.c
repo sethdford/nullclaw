@@ -364,7 +364,10 @@ static sc_error_t impl_store(void *ctx, const char *key, size_t key_len, const c
         return SC_ERR_MEMORY_STORE;
 
     char keys_key[256];
-    snprintf(keys_key, sizeof(keys_key), "%s:keys", self->key_prefix ? self->key_prefix : "mem");
+    int kkn = snprintf(keys_key, sizeof(keys_key), "%s:keys",
+                       self->key_prefix ? self->key_prefix : "mem");
+    if (kkn < 0 || (size_t)kkn >= sizeof(keys_key))
+        return SC_ERR_MEMORY_STORE;
     if (redis_send_array_start(self->sock, 2) != 0)
         return SC_ERR_MEMORY_STORE;
     if (redis_send_bulk(self->sock, "SADD", 4) != 0)

@@ -57,7 +57,7 @@ static sc_error_t shell_execute(void *ctx, sc_allocator_t *alloc, const sc_json_
         char *msg = sc_strndup(alloc, stub, stub_len);
         if (!msg) {
             *out = sc_tool_result_fail("out of memory", 13);
-            return SC_ERR_OUT_OF_MEMORY;
+            return SC_OK;
         }
         *out = sc_tool_result_ok_owned(msg, stub_len);
     }
@@ -199,7 +199,7 @@ static sc_error_t shell_execute(void *ctx, sc_allocator_t *alloc, const sc_json_
         close(fds[0]);
         waitpid(pid, NULL, 0);
         *out = sc_tool_result_fail("out of memory", 12);
-        return SC_ERR_OUT_OF_MEMORY;
+        return SC_OK;
     }
     size_t len = 0;
     for (;;) {
@@ -221,7 +221,7 @@ static sc_error_t shell_execute(void *ctx, sc_allocator_t *alloc, const sc_json_
         alloc->free(alloc->ctx, buf, cap);
         if (!out_copy) {
             *out = sc_tool_result_fail("out of memory", 12);
-            return SC_ERR_OUT_OF_MEMORY;
+            return SC_OK;
         }
         *out = sc_tool_result_ok_owned(out_copy, len);
     } else if (WIFSIGNALED(status)) {

@@ -81,6 +81,8 @@ static sc_error_t database_execute(void *ctx, sc_allocator_t *alloc, const sc_js
                 }
                 off += (size_t)snprintf(buf + off, cap - off, "]}");
                 *out = sc_tool_result_ok_owned(buf, off);
+            } else {
+                *out = sc_tool_result_fail("out of memory", 12);
             }
             sqlite3_finalize(stmt);
         } else {

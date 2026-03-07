@@ -43,7 +43,7 @@ static sc_error_t file_read_execute(void *ctx, sc_allocator_t *alloc, const sc_j
     char *msg = sc_strndup(alloc, "(file_read stub in test)", 24);
     if (!msg) {
         *out = sc_tool_result_fail("out of memory", 12);
-        return SC_ERR_OUT_OF_MEMORY;
+        return SC_OK;
     }
     *out = sc_tool_result_ok_owned(msg, 24);
     return SC_OK;
@@ -95,7 +95,7 @@ static sc_error_t file_read_execute(void *ctx, sc_allocator_t *alloc, const sc_j
     if (!buf) {
         fclose(f);
         *out = sc_tool_result_fail("out of memory", 12);
-        return SC_ERR_OUT_OF_MEMORY;
+        return SC_OK;
     }
     size_t n = fread(buf, 1, (size_t)sz, f);
     fclose(f);

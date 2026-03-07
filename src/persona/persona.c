@@ -114,6 +114,33 @@ static void free_example_bank(sc_allocator_t *alloc, sc_persona_example_bank_t *
     }
 }
 
+static void free_contact_string(sc_allocator_t *alloc, char *s) {
+    if (s) {
+        size_t len = strlen(s);
+        alloc->free(alloc->ctx, s, len + 1);
+    }
+}
+
+static void free_contact_profile(sc_allocator_t *alloc, sc_contact_profile_t *cp) {
+    if (!alloc || !cp)
+        return;
+    free_contact_string(alloc, cp->contact_id);
+    free_contact_string(alloc, cp->name);
+    free_contact_string(alloc, cp->relationship);
+    free_contact_string(alloc, cp->relationship_stage);
+    free_contact_string(alloc, cp->warmth_level);
+    free_contact_string(alloc, cp->vulnerability_level);
+    free_contact_string(alloc, cp->identity);
+    free_contact_string(alloc, cp->context);
+    free_contact_string(alloc, cp->dynamic);
+    free_contact_string(alloc, cp->greeting_style);
+    free_contact_string(alloc, cp->closing_style);
+    free_string_array(alloc, cp->interests, cp->interests_count);
+    free_string_array(alloc, cp->recent_topics, cp->recent_topics_count);
+    free_string_array(alloc, cp->sensitive_topics, cp->sensitive_topics_count);
+    free_string_array(alloc, cp->allowed_behaviors, cp->allowed_behaviors_count);
+}
+
 void sc_persona_deinit(sc_allocator_t *alloc, sc_persona_t *persona) {
     if (!alloc || !persona)
         return;
@@ -150,7 +177,175 @@ void sc_persona_deinit(sc_allocator_t *alloc, sc_persona_t *persona) {
                     persona->example_banks_count * sizeof(sc_persona_example_bank_t));
     }
 
+    if (persona->contacts) {
+        for (size_t i = 0; i < persona->contacts_count; i++)
+            free_contact_profile(alloc, &persona->contacts[i]);
+        alloc->free(alloc->ctx, persona->contacts,
+                    persona->contacts_count * sizeof(sc_contact_profile_t));
+    }
+
     memset(persona, 0, sizeof(*persona));
+}
+
+const sc_contact_profile_t *sc_persona_find_contact(const sc_persona_t *persona,
+                                                    const char *contact_id, size_t contact_id_len) {
+    if (!persona || !contact_id || !persona->contacts)
+        return NULL;
+    for (size_t i = 0; i < persona->contacts_count; i++) {
+        const sc_contact_profile_t *cp = &persona->contacts[i];
+        if (!cp->contact_id)
+            continue;
+        size_t cp_len = strlen(cp->contact_id);
+        if (cp_len == contact_id_len && memcmp(cp->contact_id, contact_id, contact_id_len) == 0)
+            return cp;
+    }
+    return NULL;
+}
+
+sc_error_t sc_contact_profile_build_context(sc_allocator_t *alloc, const sc_contact_profile_t *cp,
+                                            char **out, size_t *out_len) {
+    if (!alloc || !cp || !out || !out_len)
+        return SC_ERR_INVALID_ARGUMENT;
+
+    size_t cap = 4096;
+    char *buf = (char *)alloc->alloc(alloc->ctx, cap);
+    if (!buf)
+        return SC_ERR_OUT_OF_MEMORY;
+    size_t pos = 0;
+    int w;
+
+    w = snprintf(buf + pos, cap - pos, "\n--- Contact profile for %s ---\n",
+                 cp->contact_id ? cp->contact_id : "?");
+    if (w > 0)
+        pos += (size_t)w;
+
+    if (cp->name) {
+        w = snprintf(buf + pos, cap - pos, "Name: %s\n", cp->name);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->relationship) {
+        w = snprintf(buf + pos, cap - pos, "Relationship: %s\n", cp->relationship);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->relationship_stage) {
+        w = snprintf(buf + pos, cap - pos, "Stage: %s\n", cp->relationship_stage);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->warmth_level) {
+        w = snprintf(buf + pos, cap - pos, "Warmth: %s\n", cp->warmth_level);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->vulnerability_level) {
+        w = snprintf(buf + pos, cap - pos, "Vulnerability: %s\n", cp->vulnerability_level);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->identity) {
+        w = snprintf(buf + pos, cap - pos, "Who they are: %s\n", cp->identity);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->context) {
+        w = snprintf(buf + pos, cap - pos, "Current context: %s\n", cp->context);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->dynamic) {
+        w = snprintf(buf + pos, cap - pos, "Dynamic: %s\n", cp->dynamic);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->interests_count > 0) {
+        w = snprintf(buf + pos, cap - pos, "Interests:");
+        if (w > 0)
+            pos += (size_t)w;
+        for (size_t i = 0; i < cp->interests_count; i++) {
+            w = snprintf(buf + pos, cap - pos, " %s%s", cp->interests[i],
+                         i + 1 < cp->interests_count ? "," : "");
+            if (w > 0)
+                pos += (size_t)w;
+        }
+        w = snprintf(buf + pos, cap - pos, "\n");
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->recent_topics_count > 0) {
+        w = snprintf(buf + pos, cap - pos, "Recent topics:");
+        if (w > 0)
+            pos += (size_t)w;
+        for (size_t i = 0; i < cp->recent_topics_count; i++) {
+            w = snprintf(buf + pos, cap - pos, " %s%s", cp->recent_topics[i],
+                         i + 1 < cp->recent_topics_count ? "," : "");
+            if (w > 0)
+                pos += (size_t)w;
+        }
+        w = snprintf(buf + pos, cap - pos, "\n");
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->sensitive_topics_count > 0) {
+        w = snprintf(buf + pos, cap - pos, "Sensitive topics (be careful):");
+        if (w > 0)
+            pos += (size_t)w;
+        for (size_t i = 0; i < cp->sensitive_topics_count; i++) {
+            w = snprintf(buf + pos, cap - pos, " %s%s", cp->sensitive_topics[i],
+                         i + 1 < cp->sensitive_topics_count ? "," : "");
+            if (w > 0)
+                pos += (size_t)w;
+        }
+        w = snprintf(buf + pos, cap - pos, "\n");
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->texts_in_bursts) {
+        w = snprintf(buf + pos, cap - pos,
+                     "Pattern: They text in bursts — wait for the full batch.\n");
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->prefers_short_texts) {
+        w = snprintf(buf + pos, cap - pos,
+                     "Pattern: They prefer short texts. Keep yours short too.\n");
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->allowed_behaviors_count > 0) {
+        w = snprintf(buf + pos, cap - pos, "With this person you're allowed to:");
+        if (w > 0)
+            pos += (size_t)w;
+        for (size_t i = 0; i < cp->allowed_behaviors_count; i++) {
+            w = snprintf(buf + pos, cap - pos, " %s%s", cp->allowed_behaviors[i],
+                         i + 1 < cp->allowed_behaviors_count ? "," : "");
+            if (w > 0)
+                pos += (size_t)w;
+        }
+        w = snprintf(buf + pos, cap - pos, "\n");
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->greeting_style) {
+        w = snprintf(buf + pos, cap - pos, "Greeting style: %s\n", cp->greeting_style);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->closing_style) {
+        w = snprintf(buf + pos, cap - pos, "Closing style: %s\n", cp->closing_style);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+
+    w = snprintf(buf + pos, cap - pos, "--- End contact profile ---\n");
+    if (w > 0)
+        pos += (size_t)w;
+
+    buf[pos] = '\0';
+    *out = buf;
+    *out_len = pos;
+    return SC_OK;
 }
 
 /* --- JSON loading helpers --- */
@@ -307,6 +502,86 @@ sc_error_t sc_persona_load_json(sc_allocator_t *alloc, const char *json, size_t 
                 return SC_ERR_OUT_OF_MEMORY;
             }
         }
+    }
+
+    /* Parse contacts */
+    sc_json_value_t *contacts_obj = sc_json_object_get(root, "contacts");
+    if (contacts_obj && contacts_obj->type == SC_JSON_OBJECT && contacts_obj->data.object.pairs) {
+        size_t n = contacts_obj->data.object.len;
+        sc_contact_profile_t *contacts =
+            (sc_contact_profile_t *)alloc->alloc(alloc->ctx, n * sizeof(sc_contact_profile_t));
+        if (!contacts) {
+            sc_persona_deinit(alloc, out);
+            sc_json_free(alloc, root);
+            return SC_ERR_OUT_OF_MEMORY;
+        }
+        memset(contacts, 0, n * sizeof(sc_contact_profile_t));
+        size_t count = 0;
+        for (size_t i = 0; i < n; i++) {
+            sc_json_pair_t *pair = &contacts_obj->data.object.pairs[i];
+            if (!pair->key || !pair->value || pair->value->type != SC_JSON_OBJECT)
+                continue;
+            sc_contact_profile_t *cp = &contacts[count];
+            cp->contact_id = sc_strdup(alloc, pair->key);
+            if (!cp->contact_id)
+                continue;
+            const sc_json_value_t *cval = pair->value;
+            const char *s;
+            s = sc_json_get_string(cval, "name");
+            if (s)
+                cp->name = sc_strdup(alloc, s);
+            s = sc_json_get_string(cval, "relationship");
+            if (s)
+                cp->relationship = sc_strdup(alloc, s);
+            s = sc_json_get_string(cval, "relationship_stage");
+            if (s)
+                cp->relationship_stage = sc_strdup(alloc, s);
+            s = sc_json_get_string(cval, "warmth_level");
+            if (s)
+                cp->warmth_level = sc_strdup(alloc, s);
+            s = sc_json_get_string(cval, "vulnerability_level");
+            if (s)
+                cp->vulnerability_level = sc_strdup(alloc, s);
+            s = sc_json_get_string(cval, "identity");
+            if (s)
+                cp->identity = sc_strdup(alloc, s);
+            s = sc_json_get_string(cval, "context");
+            if (s)
+                cp->context = sc_strdup(alloc, s);
+            s = sc_json_get_string(cval, "dynamic");
+            if (s)
+                cp->dynamic = sc_strdup(alloc, s);
+            s = sc_json_get_string(cval, "greeting_style");
+            if (s)
+                cp->greeting_style = sc_strdup(alloc, s);
+            s = sc_json_get_string(cval, "closing_style");
+            if (s)
+                cp->closing_style = sc_strdup(alloc, s);
+            sc_json_value_t *arr;
+            arr = sc_json_object_get(cval, "interests");
+            if (arr)
+                parse_string_array(alloc, arr, &cp->interests, &cp->interests_count);
+            arr = sc_json_object_get(cval, "recent_topics");
+            if (arr)
+                parse_string_array(alloc, arr, &cp->recent_topics, &cp->recent_topics_count);
+            arr = sc_json_object_get(cval, "sensitive_topics");
+            if (arr)
+                parse_string_array(alloc, arr, &cp->sensitive_topics, &cp->sensitive_topics_count);
+            arr = sc_json_object_get(cval, "allowed_behaviors");
+            if (arr)
+                parse_string_array(alloc, arr, &cp->allowed_behaviors,
+                                   &cp->allowed_behaviors_count);
+            sc_json_value_t *comm = sc_json_object_get(cval, "communication_patterns");
+            if (comm && comm->type == SC_JSON_OBJECT) {
+                cp->texts_in_bursts = sc_json_get_bool(comm, "texts_in_bursts", false);
+                cp->prefers_short_texts = sc_json_get_bool(comm, "prefers_short_texts", false);
+                cp->sends_links_often = sc_json_get_bool(comm, "sends_links_often", false);
+                cp->uses_emoji = sc_json_get_bool(comm, "uses_emoji", false);
+            }
+            count++;
+        }
+        out->contacts = contacts;
+        out->contacts_count = count;
     }
 
     sc_json_value_t *overlays_obj = sc_json_object_get(root, "channel_overlays");

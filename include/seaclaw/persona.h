@@ -31,6 +31,32 @@ typedef struct sc_persona_example_bank {
     size_t examples_count;
 } sc_persona_example_bank_t;
 
+typedef struct sc_contact_profile {
+    char *contact_id;
+    char *name;
+    char *relationship;
+    char *relationship_stage;
+    char *warmth_level;
+    char *vulnerability_level;
+    char *identity;
+    char *context;
+    char *dynamic;
+    char *greeting_style;
+    char *closing_style;
+    char **interests;
+    size_t interests_count;
+    char **recent_topics;
+    size_t recent_topics_count;
+    char **sensitive_topics;
+    size_t sensitive_topics_count;
+    char **allowed_behaviors;
+    size_t allowed_behaviors_count;
+    bool texts_in_bursts;
+    bool prefers_short_texts;
+    bool sends_links_often;
+    bool uses_emoji;
+} sc_contact_profile_t;
+
 typedef struct sc_persona {
     char *name;
     size_t name_len;
@@ -52,6 +78,8 @@ typedef struct sc_persona {
     size_t overlays_count;
     sc_persona_example_bank_t *example_banks;
     size_t example_banks_count;
+    sc_contact_profile_t *contacts;
+    size_t contacts_count;
 } sc_persona_t;
 
 /* Returns persona base directory path in buf (either SC_PERSONA_DIR or ~/.seaclaw/personas).
@@ -84,6 +112,13 @@ sc_error_t sc_persona_select_examples(const sc_persona_t *persona, const char *c
 
 const sc_persona_overlay_t *sc_persona_find_overlay(const sc_persona_t *persona,
                                                     const char *channel, size_t channel_len);
+
+const sc_contact_profile_t *sc_persona_find_contact(const sc_persona_t *persona,
+                                                    const char *contact_id, size_t contact_id_len);
+
+sc_error_t sc_contact_profile_build_context(sc_allocator_t *alloc,
+                                            const sc_contact_profile_t *contact, char **out,
+                                            size_t *out_len);
 
 /* Feedback — user corrections for persona learning */
 typedef struct sc_persona_feedback {

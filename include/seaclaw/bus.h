@@ -5,6 +5,11 @@
 #include "core/error.h"
 #include <stdbool.h>
 #include <stddef.h>
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
 
 /* ──────────────────────────────────────────────────────────────────────────
  * Event types
@@ -60,10 +65,19 @@ typedef struct sc_bus_subscriber {
 typedef struct sc_bus {
     sc_bus_subscriber_t subscribers[SC_BUS_MAX_SUBSCRIBERS];
     size_t count;
+#if defined(_WIN32) || defined(_WIN64)
+    CRITICAL_SECTION mutex;
+#else
+    pthread_mutex_t mutex;
+#endif
+    bool mutex_initialized;
 } sc_bus_t;
 
 /* Initialize bus. */
 void sc_bus_init(sc_bus_t *bus);
+
+/* Destroy bus (call when done). */
+void sc_bus_deinit(sc_bus_t *bus);
 
 /* Subscribe. Returns SC_ERR_ALREADY_EXISTS if full. filter=SC_BUS_EVENT_COUNT for all. */
 sc_error_t sc_bus_subscribe(sc_bus_t *bus, sc_bus_subscriber_fn fn, void *user_ctx,

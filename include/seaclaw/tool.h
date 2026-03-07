@@ -93,6 +93,14 @@ typedef struct sc_tool {
 
 /* args: JSON object (sc_json_value_t with type SC_JSON_OBJECT) */
 typedef struct sc_tool_vtable {
+    /**
+     * Execute the tool with the given JSON input.
+     *
+     * Always set *out and return SC_OK. Use sc_tool_result_ok*() for success,
+     * sc_tool_result_fail*() for tool-level failure (validation, file not found,
+     * command failed, etc.). Return SC_ERR_* only for infrastructure failures
+     * (allocation, missing context) when the tool cannot meaningfully set *out.
+     */
     sc_error_t (*execute)(void *ctx, sc_allocator_t *alloc, const sc_json_value_t *args,
                           sc_tool_result_t *out);
     const char *(*name)(void *ctx);

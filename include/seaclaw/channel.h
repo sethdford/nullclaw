@@ -59,6 +59,20 @@ typedef struct sc_channel_message {
 } sc_channel_message_t;
 
 /* ──────────────────────────────────────────────────────────────────────────
+ * Channel conversation history entry (for load_conversation_history)
+ * ────────────────────────────────────────────────────────────────────────── */
+
+typedef struct sc_channel_history_entry {
+    bool from_me;
+    char text[512];
+    char timestamp[32];
+} sc_channel_history_entry_t;
+
+typedef struct sc_channel_response_constraints {
+    uint32_t max_chars; /* 0 = unlimited */
+} sc_channel_response_constraints_t;
+
+/* ──────────────────────────────────────────────────────────────────────────
  * Channel vtable
  * ────────────────────────────────────────────────────────────────────────── */
 
@@ -84,6 +98,18 @@ typedef struct sc_channel_vtable {
                              sc_outbound_stage_t stage);
     sc_error_t (*start_typing)(void *ctx, const char *recipient, size_t recipient_len);
     sc_error_t (*stop_typing)(void *ctx, const char *recipient, size_t recipient_len);
+
+    /* Optional — load native conversation history from the channel's own data store.
+     * Returns entries in chronological order (oldest first). Caller owns entries array.
+     * NULL = channel does not support history loading. */
+    sc_error_t (*load_conversation_history)(void *ctx, sc_allocator_t *alloc,
+                                            const char *contact_id, size_t contact_id_len,
+                                            size_t limit, sc_channel_history_entry_t **out,
+                                            size_t *out_count);
+
+    /* Optional — return per-channel response constraints (max length, etc.).
+     * NULL = no constraints. */
+    sc_error_t (*get_response_constraints)(void *ctx, sc_channel_response_constraints_t *out);
 } sc_channel_vtable_t;
 
 #endif /* SC_CHANNEL_H */

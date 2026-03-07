@@ -284,6 +284,119 @@ static bool imessage_health_check(void *ctx) {
 #endif
 }
 
+static sc_error_t imessage_load_conversation_history(void *ctx, sc_allocator_t *alloc,
+                                                     const char *contact_id, size_t contact_id_len,
+                                                     size_t limit, sc_channel_history_entry_t **out,
+                                                     size_t *out_count) {
+    (void)ctx;
+    if (!alloc || !contact_id || !out || !out_count)
+        return SC_ERR_INVALID_ARGUMENT;
+    *out = NULL;
+    *out_count = 0;
+
+#if !SC_IS_TEST && defined(__APPLE__) && defined(__MACH__) && defined(SC_ENABLE_SQLITE)
+    const char *home = getenv("HOME");
+    if (!home)
+        return SC_ERR_NOT_SUPPORTED;
+
+    char db_path[512];
+    int n = snprintf(db_path, sizeof(db_path), "%s/Library/Messages/chat.db", home);
+    if (n < 0 || (size_t)n >= sizeof(db_path))
+        return SC_ERR_INTERNAL;
+
+    sqlite3 *db = NULL;
+    if (sqlite3_open_v2(db_path, &db, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK) {
+        if (db)
+            sqlite3_close(db);
+        return SC_ERR_INTERNAL;
+    }
+
+    const char *sql = "SELECT m.is_from_me, m.text, "
+                      "  datetime(m.date/1000000000 + 978307200, 'unixepoch', 'localtime') as ts "
+                      "FROM message m "
+                      "JOIN handle h ON m.handle_id = h.ROWID "
+                      "WHERE h.id = ?1 AND m.associated_message_type = 0 "
+                      "ORDER BY m.date DESC LIMIT ?2";
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        sqlite3_close(db);
+        return SC_ERR_INTERNAL;
+    }
+
+    char contact_buf[128];
+    size_t clen =
+        contact_id_len < sizeof(contact_buf) - 1 ? contact_id_len : sizeof(contact_buf) - 1;
+    memcpy(contact_buf, contact_id, clen);
+    contact_buf[clen] = '\0';
+    sqlite3_bind_text(stmt, 1, contact_buf, -1, NULL);
+    sqlite3_bind_int(stmt, 2, (int)(limit > 50 ? 50 : limit));
+
+    if (limit > 50)
+        limit = 50;
+    sc_channel_history_entry_t *entries =
+        (sc_channel_history_entry_t *)alloc->alloc(alloc->ctx, limit * sizeof(*entries));
+    if (!entries) {
+        sqlite3_finalize(stmt);
+        sqlite3_close(db);
+        return SC_ERR_OUT_OF_MEMORY;
+    }
+    memset(entries, 0, limit * sizeof(*entries));
+    size_t count = 0;
+
+    while (sqlite3_step(stmt) == SQLITE_ROW && count < limit) {
+        entries[count].from_me = sqlite3_column_int(stmt, 0) != 0;
+        const char *txt = (const char *)sqlite3_column_text(stmt, 1);
+        const char *ts = (const char *)sqlite3_column_text(stmt, 2);
+        if (txt && strlen(txt) > 0) {
+            size_t tlen = strlen(txt);
+            if (tlen >= sizeof(entries[0].text))
+                tlen = sizeof(entries[0].text) - 1;
+            memcpy(entries[count].text, txt, tlen);
+            entries[count].text[tlen] = '\0';
+        } else if (entries[count].from_me) {
+            snprintf(entries[count].text, sizeof(entries[0].text), "[you replied]");
+        } else {
+            snprintf(entries[count].text, sizeof(entries[0].text), "[image or attachment]");
+        }
+        if (ts) {
+            size_t tslen = strlen(ts);
+            if (tslen >= sizeof(entries[0].timestamp))
+                tslen = sizeof(entries[0].timestamp) - 1;
+            memcpy(entries[count].timestamp, ts, tslen);
+            entries[count].timestamp[tslen] = '\0';
+        }
+        count++;
+    }
+    sqlite3_finalize(stmt);
+    sqlite3_close(db);
+
+    /* Results come in DESC order; reverse to chronological for caller */
+    for (size_t i = 0; i < count / 2; i++) {
+        sc_channel_history_entry_t tmp = entries[i];
+        entries[i] = entries[count - 1 - i];
+        entries[count - 1 - i] = tmp;
+    }
+
+    *out = entries;
+    *out_count = count;
+    return SC_OK;
+#else
+    (void)contact_id_len;
+    (void)limit;
+    return SC_ERR_NOT_SUPPORTED;
+#endif
+}
+
+static sc_error_t imessage_get_response_constraints(void *ctx,
+                                                    sc_channel_response_constraints_t *out) {
+    (void)ctx;
+    if (!out)
+        return SC_ERR_INVALID_ARGUMENT;
+    out->max_chars = 300;
+    return SC_OK;
+}
+
 static const sc_channel_vtable_t imessage_vtable = {
     .start = imessage_start,
     .stop = imessage_stop,
@@ -293,6 +406,8 @@ static const sc_channel_vtable_t imessage_vtable = {
     .send_event = NULL,
     .start_typing = NULL,
     .stop_typing = NULL,
+    .load_conversation_history = imessage_load_conversation_history,
+    .get_response_constraints = imessage_get_response_constraints,
 };
 
 sc_error_t sc_imessage_create(sc_allocator_t *alloc, const char *default_target,
@@ -469,7 +584,7 @@ sc_error_t sc_imessage_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel
         c->last_rowid = rowid;
         count++;
         if (getenv("SC_DEBUG"))
-            fprintf(stderr, "[imessage] received from %.20s: [message]\n", handle,
+            fprintf(stderr, "[imessage] received from %.20s: %.*s\n", handle,
                     (int)(text_len > 80 ? 80 : text_len), text);
     }
 

@@ -35,27 +35,68 @@ static void ensure_mutex(void) {
 }
 #endif
 
+static void lock_bus(sc_bus_t *bus) {
+    if (bus->mutex_initialized) {
+#if defined(_WIN32) || defined(_WIN64)
+        EnterCriticalSection(&bus->mutex);
+#else
+        pthread_mutex_lock(&bus->mutex);
+#endif
+    } else {
+        ensure_mutex();
+        sc_mutex_lock(&s_bus_mutex);
+    }
+}
+
+static void unlock_bus(sc_bus_t *bus) {
+    if (bus->mutex_initialized) {
+#if defined(_WIN32) || defined(_WIN64)
+        LeaveCriticalSection(&bus->mutex);
+#else
+        pthread_mutex_unlock(&bus->mutex);
+#endif
+    } else {
+        sc_mutex_unlock(&s_bus_mutex);
+    }
+}
+
 void sc_bus_init(sc_bus_t *bus) {
     if (!bus)
         return;
     memset(bus, 0, sizeof(*bus));
+#if defined(_WIN32) || defined(_WIN64)
+    InitializeCriticalSection(&bus->mutex);
+#else
+    pthread_mutex_init(&bus->mutex, NULL);
+#endif
+    bus->mutex_initialized = true;
+}
+
+void sc_bus_deinit(sc_bus_t *bus) {
+    if (!bus || !bus->mutex_initialized)
+        return;
+#if defined(_WIN32) || defined(_WIN64)
+    DeleteCriticalSection(&bus->mutex);
+#else
+    pthread_mutex_destroy(&bus->mutex);
+#endif
+    bus->mutex_initialized = false;
 }
 
 sc_error_t sc_bus_subscribe(sc_bus_t *bus, sc_bus_subscriber_fn fn, void *user_ctx,
                             sc_bus_event_type_t filter) {
     if (!bus || !fn)
         return SC_ERR_INVALID_ARGUMENT;
-    ensure_mutex();
-    sc_mutex_lock(&s_bus_mutex);
+    lock_bus(bus);
     if (bus->count >= SC_BUS_MAX_SUBSCRIBERS) {
-        sc_mutex_unlock(&s_bus_mutex);
+        unlock_bus(bus);
         return SC_ERR_ALREADY_EXISTS;
     }
     sc_bus_subscriber_t *sub = &bus->subscribers[bus->count++];
     sub->fn = fn;
     sub->user_ctx = user_ctx;
     sub->filter = filter;
-    sc_mutex_unlock(&s_bus_mutex);
+    unlock_bus(bus);
     return SC_OK;
 }
 
@@ -78,14 +119,13 @@ void sc_bus_unsubscribe(sc_bus_t *bus, sc_bus_subscriber_fn fn, void *user_ctx) 
 void sc_bus_publish(sc_bus_t *bus, const sc_bus_event_t *ev) {
     if (!bus || !ev)
         return;
-    ensure_mutex();
-    sc_mutex_lock(&s_bus_mutex);
+    lock_bus(bus);
     sc_bus_subscriber_t snapshot[SC_BUS_MAX_SUBSCRIBERS];
     size_t n = bus->count;
     if (n > SC_BUS_MAX_SUBSCRIBERS)
         n = SC_BUS_MAX_SUBSCRIBERS;
     memcpy(snapshot, bus->subscribers, n * sizeof(sc_bus_subscriber_t));
-    sc_mutex_unlock(&s_bus_mutex);
+    unlock_bus(bus);
 
     for (size_t i = 0; i < n; i++) {
         sc_bus_subscriber_t *sub = &snapshot[i];
