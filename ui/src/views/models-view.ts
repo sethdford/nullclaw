@@ -2,13 +2,18 @@ import { html, css, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { GatewayAwareLitElement } from "../gateway-aware.js";
 import { icons } from "../icons.js";
+import { ScToast } from "../components/sc-toast.js";
 import "../components/sc-page-hero.js";
 import "../components/sc-section-header.js";
 import "../components/sc-card.js";
 import "../components/sc-badge.js";
+import "../components/sc-button.js";
 import "../components/sc-skeleton.js";
 import "../components/sc-empty-state.js";
 import "../components/sc-search.js";
+import "../components/sc-chart.js";
+import "../components/sc-combobox.js";
+import type { ChartData } from "../components/sc-chart.js";
 
 interface ProviderItem {
   name?: string;
@@ -28,6 +33,16 @@ interface ConfigGetRes {
   default_provider?: string;
 }
 
+interface ProviderUsage {
+  provider: string;
+  tokens: number;
+  cost: number;
+}
+
+interface UsageSummary {
+  by_provider?: ProviderUsage[];
+}
+
 @customElement("sc-models-view")
 export class ScModelsView extends GatewayAwareLitElement {
   static override styles = css`
@@ -35,19 +50,31 @@ export class ScModelsView extends GatewayAwareLitElement {
       display: block;
       max-width: 1200px;
     }
-    .info-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--sc-space-md);
+    .info-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sc-space-xl);
       margin-bottom: var(--sc-space-2xl);
-      font-size: var(--sc-text-base);
     }
     .info-item {
-      color: var(--sc-text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sc-space-xs);
     }
-    .info-item strong {
+    .chart-section {
+      margin-bottom: var(--sc-space-2xl);
+    }
+    .chart-header {
+      font-size: var(--sc-text-sm);
+      font-weight: var(--sc-weight-semibold);
       color: var(--sc-text);
-      margin-right: var(--sc-space-xs);
+      margin-bottom: var(--sc-space-md);
+    }
+    .section-label {
+      font-size: var(--sc-text-xs);
+      color: var(--sc-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
     .grid {
       display: grid;
@@ -91,22 +118,28 @@ export class ScModelsView extends GatewayAwareLitElement {
     .key-status.missing {
       color: var(--sc-error);
     }
-    .key-status svg {
-      width: 14px;
-      height: 14px;
-    }
     .key-icon {
       width: 14px;
       height: 14px;
       display: inline-block;
       vertical-align: middle;
     }
-    .info-card {
-      margin-bottom: var(--sc-space-2xl);
+    .card-actions {
+      margin-top: var(--sc-space-md);
+      display: flex;
+      justify-content: flex-end;
     }
     @media (max-width: 768px) /* --sc-breakpoint-lg */ {
+      .info-section {
+        grid-template-columns: 1fr;
+      }
       .grid {
         grid-template-columns: 1fr 1fr;
+      }
+    }
+    @media (max-width: 640px) /* --sc-breakpoint-md */ {
+      .grid {
+        grid-template-columns: 1fr;
       }
     }
     .search-wrap {
@@ -130,11 +163,32 @@ export class ScModelsView extends GatewayAwareLitElement {
   @state() private loading = true;
   @state() private error = "";
   @state() private filter = "";
+  @state() private usageByProvider: ProviderUsage[] = [];
+  @state() private settingDefault = false;
 
   private get filteredProviders(): ProviderItem[] {
     const q = this.filter.toLowerCase().trim();
     if (!q) return this.providers;
     return this.providers.filter((p) => (p.name ?? "").toLowerCase().includes(q));
+  }
+
+  private get providerOptions(): { value: string; label: string }[] {
+    return this.providers.filter((p) => p.name).map((p) => ({ value: p.name!, label: p.name! }));
+  }
+
+  private get requestDistributionChartData(): ChartData | null {
+    if (!this.usageByProvider.length) return null;
+    const byProvider = this.usageByProvider.filter((p) => (p.tokens ?? 0) > 0);
+    if (byProvider.length === 0) return null;
+    return {
+      labels: byProvider.map((p) => p.provider),
+      datasets: [
+        {
+          data: byProvider.map((p) => p.tokens ?? 0),
+          label: "Tokens",
+        },
+      ],
+    };
   }
 
   protected override async load(): Promise<void> {
@@ -145,17 +199,20 @@ export class ScModelsView extends GatewayAwareLitElement {
     }
     this.loading = true;
     try {
-      const [modelsRes, configRes] = await Promise.all([
+      const [modelsRes, configRes, usageRes] = await Promise.all([
         gw.request<ModelsListRes>("models.list", {}).catch((): Partial<ModelsListRes> => ({})),
         gw.request<ConfigGetRes>("config.get", {}).catch((): Partial<ConfigGetRes> => ({})),
+        gw.request<UsageSummary>("usage.summary", {}).catch((): Partial<UsageSummary> => ({})),
       ]);
       this.defaultModel = modelsRes?.default_model ?? configRes?.default_model ?? "";
       this.defaultProvider = configRes?.default_provider ?? "";
       this.providers = modelsRes?.providers ?? [];
+      this.usageByProvider = usageRes?.by_provider ?? [];
     } catch (e) {
       this.providers = [];
       this.defaultModel = "";
       this.defaultProvider = "";
+      this.usageByProvider = [];
       this.error = e instanceof Error ? e.message : "Failed to load models";
     } finally {
       this.loading = false;
@@ -168,10 +225,70 @@ export class ScModelsView extends GatewayAwareLitElement {
     return url.slice(0, 24) + "…" + url.slice(-24);
   }
 
+  private async _setDefaultProvider(provider: string): Promise<void> {
+    const gw = this.gateway;
+    if (!gw || !provider) return;
+    this.settingDefault = true;
+    try {
+      await gw.request("config.set", { default_provider: provider });
+      this.defaultProvider = provider;
+      this.providers = this.providers.map((p) => ({
+        ...p,
+        is_default: (p.name ?? "") === provider,
+      }));
+      ScToast.show({ message: `${provider} set as default provider`, variant: "success" });
+    } catch (e) {
+      ScToast.show({
+        message: e instanceof Error ? e.message : "Failed to set default",
+        variant: "error",
+      });
+    } finally {
+      this.settingDefault = false;
+    }
+  }
+
+  private async _onProviderChange(e: CustomEvent<{ value: string }>): Promise<void> {
+    const val = e.detail.value;
+    if (!val) return;
+    await this._setDefaultProvider(val);
+  }
+
+  private async _onModelChange(e: CustomEvent<{ value: string }>): Promise<void> {
+    const gw = this.gateway;
+    const val = e.detail.value?.trim();
+    if (!gw) return;
+    this.settingDefault = true;
+    try {
+      await gw.request("config.set", { default_model: val });
+      this.defaultModel = val;
+      ScToast.show({ message: "Default model updated", variant: "success" });
+    } catch (err) {
+      ScToast.show({
+        message: err instanceof Error ? err.message : "Failed to set default model",
+        variant: "error",
+      });
+    } finally {
+      this.settingDefault = false;
+    }
+  }
+
   override render() {
     if (this.loading) return this._renderSkeleton();
     return html`
-      <h2>Models & Providers</h2>
+      <sc-page-hero>
+        <sc-section-header
+          heading="Models & Providers"
+          description="AI model providers and their configurations"
+        >
+          <div class="search-wrap">
+            <sc-search
+              placeholder="Search providers..."
+              @sc-search=${(e: CustomEvent<{ value: string }>) => (this.filter = e.detail.value)}
+              @sc-clear=${() => (this.filter = "")}
+            ></sc-search>
+          </div>
+        </sc-section-header>
+      </sc-page-hero>
       ${this.error
         ? html`<sc-empty-state
             .icon=${icons.warning}
@@ -179,14 +296,9 @@ export class ScModelsView extends GatewayAwareLitElement {
             description=${this.error}
           ></sc-empty-state>`
         : nothing}
-      <div class="search-wrap">
-        <sc-search
-          placeholder="Search providers..."
-          @sc-search=${(e: CustomEvent<{ value: string }>) => (this.filter = e.detail.value)}
-          @sc-clear=${() => (this.filter = "")}
-        ></sc-search>
-      </div>
-      ${this._renderInfoBar()} ${this._renderGrid()}
+      ${!this.error
+        ? html`${this._renderInfoSection()}${this._renderChart()}${this._renderGrid()}`
+        : nothing}
     `;
   }
 
@@ -198,26 +310,58 @@ export class ScModelsView extends GatewayAwareLitElement {
           description="AI model providers and their configurations"
         ></sc-section-header>
       </sc-page-hero>
+      <div class="info-section sc-stagger">
+        <sc-skeleton variant="card" height="80px"></sc-skeleton>
+        <sc-skeleton variant="card" height="80px"></sc-skeleton>
+      </div>
       <div class="grid sc-stagger">
-        <sc-skeleton variant="card" height="80px"></sc-skeleton>
-        <sc-skeleton variant="card" height="80px"></sc-skeleton>
-        <sc-skeleton variant="card" height="80px"></sc-skeleton>
+        <sc-skeleton variant="card" height="120px"></sc-skeleton>
+        <sc-skeleton variant="card" height="120px"></sc-skeleton>
+        <sc-skeleton variant="card" height="120px"></sc-skeleton>
       </div>
     `;
   }
 
-  private _renderInfoBar() {
+  private _renderInfoSection() {
     return html`
-      <sc-card class="info-card">
-        <div class="info-bar">
-          <span class="info-item"
-            ><strong>Default provider:</strong> ${this.defaultProvider || "\u2014"}</span
-          >
-          <span class="info-item"
-            ><strong>Default model:</strong> ${this.defaultModel || "\u2014"}</span
-          >
+      <sc-card>
+        <div class="info-section sc-stagger">
+          <div class="info-item">
+            <span class="section-label">Default provider</span>
+            <sc-combobox
+              .options=${this.providerOptions}
+              .value=${this.defaultProvider}
+              label=""
+              placeholder="Select provider"
+              ?disabled=${this.settingDefault || this.providerOptions.length === 0}
+              @sc-combobox-change=${this._onProviderChange}
+            ></sc-combobox>
+          </div>
+          <div class="info-item">
+            <span class="section-label">Default model</span>
+            <sc-combobox
+              .options=${[]}
+              .value=${this.defaultModel}
+              freeText
+              label=""
+              placeholder="Model name"
+              ?disabled=${this.settingDefault}
+              @sc-combobox-change=${this._onModelChange}
+            ></sc-combobox>
+          </div>
         </div>
       </sc-card>
+    `;
+  }
+
+  private _renderChart() {
+    const data = this.requestDistributionChartData;
+    if (!data) return nothing;
+    return html`
+      <div class="chart-section sc-stagger">
+        <div class="chart-header">Request distribution by provider</div>
+        <sc-chart type="doughnut" .data=${data} height="200"></sc-chart>
+      </div>
     `;
   }
 
@@ -241,11 +385,12 @@ export class ScModelsView extends GatewayAwareLitElement {
   }
 
   private _renderProviderCard(p: ProviderItem) {
+    const isDefault = p.is_default ?? (p.name ?? "") === this.defaultProvider;
     return html`
       <sc-card aria-label=${`Provider: ${p.name ?? "unnamed"}`}>
         <div class="card-header">
-          <span class="card-name ${p.is_default ? "default" : ""}">${p.name ?? "unnamed"}</span>
-          ${p.is_default ? html`<sc-badge variant="info">default</sc-badge>` : nothing}
+          <span class="card-name ${isDefault ? "default" : ""}">${p.name ?? "unnamed"}</span>
+          ${isDefault ? html`<sc-badge variant="info">default</sc-badge>` : nothing}
           ${p.native_tools ? html`<sc-badge variant="neutral">native tools</sc-badge>` : nothing}
         </div>
         <div class="key-status ${p.has_key ? "has" : "missing"}">
@@ -253,6 +398,21 @@ export class ScModelsView extends GatewayAwareLitElement {
           ${p.has_key ? " API key" : " No API key"}
         </div>
         <div class="card-url" title=${p.base_url ?? ""}>${this.truncateUrl(p.base_url)}</div>
+        ${!isDefault
+          ? html`
+              <div class="card-actions">
+                <sc-button
+                  variant="ghost"
+                  size="sm"
+                  ?disabled=${this.settingDefault}
+                  @click=${() => this._setDefaultProvider(p.name ?? "")}
+                  aria-label=${`Set ${p.name ?? "unnamed"} as default`}
+                >
+                  Set as default
+                </sc-button>
+              </div>
+            `
+          : nothing}
       </sc-card>
     `;
   }
