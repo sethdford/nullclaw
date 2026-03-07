@@ -872,8 +872,8 @@
     display: none !important;
   }
   body {
-    background: #fff !important;
-    color: #000 !important;
+    background: var(--sc-web-surface, #fff) !important;
+    color: var(--sc-web-text, #000) !important;
   }
   section {
     page-break-inside: avoid;
@@ -882,7 +882,7 @@
   .glass {
     background: transparent;
     backdrop-filter: none;
-    border: 1px solid #ccc;
+    border: 1px solid var(--sc-web-border, #ccc);
     box-shadow: none;
   }
 }

@@ -50,8 +50,8 @@ export class ScChatView extends GatewayAwareLitElement {
       font-size: var(--sc-text-xs);
       color: var(--sc-text-muted);
       background: color-mix(in srgb, var(--sc-bg-surface) 60%, transparent);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(var(--sc-glass-subtle-blur, 12px));
+      -webkit-backdrop-filter: blur(var(--sc-glass-subtle-blur, 12px));
       border-bottom: 1px solid var(--sc-border-subtle);
     }
     .status-left,
@@ -78,8 +78,8 @@ export class ScChatView extends GatewayAwareLitElement {
       line-height: 1;
     }
     .status-dot {
-      width: 8px;
-      height: 8px;
+      width: var(--sc-space-sm, 8px);
+      height: var(--sc-space-sm, 8px);
       border-radius: 50%;
     }
     .status-dot.connected {
@@ -128,11 +128,11 @@ export class ScChatView extends GatewayAwareLitElement {
       cursor: pointer;
       display: flex;
       align-items: center;
-      padding: 4px;
+      padding: var(--sc-space-2xs, 4px);
     }
     .error-banner button svg {
-      width: 16px;
-      height: 16px;
+      width: var(--sc-icon-sm, 16px);
+      height: var(--sc-icon-sm, 16px);
       line-height: 1;
     }
     .sessions-toggle {
@@ -154,8 +154,8 @@ export class ScChatView extends GatewayAwareLitElement {
       border-color: var(--sc-text-muted);
     }
     .sessions-toggle svg {
-      width: 18px;
-      height: 18px;
+      width: var(--sc-icon-sm, 18px);
+      height: var(--sc-icon-sm, 18px);
     }
     @media (prefers-reduced-motion: reduce) {
       .status-dot.connecting {
@@ -444,8 +444,10 @@ export class ScChatView extends GatewayAwareLitElement {
             @sc-context-menu=${(e: CustomEvent<{ event: MouseEvent; item: ChatItem }>) =>
               this._onMessageContextMenu(e.detail.event, e.detail.item)}
             @sc-abort=${() => this.handleAbort()}
-            @sc-branch-navigate=${(e: CustomEvent<{ messageId: string; direction: string }>) =>
-              this.chat.getBranchMessages?.(e.detail.messageId)}
+            @sc-branch-navigate=${(e: CustomEvent<{ index: number; direction: number }>) => {
+              const item = this.chat.items[e.detail.index];
+              if (item?.type === "message" && item.id) this.chat.getBranchMessages?.(item.id);
+            }}
             @sc-toggle-reaction=${(e: CustomEvent<{ index: number; emoji: string }>) =>
               this.chat.toggleReaction?.(e.detail.index, e.detail.emoji)}
           ></sc-message-thread>

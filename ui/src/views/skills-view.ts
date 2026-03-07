@@ -276,7 +276,7 @@ export class ScSkillsView extends GatewayAwareLitElement {
       margin-bottom: var(--sc-space-lg);
       max-width: 400px;
     }
-    @media (max-width: 768px) {
+    @media (max-width: 768px) /* --sc-breakpoint-lg */ {
       .skills-grid {
         grid-template-columns: 1fr 1fr;
       }
@@ -284,7 +284,7 @@ export class ScSkillsView extends GatewayAwareLitElement {
         grid-template-columns: 1fr 1fr;
       }
     }
-    @media (max-width: 480px) {
+    @media (max-width: 480px) /* --sc-breakpoint-sm */ {
       .skills-grid {
         grid-template-columns: 1fr;
       }
