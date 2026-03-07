@@ -1,0 +1,24 @@
+# Default owner for everything
+* @sethdford
+
+# Security-critical paths require explicit review
+src/security/ @sethdford
+src/gateway/ @sethdford
+src/tools/ @sethdford
+src/runtime/ @sethdford
+include/seaclaw/security.h @sethdford
+include/seaclaw/gateway.h @sethdford
+
+# Design system and UI
+ui/ @sethdford
+design-tokens/ @sethdford
+website/ @sethdford
+
+# Native apps
+apps/ios/ @sethdford
+apps/android/ @sethdford
+
+# CI and automation
+.github/ @sethdford
+.githooks/ @sethdford
+scripts/ @sethdford
