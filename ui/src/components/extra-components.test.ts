@@ -46,6 +46,7 @@ import "./sc-json-viewer.js";
 import "./sc-pagination.js";
 import "./sc-data-table-v2.js";
 import "./sc-checkbox.js";
+import "./sc-combobox.js";
 
 describe("sc-checkbox", () => {
   it("should be defined as a custom element", () => {
@@ -90,6 +91,43 @@ describe("sc-checkbox", () => {
     const el = document.createElement("sc-checkbox") as any;
     el.label = "Accept terms";
     expect(el.label).toBe("Accept terms");
+  });
+});
+
+describe("sc-combobox", () => {
+  it("should be defined as a custom element", () => {
+    expect(customElements.get("sc-combobox")).toBeDefined();
+  });
+
+  it("should be creatable", () => {
+    const el = document.createElement("sc-combobox");
+    expect(el).toBeInstanceOf(HTMLElement);
+  });
+
+  it("should accept options", () => {
+    const el = document.createElement("sc-combobox") as any;
+    el.options = [{ value: "a", label: "Alpha" }];
+    expect(el.options.length).toBe(1);
+  });
+
+  it("should accept value", () => {
+    const el = document.createElement("sc-combobox") as any;
+    el.value = "test";
+    expect(el.value).toBe("test");
+  });
+
+  it("should default freeText to false", () => {
+    const el = document.createElement("sc-combobox") as any;
+    expect(el.freeText).toBe(false);
+  });
+
+  it("should have combobox role", async () => {
+    const el = document.createElement("sc-combobox") as any;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const input = el.shadowRoot?.querySelector('[role="combobox"]');
+    expect(input).toBeTruthy();
+    el.remove();
   });
 });
 
