@@ -1,3 +1,7 @@
+---
+title: Architecture and Integration Audit Report
+---
+
 # Architecture and Integration Audit Report
 
 **Date:** 2025-03-08  

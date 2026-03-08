@@ -1,3 +1,7 @@
+---
+title: SeaClaw Design Strategy
+---
+
 # SeaClaw Design Strategy
 
 > Single source of truth for visual design decisions. All component code must use

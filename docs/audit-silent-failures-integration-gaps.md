@@ -1,3 +1,6 @@
+---
+title: Audit: Silent Failures, Integration Gaps, and Unvalidated Paths
+---
 # Audit: Silent Failures, Integration Gaps, and Unvalidated Paths
 
 **Date:** 2025-03-08  

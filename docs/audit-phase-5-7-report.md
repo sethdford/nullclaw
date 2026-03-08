@@ -1,3 +1,7 @@
+---
+title: Phase 5–7 Implementation Audit Report
+---
+
 # Phase 5–7 Implementation Audit Report
 
 **Date:** 2026-03-08  

@@ -1826,7 +1826,7 @@ add_custom_target(benchmark
 )
 
 # Print build info
-message(STATUS "SeaClaw v0.3.0")
+message(STATUS "SeaClaw v0.4.0")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Channels: ${CHANNEL_SOURCES}")
 message(STATUS "Engines: none=${SC_ENABLE_NONE_ENGINE} markdown=${SC_ENABLE_MARKDOWN_ENGINE} sqlite=${SC_ENABLE_SQLITE} postgres=${SC_ENABLE_POSTGRES}")

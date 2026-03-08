@@ -1,3 +1,6 @@
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
 #include "seaclaw/persona/replay.h"
 #include "seaclaw/context/conversation.h"
 #include "seaclaw/core/string.h"

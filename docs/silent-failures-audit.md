@@ -1,3 +1,6 @@
+---
+title: Silent Failures Audit — seaclaw Codebase
+---
 # Silent Failures Audit — seaclaw Codebase
 
 This document catalogs silent failures, ignored error codes, and inadequate error handling found across the C gateway, WebSocket server, UI controllers/components, and config/main entry points.

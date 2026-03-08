@@ -8,12 +8,7 @@
 #include <string.h>
 
 static const char *PHASE_NAMES[] = {
-    "early morning",
-    "morning",
-    "afternoon",
-    "evening",
-    "night",
-    "late night",
+    "early morning", "morning", "afternoon", "evening", "night", "late night",
 };
 
 static const char *PHASE_GUIDANCE[] = {
@@ -22,27 +17,27 @@ static const char *PHASE_GUIDANCE[] = {
     "Be steady and focused. Energy may be dipping. Keep things clear and structured.",
     "Be relaxed and reflective. The day is winding down. Allow for deeper conversation.",
     "Be calm and intimate. The user is in a quieter headspace. Slow your pace, be thoughtful.",
-    "Be present and unhurried. Late night conversations often carry more weight. Be a quiet companion.",
+    "Be present and unhurried. Late night conversations often carry more weight. Be a quiet "
+    "companion.",
 };
 
 sc_time_phase_t sc_circadian_phase(uint8_t hour) {
-    if (hour >= 0 && hour < 5)
+    if (hour < 5)
         return SC_PHASE_LATE_NIGHT;
-    if (hour >= 5 && hour < 8)
+    if (hour < 8)
         return SC_PHASE_EARLY_MORNING;
-    if (hour >= 8 && hour < 12)
+    if (hour < 12)
         return SC_PHASE_MORNING;
-    if (hour >= 12 && hour < 17)
+    if (hour < 17)
         return SC_PHASE_AFTERNOON;
-    if (hour >= 17 && hour < 21)
+    if (hour < 21)
         return SC_PHASE_EVENING;
-    if (hour >= 21)
-        return SC_PHASE_NIGHT; /* 21:00-23:59 */
-    return SC_PHASE_MORNING;   /* fallback */
+    /* 21:00-23:59 */
+    return SC_PHASE_NIGHT;
 }
 
-sc_error_t sc_circadian_build_prompt(sc_allocator_t *alloc, uint8_t hour,
-                                      char **out, size_t *out_len) {
+sc_error_t sc_circadian_build_prompt(sc_allocator_t *alloc, uint8_t hour, char **out,
+                                     size_t *out_len) {
     if (!alloc || !out || !out_len)
         return SC_ERR_INVALID_ARGUMENT;
 

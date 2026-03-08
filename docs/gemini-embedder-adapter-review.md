@@ -1,3 +1,6 @@
+---
+title: Gemini Embedder Adapter Code Review
+---
 # Gemini Embedder Adapter Code Review
 
 **Reviewed:** `embedder_gemini_adapter.h`, `embedder_gemini_adapter.c`, `bootstrap.c` (Gemini path)

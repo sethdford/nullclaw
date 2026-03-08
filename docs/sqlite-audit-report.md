@@ -1,3 +1,6 @@
+---
+title: SQLite/Database Code Audit Report
+---
 # SQLite/Database Code Audit Report
 
 **Date:** 2025-03-08  

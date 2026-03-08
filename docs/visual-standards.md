@@ -1,3 +1,7 @@
+---
+title: SeaClaw Visual Design Standards
+---
+
 # SeaClaw Visual Design Standards
 
 > Normative reference for visual hierarchy, composition, depth, spacing, and aesthetic

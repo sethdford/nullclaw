@@ -3,6 +3,51 @@
 All notable changes to seaclaw are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.4.0] - 2026-03-08
+
+### Added
+
+- **Better Than Human (BTH) framework**: 8-layer conversational intelligence system —
+  conversation metrics, persona replay analysis, emotional graph, A/B response evaluation,
+  proactive scheduling, superhuman services (commitment keeper, predictive coaching,
+  emotional first aid, silence interpreter), tool relevance scoring
+- **Persona system expansion**: full-profile analyzer, creator with JSON serialization,
+  circadian time-of-day overlays, relationship depth tracking, pattern radar, per-contact
+  auto-profiling from iMessage chat history, replay auto-tune daily cron
+- **Conversation intelligence**: narrative detection, engagement tracking, emotion analysis,
+  typing quirks (double_space_to_newline), attachment context with vision, group classification,
+  response splitting, honesty guardrails, anti-repetition, farewell detection
+- **Memory subsystem**: episodic summarization, STM→LTM promotion, emotional graph persistence,
+  daily memory consolidation cron, graph communities with dedup, LRU + SQLite + vector backends
+- **LLMCompiler**: DAG-based parallel tool execution with cycle detection, batch builder,
+  variable resolution
+- **Observability dashboard**: live BTH metrics, per-turn counters, pipeline health
+- **Contact auto-profiling**: detect texting style from iMessage history, generate per-contact
+  persona overlays
+- **3 new fuzz targets**: graph, persona parse, fast capture harnesses
+- **434 new tests** (3219 → 3653): promotion, vision, conversation, persona, consolidation,
+  proactive, replay, BTH E2E, integration
+
+### Fixed
+
+- **Security**: path traversal in file tools (deny when policy NULL), constant-time gateway auth,
+  OAuth race condition (pthread_mutex), WebSocket origin validation
+- **Memory safety**: graph community memory leak (goto cleanup), agent_turn A/B use-after-free,
+  sqlite generate_id collision (static counter), persona 57× strdup NULL checks
+- **Robustness**: daemon non-blocking proactive scheduling (replaced sleep()), send_all EINTR
+  retry, load_conversation_history error checking, graph store error logging, gmtime_r/localtime_r
+  portability
+- **CI**: websocket.c fread return value handling, gmail.c format string, accessibility contrast
+  (disconnect-banner 4.5:1, sidebar active state), UI lint zero warnings
+- **Stability**: conversation stack-buffer-overflow in word frequency, persona field parsing and
+  deinit for all relational/social/listening/repair fields
+
+### Changed
+
+- Version bump 0.3.0 → 0.4.0
+- Test count: 3219 → 3653 (434 new tests, 0 failures, 0 ASan errors)
+- Fuzz validation: 12 harnesses, ~170M iterations, zero crashes
+
 ## [0.3.0] - 2026-03-03
 
 ### Added

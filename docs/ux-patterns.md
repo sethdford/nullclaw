@@ -1,3 +1,7 @@
+---
+title: SeaClaw UX Patterns & Layout Architecture
+---
+
 # SeaClaw UX Patterns & Layout Architecture
 
 > Normative reference for view composition, layout archetypes, responsive adaptation,

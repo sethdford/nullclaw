@@ -1,3 +1,6 @@
+---
+title: SeaClaw Motion Design System
+---
 # SeaClaw Motion Design System
 
 > Normative reference for all animation and motion in SeaClaw UI surfaces.

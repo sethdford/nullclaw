@@ -1,8 +1,8 @@
+#include "seaclaw/persona/auto_profile.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
 #include "seaclaw/core/string.h"
 #include "seaclaw/persona.h"
-#include "seaclaw/persona/auto_profile.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,7 +11,7 @@
 #include <sqlite3.h>
 #endif
 
-#if defined(__APPLE__) && defined(__MACH__)
+#if !defined(_WIN32)
 #include <unistd.h>
 #endif
 
@@ -28,11 +28,11 @@ char *sc_persona_profile_describe_style(sc_allocator_t *alloc,
     char buf[512];
     size_t pos = 0;
     pos += (size_t)snprintf(buf + pos, sizeof(buf) - pos,
-                             "Based on their texting: they send %s messages (avg %zu chars)",
-                             stats->avg_their_len < 30 ? "short" : stats->avg_their_len < 80
-                                 ? "medium-length"
-                                 : "long",
-                             stats->avg_their_len);
+                            "Based on their texting: they send %s messages (avg %zu chars)",
+                            stats->avg_their_len < 30   ? "short"
+                            : stats->avg_their_len < 80 ? "medium-length"
+                                                        : "long",
+                            stats->avg_their_len);
     if (stats->uses_emoji)
         pos += (size_t)snprintf(buf + pos, sizeof(buf) - pos, ", use emoji frequently");
     else
@@ -54,7 +54,7 @@ char *sc_persona_profile_describe_style(sc_allocator_t *alloc,
 }
 
 sc_error_t sc_persona_auto_profile(sc_allocator_t *alloc, const char *contact_id,
-                                  size_t contact_id_len, sc_persona_overlay_t *overlay) {
+                                   size_t contact_id_len, sc_persona_overlay_t *overlay) {
     if (!alloc || !contact_id || !overlay)
         return SC_ERR_INVALID_ARGUMENT;
     memset(overlay, 0, sizeof(*overlay));
@@ -93,12 +93,11 @@ sc_error_t sc_persona_auto_profile(sc_allocator_t *alloc, const char *contact_id
         return SC_ERR_NOT_FOUND;
     }
 
-    const char *sql =
-        "SELECT m.text, m.is_from_me, m.date "
-        "FROM message m "
-        "LEFT JOIN handle h ON m.handle_id = h.ROWID "
-        "WHERE h.id = ?1 AND m.text IS NOT NULL AND m.text != '' "
-        "ORDER BY m.date ASC LIMIT ?2";
+    const char *sql = "SELECT m.text, m.is_from_me, m.date "
+                      "FROM message m "
+                      "LEFT JOIN handle h ON m.handle_id = h.ROWID "
+                      "WHERE h.id = ?1 AND m.text IS NOT NULL AND m.text != '' "
+                      "ORDER BY m.date ASC LIMIT ?2";
 
     sqlite3_stmt *stmt = NULL;
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
@@ -107,7 +106,8 @@ sc_error_t sc_persona_auto_profile(sc_allocator_t *alloc, const char *contact_id
     }
 
     char contact_buf[128];
-    size_t clen = contact_id_len < sizeof(contact_buf) - 1 ? contact_id_len : sizeof(contact_buf) - 1;
+    size_t clen =
+        contact_id_len < sizeof(contact_buf) - 1 ? contact_id_len : sizeof(contact_buf) - 1;
     memcpy(contact_buf, contact_id, clen);
     contact_buf[clen] = '\0';
     sqlite3_bind_text(stmt, 1, contact_buf, -1, SQLITE_STATIC);
@@ -180,15 +180,14 @@ sc_error_t sc_persona_auto_profile(sc_allocator_t *alloc, const char *contact_id
         overlay->max_segment_chars = 320;
     }
 
-    overlay->emoji_usage = stats.uses_emoji ? sc_strndup(alloc, "frequent", 8)
-                                           : sc_strndup(alloc, "rare", 4);
+    overlay->emoji_usage =
+        stats.uses_emoji ? sc_strndup(alloc, "frequent", 8) : sc_strndup(alloc, "rare", 4);
 
     if (stats.texts_in_bursts)
         overlay->message_splitting = true;
 
     if (stats.prefers_short) {
-        overlay->typing_quirks =
-            (char **)alloc->alloc(alloc->ctx, 2 * sizeof(char *));
+        overlay->typing_quirks = (char **)alloc->alloc(alloc->ctx, 2 * sizeof(char *));
         if (overlay->typing_quirks) {
             overlay->typing_quirks[0] = sc_strndup(alloc, "lowercase", 9);
             overlay->typing_quirks[1] = sc_strndup(alloc, "no_periods", 10);
@@ -197,8 +196,8 @@ sc_error_t sc_persona_auto_profile(sc_allocator_t *alloc, const char *contact_id
     }
 
     size_t desc_len = 0;
-    char *desc = sc_persona_profile_describe_style(alloc, &stats, contact_id, contact_id_len,
-                                                   &desc_len);
+    char *desc =
+        sc_persona_profile_describe_style(alloc, &stats, contact_id, contact_id_len, &desc_len);
     if (desc && desc_len > 0) {
         overlay->style_notes = (char **)alloc->alloc(alloc->ctx, sizeof(char *));
         if (overlay->style_notes) {

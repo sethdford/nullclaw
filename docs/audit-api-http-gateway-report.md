@@ -1,3 +1,6 @@
+---
+title: API, HTTP, and Gateway Security Audit Report
+---
 # API, HTTP, and Gateway Security Audit Report
 
 **Date:** 2025-03-08  

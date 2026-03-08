@@ -73,20 +73,23 @@ static sc_error_t refresh_access_token(sc_gmail_ctx_t *c) {
 
     char body[2048];
     size_t j = 0;
-    memcpy(body + j, "grant_type=refresh_token&client_id=", 34);
-    j += 34;
+#define APPEND_LIT(s)                       \
+    do {                                    \
+        memcpy(body + j, s, sizeof(s) - 1); \
+        j += sizeof(s) - 1;                 \
+    } while (0)
+    APPEND_LIT("grant_type=refresh_token&client_id=");
     for (const char *p = c->client_id; *p && j < sizeof(body) - 4; p++) {
         if (form_encode_char(body, sizeof(body), &j, (unsigned char)*p) != 0)
             return SC_ERR_INVALID_ARGUMENT;
     }
-    memcpy(body + j, "&client_secret=", 16);
-    j += 16;
+    APPEND_LIT("&client_secret=");
     for (const char *p = c->client_secret; *p && j < sizeof(body) - 4; p++) {
         if (form_encode_char(body, sizeof(body), &j, (unsigned char)*p) != 0)
             return SC_ERR_INVALID_ARGUMENT;
     }
-    memcpy(body + j, "&refresh_token=", 16);
-    j += 16;
+    APPEND_LIT("&refresh_token=");
+#undef APPEND_LIT
     for (const char *p = c->refresh_token; *p && j < sizeof(body) - 4; p++) {
         if (form_encode_char(body, sizeof(body), &j, (unsigned char)*p) != 0)
             return SC_ERR_INVALID_ARGUMENT;

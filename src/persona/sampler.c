@@ -128,7 +128,10 @@ sc_error_t sc_persona_sampler_imessage_conversation_query(const char *handle_id,
     int n = snprintf(buf, cap,
                      "SELECT m.text, m.is_from_me, m.date "
                      "FROM message m "
-                     "LEFT JOIN handle h ON m.handle_id = h.ROWID "
+                     "JOIN chat_message_join cmj ON cmj.message_id = m.ROWID "
+                     "JOIN chat c ON c.ROWID = cmj.chat_id "
+                     "JOIN chat_handle_join chj ON chj.chat_id = c.ROWID "
+                     "JOIN handle h ON h.ROWID = chj.handle_id "
                      "WHERE h.id = '%.*s' AND m.text IS NOT NULL AND m.text != '' "
                      "ORDER BY m.date ASC LIMIT %zu",
                      (int)handle_id_len, handle_id, limit);

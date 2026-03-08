@@ -1,3 +1,7 @@
+---
+title: Security & Correctness Audit — BTH Deployment & Infrastructure
+---
+
 # Security & Correctness Audit — BTH Deployment & Infrastructure
 
 **Date:** 2025-03-08  
