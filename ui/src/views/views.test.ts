@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 
+import type { ScLogsView } from "./logs-view.js";
+
 // Import all view elements to register them
 import "./overview-view.js";
 import "./chat-view.js";
@@ -329,7 +331,7 @@ describe("sc-logs-view", () => {
   });
 
   it("should render controls header", async () => {
-    const el = document.createElement("sc-logs-view") as any;
+    const el = document.createElement("sc-logs-view") as ScLogsView;
     document.body.appendChild(el);
     await el.updateComplete;
     const controls = el.shadowRoot?.querySelector(".controls-sticky, .controls");

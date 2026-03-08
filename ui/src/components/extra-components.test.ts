@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
+import type { ScChart } from "./sc-chart.js";
+import type { ScJsonViewer } from "./sc-json-viewer.js";
+import type { ScPagination } from "./sc-pagination.js";
+import type { ScDataTableV2 } from "./sc-data-table-v2.js";
+import type { ScCheckbox } from "./sc-checkbox.js";
+import type { ScCombobox } from "./sc-combobox.js";
+import type { ScFormGroup } from "./sc-form-group.js";
+
 import "./floating-mic.js";
 import "./sidebar.js";
 import "./command-palette.js";
@@ -63,12 +71,12 @@ describe("sc-checkbox", () => {
   });
 
   it("should default checked to false", () => {
-    const el = document.createElement("sc-checkbox") as any;
+    const el = document.createElement("sc-checkbox") as ScCheckbox;
     expect(el.checked).toBe(false);
   });
 
   it("should toggle on click", async () => {
-    const el = document.createElement("sc-checkbox") as any;
+    const el = document.createElement("sc-checkbox") as ScCheckbox;
     document.body.appendChild(el);
     await el.updateComplete;
     const events: any[] = [];
@@ -80,7 +88,7 @@ describe("sc-checkbox", () => {
   });
 
   it("should not toggle when disabled", async () => {
-    const el = document.createElement("sc-checkbox") as any;
+    const el = document.createElement("sc-checkbox") as ScCheckbox;
     el.disabled = true;
     document.body.appendChild(el);
     await el.updateComplete;
@@ -92,7 +100,7 @@ describe("sc-checkbox", () => {
   });
 
   it("should support label", () => {
-    const el = document.createElement("sc-checkbox") as any;
+    const el = document.createElement("sc-checkbox") as ScCheckbox;
     el.label = "Accept terms";
     expect(el.label).toBe("Accept terms");
   });
@@ -109,24 +117,24 @@ describe("sc-combobox", () => {
   });
 
   it("should accept options", () => {
-    const el = document.createElement("sc-combobox") as any;
+    const el = document.createElement("sc-combobox") as ScCombobox;
     el.options = [{ value: "a", label: "Alpha" }];
     expect(el.options.length).toBe(1);
   });
 
   it("should accept value", () => {
-    const el = document.createElement("sc-combobox") as any;
+    const el = document.createElement("sc-combobox") as ScCombobox;
     el.value = "test";
     expect(el.value).toBe("test");
   });
 
   it("should default freeText to false", () => {
-    const el = document.createElement("sc-combobox") as any;
+    const el = document.createElement("sc-combobox") as ScCombobox;
     expect(el.freeText).toBe(false);
   });
 
   it("should have combobox role", async () => {
-    const el = document.createElement("sc-combobox") as any;
+    const el = document.createElement("sc-combobox") as ScCombobox;
     document.body.appendChild(el);
     await el.updateComplete;
     const input = el.shadowRoot?.querySelector('[role="combobox"]');
@@ -146,22 +154,22 @@ describe("sc-form-group", () => {
   });
 
   it("should default dirty to false", () => {
-    const el = document.createElement("sc-form-group") as any;
+    const el = document.createElement("sc-form-group") as ScFormGroup;
     expect(el.dirty).toBe(false);
   });
 
   it("should default valid to true", () => {
-    const el = document.createElement("sc-form-group") as any;
+    const el = document.createElement("sc-form-group") as ScFormGroup;
     expect(el.valid).toBe(true);
   });
 
   it("should have validate method", () => {
-    const el = document.createElement("sc-form-group") as any;
+    const el = document.createElement("sc-form-group") as ScFormGroup;
     expect(typeof el.validate).toBe("function");
   });
 
   it("should have reset method", () => {
-    const el = document.createElement("sc-form-group") as any;
+    const el = document.createElement("sc-form-group") as ScFormGroup;
     expect(typeof el.reset).toBe("function");
   });
 });
@@ -177,24 +185,24 @@ describe("sc-pagination", () => {
   });
 
   it("should compute page count from total and pageSize", () => {
-    const el = document.createElement("sc-pagination") as any;
+    const el = document.createElement("sc-pagination") as ScPagination;
     el.total = 100;
     el.pageSize = 10;
     expect(el.pageCount).toBe(10);
   });
 
   it("should default page to 1", () => {
-    const el = document.createElement("sc-pagination") as any;
+    const el = document.createElement("sc-pagination") as ScPagination;
     expect(el.page).toBe(1);
   });
 
   it("should default pageSize to 10", () => {
-    const el = document.createElement("sc-pagination") as any;
+    const el = document.createElement("sc-pagination") as ScPagination;
     expect(el.pageSize).toBe(10);
   });
 
   it("should fire sc-page-change on page navigation", async () => {
-    const el = document.createElement("sc-pagination") as any;
+    const el = document.createElement("sc-pagination") as ScPagination;
     el.total = 50;
     el.pageSize = 10;
     el.page = 1;
@@ -212,7 +220,7 @@ describe("sc-pagination", () => {
   });
 
   it("should render showing label", async () => {
-    const el = document.createElement("sc-pagination") as any;
+    const el = document.createElement("sc-pagination") as ScPagination;
     el.total = 100;
     el.pageSize = 10;
     el.page = 1;
@@ -237,7 +245,7 @@ describe("sc-data-table-v2", () => {
   });
 
   it("should render rows", async () => {
-    const el = document.createElement("sc-data-table-v2") as any;
+    const el = document.createElement("sc-data-table-v2") as ScDataTableV2;
     el.columns = [{ key: "name", label: "Name" }];
     el.rows = [{ name: "Alice" }, { name: "Bob" }];
     el.paginated = false;
@@ -249,7 +257,7 @@ describe("sc-data-table-v2", () => {
   });
 
   it("should fire sc-row-click on row click", async () => {
-    const el = document.createElement("sc-data-table-v2") as any;
+    const el = document.createElement("sc-data-table-v2") as ScDataTableV2;
     el.columns = [{ key: "name", label: "Name" }];
     el.rows = [{ name: "Alice" }];
     el.paginated = false;
@@ -267,7 +275,7 @@ describe("sc-data-table-v2", () => {
   });
 
   it("should sort when clicking sortable column", async () => {
-    const el = document.createElement("sc-data-table-v2") as any;
+    const el = document.createElement("sc-data-table-v2") as ScDataTableV2;
     el.columns = [{ key: "name", label: "Name", sortable: true }];
     el.rows = [{ name: "Bob" }, { name: "Alice" }];
     el.paginated = false;
@@ -284,7 +292,7 @@ describe("sc-data-table-v2", () => {
   });
 
   it("should show empty state for no rows", async () => {
-    const el = document.createElement("sc-data-table-v2") as any;
+    const el = document.createElement("sc-data-table-v2") as ScDataTableV2;
     el.columns = [{ key: "name", label: "Name" }];
     el.rows = [];
     document.body.appendChild(el);
@@ -295,7 +303,7 @@ describe("sc-data-table-v2", () => {
   });
 
   it("should default paginated to true", () => {
-    const el = document.createElement("sc-data-table-v2") as any;
+    const el = document.createElement("sc-data-table-v2") as ScDataTableV2;
     expect(el.paginated).toBe(true);
   });
 });
@@ -311,18 +319,18 @@ describe("sc-json-viewer", () => {
   });
 
   it("should accept data property", () => {
-    const el = document.createElement("sc-json-viewer") as any;
+    const el = document.createElement("sc-json-viewer") as ScJsonViewer;
     el.data = { key: "value" };
     expect(el.data).toEqual({ key: "value" });
   });
 
   it("should default expandedDepth to 2", () => {
-    const el = document.createElement("sc-json-viewer") as any;
+    const el = document.createElement("sc-json-viewer") as ScJsonViewer;
     expect(el.expandedDepth).toBe(2);
   });
 
   it("should render primitive string value", async () => {
-    const el = document.createElement("sc-json-viewer") as any;
+    const el = document.createElement("sc-json-viewer") as ScJsonViewer;
     el.data = "hello";
     document.body.appendChild(el);
     await el.updateComplete;
@@ -332,7 +340,7 @@ describe("sc-json-viewer", () => {
   });
 
   it("should render object keys", async () => {
-    const el = document.createElement("sc-json-viewer") as any;
+    const el = document.createElement("sc-json-viewer") as ScJsonViewer;
     el.data = { name: "test" };
     document.body.appendChild(el);
     await el.updateComplete;
@@ -342,7 +350,7 @@ describe("sc-json-viewer", () => {
   });
 
   it("should render array length indicator", async () => {
-    const el = document.createElement("sc-json-viewer") as any;
+    const el = document.createElement("sc-json-viewer") as ScJsonViewer;
     el.data = [1, 2, 3];
     document.body.appendChild(el);
     await el.updateComplete;
@@ -352,7 +360,7 @@ describe("sc-json-viewer", () => {
   });
 
   it("should render null value", async () => {
-    const el = document.createElement("sc-json-viewer") as any;
+    const el = document.createElement("sc-json-viewer") as ScJsonViewer;
     el.data = null;
     document.body.appendChild(el);
     await el.updateComplete;
@@ -362,7 +370,7 @@ describe("sc-json-viewer", () => {
   });
 
   it("should use tree role for accessibility", async () => {
-    const el = document.createElement("sc-json-viewer") as any;
+    const el = document.createElement("sc-json-viewer") as ScJsonViewer;
     el.data = { a: 1 };
     document.body.appendChild(el);
     await el.updateComplete;
@@ -2754,36 +2762,36 @@ describe("sc-chart", () => {
   });
 
   it("should accept type property", () => {
-    const el = document.createElement("sc-chart") as any;
+    const el = document.createElement("sc-chart") as ScChart;
     el.type = "bar";
     expect(el.type).toBe("bar");
   });
 
   it("should accept data property", () => {
-    const el = document.createElement("sc-chart") as any;
+    const el = document.createElement("sc-chart") as ScChart;
     const data = { labels: ["A", "B"], datasets: [{ data: [1, 2] }] };
     el.data = data;
     expect(el.data).toEqual(data);
   });
 
   it("should default height to 200", () => {
-    const el = document.createElement("sc-chart") as any;
+    const el = document.createElement("sc-chart") as ScChart;
     expect(el.height).toBe(200);
   });
 
   it("should default horizontal to false", () => {
-    const el = document.createElement("sc-chart") as any;
+    const el = document.createElement("sc-chart") as ScChart;
     expect(el.horizontal).toBe(false);
   });
 
   it("should accept horizontal property", () => {
-    const el = document.createElement("sc-chart") as any;
+    const el = document.createElement("sc-chart") as ScChart;
     el.horizontal = true;
     expect(el.horizontal).toBe(true);
   });
 
   it("should render a canvas when data has entries", async () => {
-    const el = document.createElement("sc-chart") as any;
+    const el = document.createElement("sc-chart") as ScChart;
     el.type = "bar";
     el.data = { labels: ["A"], datasets: [{ data: [1] }] };
     document.body.appendChild(el);
@@ -2794,7 +2802,7 @@ describe("sc-chart", () => {
   });
 
   it("should show empty message when no data", async () => {
-    const el = document.createElement("sc-chart") as any;
+    const el = document.createElement("sc-chart") as ScChart;
     el.data = { labels: [], datasets: [] };
     document.body.appendChild(el);
     await el.updateComplete;
