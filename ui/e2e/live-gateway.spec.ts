@@ -34,13 +34,17 @@ test.describe("Live Gateway E2E", () => {
     const sendBtn = chatView.locator(".send-btn");
     await sendBtn.click();
 
-    const assistantMsg = chatView.locator("sc-message-list .message.assistant").first();
+    const assistantMsg = chatView
+      .locator("sc-message-thread sc-message-group[role='assistant'] sc-chat-bubble")
+      .first();
     await expect(assistantMsg).toBeVisible({ timeout: 30000 });
 
     const content = await assistantMsg.evaluate((el) => {
       const stream = el.querySelector("sc-message-stream");
-      const shadowText = stream?.shadowRoot?.querySelector(".content")?.textContent ?? "";
-      return shadowText || el.textContent || "";
+      const streamText = stream?.shadowRoot?.querySelector(".content")?.textContent ?? "";
+      const bubbleText =
+        (el as HTMLElement).shadowRoot?.querySelector(".content")?.textContent ?? "";
+      return streamText || bubbleText || (el as HTMLElement).textContent || "";
     });
     expect(content).toContain("4");
   });
@@ -56,10 +60,14 @@ test.describe("Live Gateway E2E", () => {
     const sendBtn = chatView.locator(".send-btn");
     await sendBtn.click();
 
-    const thinkingOrStream = chatView.locator("sc-thinking, sc-message-list .message.assistant");
+    const thinkingOrStream = chatView.locator(
+      "sc-thinking, sc-message-thread sc-message-group[role='assistant'] sc-chat-bubble",
+    );
     await expect(thinkingOrStream.first()).toBeVisible({ timeout: 15000 });
 
-    const assistantMsg = chatView.locator("sc-message-list .message.assistant").first();
+    const assistantMsg = chatView
+      .locator("sc-message-thread sc-message-group[role='assistant'] sc-chat-bubble")
+      .first();
     await expect(assistantMsg).toBeVisible({ timeout: 30000 });
   });
 
@@ -74,13 +82,17 @@ test.describe("Live Gateway E2E", () => {
 
     await textarea.fill("Remember this number: 42. Reply with just OK.");
     await sendBtn.click();
-    const firstReply = chatView.locator("sc-message-list .message.assistant").first();
+    const firstReply = chatView
+      .locator("sc-message-thread sc-message-group[role='assistant'] sc-chat-bubble")
+      .first();
     await expect(firstReply).toBeVisible({ timeout: 30000 });
 
     await textarea.fill("What was the number I just told you? Reply with just the number.");
     await sendBtn.click();
 
-    const replies = chatView.locator("sc-message-list .message.assistant");
+    const replies = chatView.locator(
+      "sc-message-thread sc-message-group[role='assistant'] sc-chat-bubble",
+    );
     await expect(async () => {
       const count = await replies.count();
       expect(count).toBeGreaterThanOrEqual(2);
@@ -91,8 +103,10 @@ test.describe("Live Gateway E2E", () => {
 
     const content = await lastReply.evaluate((el) => {
       const stream = el.querySelector("sc-message-stream");
-      const shadowText = stream?.shadowRoot?.querySelector(".content")?.textContent ?? "";
-      return shadowText || el.textContent || "";
+      const streamText = stream?.shadowRoot?.querySelector(".content")?.textContent ?? "";
+      const bubbleText =
+        (el as HTMLElement).shadowRoot?.querySelector(".content")?.textContent ?? "";
+      return streamText || bubbleText || (el as HTMLElement).textContent || "";
     });
     expect(content).toContain("42");
   });
@@ -108,7 +122,9 @@ test.describe("Live Gateway E2E", () => {
     const sendBtn = chatView.locator(".send-btn");
     await sendBtn.click();
 
-    const assistantMsg = chatView.locator("sc-message-list .message.assistant").first();
+    const assistantMsg = chatView
+      .locator("sc-message-thread sc-message-group[role='assistant'] sc-chat-bubble")
+      .first();
     await expect(assistantMsg).toBeVisible({ timeout: 30000 });
 
     await page.screenshot({
