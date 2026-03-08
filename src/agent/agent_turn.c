@@ -1,6 +1,8 @@
 /* Core turn execution: sc_agent_turn and turn-local helpers */
 #include "agent_internal.h"
 #include "seaclaw/agent/awareness.h"
+#include "seaclaw/agent/commitment.h"
+#include "seaclaw/agent/commitment_store.h"
 #include "seaclaw/agent/commands.h"
 #include "seaclaw/agent/compaction.h"
 #include "seaclaw/agent/dispatcher.h"
@@ -95,6 +97,22 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
             }
         }
         sc_fc_result_deinit(&fc_result, agent->alloc);
+    }
+
+    /* Commitment detection: extract promises, intentions, reminders, goals from user message */
+    if (agent->commitment_store) {
+        sc_commitment_detect_result_t commit_result;
+        memset(&commit_result, 0, sizeof(commit_result));
+        sc_error_t cerr = sc_commitment_detect(agent->alloc, msg, msg_len, "user", 4, &commit_result);
+        if (cerr == SC_OK && commit_result.count > 0) {
+            const char *sess = agent->memory_session_id ? agent->memory_session_id : NULL;
+            size_t sess_len = agent->memory_session_id_len;
+            for (size_t i = 0; i < commit_result.count; i++) {
+                (void)sc_commitment_store_save(agent->commitment_store, &commit_result.commitments[i],
+                                                sess, sess_len);
+            }
+        }
+        sc_commitment_detect_result_deinit(&commit_result, agent->alloc);
     }
 
     /* Detect preferences from user corrections and store them */
@@ -192,6 +210,16 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
     size_t stm_ctx_len = 0;
     (void)sc_stm_build_context(&agent->stm, agent->alloc, &stm_ctx, &stm_ctx_len);
 
+    /* Build commitment context for this turn */
+    char *commitment_ctx = NULL;
+    size_t commitment_ctx_len = 0;
+    if (agent->commitment_store) {
+        const char *sess = agent->memory_session_id ? agent->memory_session_id : NULL;
+        size_t sess_len = agent->memory_session_id_len;
+        (void)sc_commitment_store_build_context(agent->commitment_store, agent->alloc, sess,
+                                                 sess_len, &commitment_ctx, &commitment_ctx_len);
+    }
+
     /* Build situational awareness context */
     char *awareness_ctx = NULL;
     size_t awareness_ctx_len = 0;
@@ -232,7 +260,7 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
     char *system_prompt = NULL;
     size_t system_prompt_len = 0;
     if (agent->cached_static_prompt && !pref_ctx && !tone_hint && !persona_prompt &&
-        !awareness_ctx && !stm_ctx) {
+        !awareness_ctx && !stm_ctx && !commitment_ctx) {
         err = sc_prompt_build_with_cache(agent->alloc, agent->cached_static_prompt,
                                          agent->cached_static_prompt_len, memory_ctx,
                                          memory_ctx_len, &system_prompt, &system_prompt_len);
@@ -245,6 +273,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
         if (err != SC_OK) {
             if (pref_ctx)
                 agent->alloc->free(agent->alloc->ctx, pref_ctx, pref_ctx_len + 1);
+            if (commitment_ctx)
+                agent->alloc->free(agent->alloc->ctx, commitment_ctx, commitment_ctx_len + 1);
             sc_agent_clear_current_for_tools();
             return err;
         }
@@ -262,6 +292,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
             .memory_context_len = memory_ctx_len,
             .stm_context = stm_ctx,
             .stm_context_len = stm_ctx_len,
+            .commitment_context = commitment_ctx,
+            .commitment_context_len = commitment_ctx_len,
             .autonomy_level = agent->autonomy_level,
             .custom_instructions = agent->custom_instructions,
             .custom_instructions_len = agent->custom_instructions_len,
@@ -300,12 +332,16 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
         if (err != SC_OK) {
             if (pref_ctx)
                 agent->alloc->free(agent->alloc->ctx, pref_ctx, pref_ctx_len + 1);
+            if (commitment_ctx)
+                agent->alloc->free(agent->alloc->ctx, commitment_ctx, commitment_ctx_len + 1);
             sc_agent_clear_current_for_tools();
             return err;
         }
     }
     if (stm_ctx)
         agent->alloc->free(agent->alloc->ctx, stm_ctx, stm_ctx_len + 1);
+    if (commitment_ctx)
+        agent->alloc->free(agent->alloc->ctx, commitment_ctx, commitment_ctx_len + 1);
     if (pref_ctx)
         agent->alloc->free(agent->alloc->ctx, pref_ctx, pref_ctx_len + 1);
 

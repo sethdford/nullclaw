@@ -24,6 +24,8 @@ typedef struct sc_prompt_config {
     size_t memory_context_len;
     const char *stm_context;
     size_t stm_context_len;
+    const char *commitment_context;
+    size_t commitment_context_len;
     uint8_t autonomy_level; /* 0=readonly, 1=supervised, 2=full */
     const char *custom_instructions;
     size_t custom_instructions_len;

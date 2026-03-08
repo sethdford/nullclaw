@@ -1,5 +1,6 @@
 #include "seaclaw/agent.h"
 #include "seaclaw/agent/awareness.h"
+#include "seaclaw/agent/commitment_store.h"
 #include "seaclaw/agent/commands.h"
 #include "seaclaw/agent/compaction.h"
 #include "seaclaw/agent/dispatcher.h"
@@ -262,6 +263,14 @@ sc_error_t sc_agent_from_config(
             return serr;
     }
 
+    if (memory && memory->vtable) {
+        sc_error_t cerr = sc_commitment_store_create(alloc, memory, &out->commitment_store);
+        if (cerr != SC_OK)
+            out->commitment_store = NULL;
+    } else {
+        out->commitment_store = NULL;
+    }
+
     return SC_OK;
 }
 
@@ -426,6 +435,10 @@ void sc_agent_deinit(sc_agent_t *agent) {
         agent->persona_prompt = NULL;
     }
     sc_stm_deinit(&agent->stm);
+    if (agent->commitment_store) {
+        sc_commitment_store_destroy(agent->commitment_store);
+        agent->commitment_store = NULL;
+    }
     if (agent->provider.vtable && agent->provider.vtable->deinit) {
         agent->provider.vtable->deinit(agent->provider.ctx, agent->alloc);
     }

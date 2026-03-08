@@ -1,6 +1,7 @@
 #ifndef SC_AGENT_H
 #define SC_AGENT_H
 
+#include "seaclaw/agent/commitment_store.h"
 #include "seaclaw/agent/mailbox.h"
 #include "seaclaw/agent/spawn.h"
 #include "seaclaw/agent/task_list.h"
@@ -164,6 +165,8 @@ struct sc_agent {
     char trace_id[37]; /* UUID v4 hex string + NUL, regenerated per conversation turn */
 
     sc_stm_buffer_t stm; /* short-term memory buffer for session context */
+
+    sc_commitment_store_t *commitment_store; /* optional; when memory is set */
 
 #ifdef SC_HAS_PERSONA
     sc_persona_t *persona; /* loaded from config; owned */
