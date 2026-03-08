@@ -521,9 +521,8 @@ char *sc_conversation_build_awareness(sc_allocator_t *alloc,
             }
         }
         if (last_their_msg && last_their_len > 0) {
-            size_t cal_len = sc_conversation_calibrate_length(last_their_msg, last_their_len,
-                                                              entries, count, buf + pos,
-                                                              CTX_BUF_CAP - pos);
+            size_t cal_len = sc_conversation_calibrate_length(
+                last_their_msg, last_their_len, entries, count, buf + pos, CTX_BUF_CAP - pos);
             pos += cal_len;
         }
     }
@@ -1165,10 +1164,9 @@ size_t sc_conversation_calibrate_length(const char *last_msg, size_t last_msg_le
     /* Yes/no questions start with auxiliary verbs */
     if (is_question && last_msg_len > 3) {
         static const char *yn_starters[] = {
-            "are you",  "do you",    "did you",  "have you", "will you", "can you",
-            "is it",    "is that",   "was it",   "would you", "should i", "could you",
-            "are we",   "do we",     "shall we", "wanna",    "you coming", "you going",
-            "you ok",   "you good",  NULL,
+            "are you",  "do you", "did you",    "have you",  "will you",  "can you",  "is it",
+            "is that",  "was it", "would you",  "should i",  "could you", "are we",   "do we",
+            "shall we", "wanna",  "you coming", "you going", "you ok",    "you good", NULL,
         };
         for (int j = 0; yn_starters[j]; j++) {
             size_t sl = strlen(yn_starters[j]);
@@ -1194,8 +1192,8 @@ size_t sc_conversation_calibrate_length(const char *last_msg, size_t last_msg_le
 
     if (last_msg_len < 12) {
         static const char *greetings[] = {
-            "hey", "hi", "yo", "sup", "what's up", "whats up", "wassup", "morning",
-            "good morning", "gm", "heyy", "heyyy", NULL,
+            "hey",     "hi",           "yo", "sup",  "what's up", "whats up", "wassup",
+            "morning", "good morning", "gm", "heyy", "heyyy",     NULL,
         };
         for (int j = 0; greetings[j]; j++) {
             size_t gl = strlen(greetings[j]);
@@ -1220,9 +1218,9 @@ size_t sc_conversation_calibrate_length(const char *last_msg, size_t last_msg_le
     }
 
     static const char *emo_words[] = {
-        "stressed", "sad",     "anxious",     "worried",    "scared",   "hurt",
-        "miss you", "love you", "upset",       "frustrated", "crying",   "depressed",
-        "lonely",   "nervous", "overwhelmed", "exhausted",  "burned out", NULL,
+        "stressed", "sad",      "anxious",     "worried",    "scared",     "hurt",
+        "miss you", "love you", "upset",       "frustrated", "crying",     "depressed",
+        "lonely",   "nervous",  "overwhelmed", "exhausted",  "burned out", NULL,
     };
     for (int j = 0; emo_words[j]; j++) {
         if (str_contains_ci(last_msg, last_msg_len, emo_words[j])) {
@@ -1232,9 +1230,8 @@ size_t sc_conversation_calibrate_length(const char *last_msg, size_t last_msg_le
     }
 
     static const char *logistics_words[] = {
-        "what time", "where",    "address",   "meet at",    "pick up",
-        "flight",    "arriving", "leaving at", "reservation", "booking",
-        "dinner at", "lunch at", "meeting at", NULL,
+        "what time",  "where",       "address", "meet at",   "pick up",  "flight",     "arriving",
+        "leaving at", "reservation", "booking", "dinner at", "lunch at", "meeting at", NULL,
     };
     for (int j = 0; logistics_words[j]; j++) {
         if (str_contains_ci(last_msg, last_msg_len, logistics_words[j])) {
@@ -1250,7 +1247,7 @@ size_t sc_conversation_calibrate_length(const char *last_msg, size_t last_msg_le
 
     if (last_msg_len <= 6) {
         static const char *reacts[] = {
-            "lol", "haha", "nice", "ok", "k", "ya", "yep", "true",
+            "lol",  "haha", "nice", "ok",   "k",     "ya",  "yep", "true",
             "same", "mood", "bet",  "word", "right", "wow", NULL,
         };
         for (int j = 0; reacts[j]; j++) {
@@ -1304,15 +1301,14 @@ size_t sc_conversation_calibrate_length(const char *last_msg, size_t last_msg_le
         is_good_news = true;
 
     bool is_bad_news = false;
-    if (!is_emotional &&
-        (str_contains_ci(last_msg, last_msg_len, "got fired") ||
-         str_contains_ci(last_msg, last_msg_len, "broke up") ||
-         str_contains_ci(last_msg, last_msg_len, "didn't get") ||
-         str_contains_ci(last_msg, last_msg_len, "passed away") ||
-         str_contains_ci(last_msg, last_msg_len, "bad news") ||
-         str_contains_ci(last_msg, last_msg_len, "didn't make it") ||
-         str_contains_ci(last_msg, last_msg_len, "got rejected") ||
-         str_contains_ci(last_msg, last_msg_len, "lost my")))
+    if (!is_emotional && (str_contains_ci(last_msg, last_msg_len, "got fired") ||
+                          str_contains_ci(last_msg, last_msg_len, "broke up") ||
+                          str_contains_ci(last_msg, last_msg_len, "didn't get") ||
+                          str_contains_ci(last_msg, last_msg_len, "passed away") ||
+                          str_contains_ci(last_msg, last_msg_len, "bad news") ||
+                          str_contains_ci(last_msg, last_msg_len, "didn't make it") ||
+                          str_contains_ci(last_msg, last_msg_len, "got rejected") ||
+                          str_contains_ci(last_msg, last_msg_len, "lost my")))
         is_bad_news = true;
 
     bool is_teasing = false;
@@ -1327,14 +1323,13 @@ size_t sc_conversation_calibrate_length(const char *last_msg, size_t last_msg_le
         is_teasing = true;
 
     bool is_vulnerable = false;
-    if (!is_emotional &&
-        (str_contains_ci(last_msg, last_msg_len, "i need to tell you") ||
-         str_contains_ci(last_msg, last_msg_len, "can i be honest") ||
-         str_contains_ci(last_msg, last_msg_len, "don't judge me") ||
-         str_contains_ci(last_msg, last_msg_len, "this is hard to say") ||
-         str_contains_ci(last_msg, last_msg_len, "i've been thinking") ||
-         str_contains_ci(last_msg, last_msg_len, "i never told") ||
-         str_contains_ci(last_msg, last_msg_len, "between us")))
+    if (!is_emotional && (str_contains_ci(last_msg, last_msg_len, "i need to tell you") ||
+                          str_contains_ci(last_msg, last_msg_len, "can i be honest") ||
+                          str_contains_ci(last_msg, last_msg_len, "don't judge me") ||
+                          str_contains_ci(last_msg, last_msg_len, "this is hard to say") ||
+                          str_contains_ci(last_msg, last_msg_len, "i've been thinking") ||
+                          str_contains_ci(last_msg, last_msg_len, "i never told") ||
+                          str_contains_ci(last_msg, last_msg_len, "between us")))
         is_vulnerable = true;
 
     /* Produce the directive — pick the most specific match */
@@ -1348,6 +1343,14 @@ size_t sc_conversation_calibrate_length(const char *last_msg, size_t last_msg_le
                      "'hey what's up' or 'heyy' — don't over-respond to a greeting.\n"
                      "TONE: Light, easy, warm. Mirror their vibe exactly. "
                      "If they're chill, be chill. If they're excited, match it.\n");
+    } else if (is_teasing) {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Teasing / banter.\n"
+                     "LENGTH: One punchy line back. This is a volley, not a speech.\n"
+                     "TONE: Playful, quick. Escalate the bit slightly or flip it back on them. "
+                     "NEVER get defensive or explain yourself. "
+                     "If they say 'yeah right', you say 'watch me'. "
+                     "Match their sarcasm energy but keep it warm underneath.\n");
     } else if (is_short_react) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Short reaction (lol, nice, etc).\n"
@@ -1355,6 +1358,31 @@ size_t sc_conversation_calibrate_length(const char *last_msg, size_t last_msg_le
                      "Don't turn 'lol' into a conversation.\n"
                      "TONE: Effortless. Match their low investment. "
                      "This is background noise in a conversation, not a prompt for depth.\n");
+    } else if (is_good_news) {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Good news / celebration.\n"
+                     "LENGTH: 1-2 short excited messages.\n"
+                     "TONE: Match or EXCEED their excitement. This is their moment — hype them up. "
+                     "'LETS GO' or 'wait are you serious?? that's amazing'. "
+                     "Exclamation marks are appropriate here. "
+                     "Ask them to tell you more. Don't immediately relate it back to yourself.\n");
+    } else if (is_bad_news) {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Bad news.\n"
+                     "LENGTH: 1 short sentence of acknowledgment. Maybe a follow-up.\n"
+                     "TONE: Quiet, steady, present. Drop ALL energy and humor. "
+                     "No platitudes ('everything happens for a reason'). "
+                     "No problem-solving unless asked. No 'well at least...'. "
+                     "'damn i'm really sorry' — then wait. Let them lead.\n");
+    } else if (is_vulnerable) {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Vulnerable / confession.\n"
+                     "LENGTH: 1-2 short sentences. Don't overwhelm them.\n"
+                     "TONE: Safe, zero judgment, steady. They're taking a risk by sharing this. "
+                     "Honor that with stillness, not a performance. "
+                     "Don't rush to reassure — just receive it. "
+                     "'i hear you' or 'thanks for telling me that'. "
+                     "Let them set the pace for what comes next.\n");
     } else if (is_emotional) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Emotional share.\n"
@@ -1372,12 +1400,13 @@ size_t sc_conversation_calibrate_length(const char *last_msg, size_t last_msg_le
                      "'all good honestly' — don't say 'it's fine' (passive-aggressive). "
                      "Don't revisit what they're apologizing for.\n");
     } else if (is_compliment) {
-        w = snprintf(buf + pos, cap - pos,
-                     "MESSAGE TYPE: Compliment or affirmation.\n"
-                     "LENGTH: 1 short sentence.\n"
-                     "TONE: Receive it naturally. Slight deflection or humor is fine. "
-                     "Don't over-thank, don't be self-deprecating, don't bounce it back immediately. "
-                     "'haha thanks that means a lot' — not 'omg no YOU'RE amazing'.\n");
+        w = snprintf(
+            buf + pos, cap - pos,
+            "MESSAGE TYPE: Compliment or affirmation.\n"
+            "LENGTH: 1 short sentence.\n"
+            "TONE: Receive it naturally. Slight deflection or humor is fine. "
+            "Don't over-thank, don't be self-deprecating, don't bounce it back immediately. "
+            "'haha thanks that means a lot' — not 'omg no YOU'RE amazing'.\n");
     } else if (is_yes_no_question) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Yes/no question.\n"
@@ -1393,12 +1422,13 @@ size_t sc_conversation_calibrate_length(const char *last_msg, size_t last_msg_le
                      "This is not the moment for warmth or banter — just be useful. "
                      "'cool let's do 7pm at that place on main' — direct and useful.\n");
     } else if (is_link_share) {
-        w = snprintf(buf + pos, cap - pos,
-                     "MESSAGE TYPE: Link or media share.\n"
-                     "LENGTH: 1 short reaction + maybe a question.\n"
-                     "TONE: Genuine curiosity or reaction. They shared something — engage with IT, "
-                     "not around it. 'wait that's hilarious' or 'oh I've been wanting to try that'. "
-                     "Don't ignore what they shared to talk about yourself.\n");
+        w = snprintf(
+            buf + pos, cap - pos,
+            "MESSAGE TYPE: Link or media share.\n"
+            "LENGTH: 1 short reaction + maybe a question.\n"
+            "TONE: Genuine curiosity or reaction. They shared something — engage with IT, "
+            "not around it. 'wait that's hilarious' or 'oh I've been wanting to try that'. "
+            "Don't ignore what they shared to talk about yourself.\n");
     } else if (is_question && !is_yes_no_question) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Open question.\n"
@@ -1647,7 +1677,7 @@ size_t sc_conversation_apply_typing_quirks(char *buf, size_t len, const char *co
             bool strip = false;
             if (do_no_periods && buf[i] == '.') {
                 bool is_end = (i + 1 == len) || (buf[i + 1] == ' ' && i + 2 < len &&
-                                                  buf[i + 2] >= 'A' && buf[i + 2] <= 'z');
+                                                 buf[i + 2] >= 'A' && buf[i + 2] <= 'z');
                 bool in_ellipsis = (i + 2 < len && buf[i + 1] == '.' && buf[i + 2] == '.') ||
                                    (i > 0 && buf[i - 1] == '.');
                 if (is_end && !in_ellipsis)

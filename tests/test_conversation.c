@@ -432,7 +432,7 @@ static void calibrate_yes_no_question(void) {
 static void calibrate_emotional_message(void) {
     char buf[1024];
     size_t len = sc_conversation_calibrate_length("I'm really stressed about this job thing", 40,
-                                                   NULL, 0, buf, sizeof(buf));
+                                                  NULL, 0, buf, sizeof(buf));
     SC_ASSERT_TRUE(len > 0);
     SC_ASSERT_NOT_NULL(strstr(buf, "Emotional"));
     SC_ASSERT_NOT_NULL(strstr(buf, "Validate"));
@@ -441,7 +441,7 @@ static void calibrate_emotional_message(void) {
 static void calibrate_logistics(void) {
     char buf[1024];
     size_t len = sc_conversation_calibrate_length("what time should we meet at the restaurant?", 43,
-                                                   NULL, 0, buf, sizeof(buf));
+                                                  NULL, 0, buf, sizeof(buf));
     SC_ASSERT_TRUE(len > 0);
     SC_ASSERT_NOT_NULL(strstr(buf, "Logistics"));
 }
@@ -456,7 +456,7 @@ static void calibrate_short_react(void) {
 static void calibrate_link_share(void) {
     char buf[1024];
     size_t len = sc_conversation_calibrate_length("check this out https://example.com", 34, NULL, 0,
-                                                   buf, sizeof(buf));
+                                                  buf, sizeof(buf));
     SC_ASSERT_TRUE(len > 0);
     SC_ASSERT_NOT_NULL(strstr(buf, "Link"));
 }
@@ -464,8 +464,7 @@ static void calibrate_link_share(void) {
 static void calibrate_open_question(void) {
     char buf[1024];
     const char *msg = "what do you think about all that?";
-    size_t len =
-        sc_conversation_calibrate_length(msg, strlen(msg), NULL, 0, buf, sizeof(buf));
+    size_t len = sc_conversation_calibrate_length(msg, strlen(msg), NULL, 0, buf, sizeof(buf));
     SC_ASSERT_TRUE(len > 0);
     SC_ASSERT_NOT_NULL(strstr(buf, "Open question"));
 }
@@ -480,6 +479,58 @@ static void calibrate_long_story(void) {
     SC_ASSERT_NOT_NULL(strstr(buf, "Long message"));
 }
 
+static void calibrate_good_news(void) {
+    char buf[1024];
+    const char *msg = "I got the job!!";
+    size_t len = sc_conversation_calibrate_length(msg, strlen(msg), NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "Good news"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "TONE:"));
+}
+
+static void calibrate_bad_news(void) {
+    char buf[1024];
+    const char *msg = "my grandma passed away last night";
+    size_t len = sc_conversation_calibrate_length(msg, strlen(msg), NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "Bad news"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "TONE:"));
+}
+
+static void calibrate_teasing(void) {
+    char buf[1024];
+    const char *msg = "yeah right";
+    size_t len = sc_conversation_calibrate_length(msg, strlen(msg), NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "Teasing"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "TONE:"));
+}
+
+static void calibrate_vulnerable(void) {
+    char buf[1024];
+    const char *msg = "can i be honest with you about something";
+    size_t len = sc_conversation_calibrate_length(msg, strlen(msg), NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "Vulnerable"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "TONE:"));
+}
+
+static void calibrate_tone_present_in_greeting(void) {
+    char buf[1024];
+    const char *msg = "hey";
+    size_t len = sc_conversation_calibrate_length(msg, strlen(msg), NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "TONE:"));
+}
+
+static void calibrate_tone_present_in_emotional(void) {
+    char buf[1024];
+    const char *msg = "i'm so stressed out i can't handle this anymore";
+    size_t len = sc_conversation_calibrate_length(msg, strlen(msg), NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "TONE:"));
+}
+
 static void calibrate_null_returns_zero(void) {
     char buf[64];
     SC_ASSERT_EQ(sc_conversation_calibrate_length(NULL, 0, NULL, 0, buf, sizeof(buf)), 0u);
@@ -487,14 +538,17 @@ static void calibrate_null_returns_zero(void) {
 
 static void calibrate_rapid_fire_momentum(void) {
     sc_channel_history_entry_t entries[] = {
-        make_entry(false, "hey", "10:00"),       make_entry(true, "hey", "10:00"),
-        make_entry(false, "what's up", "10:01"),  make_entry(true, "nm you?", "10:01"),
-        make_entry(false, "same lol", "10:01"),   make_entry(true, "haha", "10:02"),
+        make_entry(false, "hey", "10:00"),
+        make_entry(true, "hey", "10:00"),
+        make_entry(false, "what's up", "10:01"),
+        make_entry(true, "nm you?", "10:01"),
+        make_entry(false, "same lol", "10:01"),
+        make_entry(true, "haha", "10:02"),
         make_entry(false, "wanna grab food?", "10:02"),
     };
     char buf[1024];
-    size_t len = sc_conversation_calibrate_length("wanna grab food?", 16, entries, 7, buf,
-                                                   sizeof(buf));
+    size_t len =
+        sc_conversation_calibrate_length("wanna grab food?", 16, entries, 7, buf, sizeof(buf));
     SC_ASSERT_TRUE(len > 0);
     SC_ASSERT_NOT_NULL(strstr(buf, "MOMENTUM"));
 }
@@ -626,7 +680,7 @@ void run_conversation_tests(void) {
     SC_RUN_TEST(honesty_detects_action_query);
     SC_RUN_TEST(honesty_null_for_normal_message);
 
-    /* Length calibration */
+    /* Length + tone calibration */
     SC_RUN_TEST(calibrate_greeting_short);
     SC_RUN_TEST(calibrate_yes_no_question);
     SC_RUN_TEST(calibrate_emotional_message);
@@ -635,6 +689,12 @@ void run_conversation_tests(void) {
     SC_RUN_TEST(calibrate_link_share);
     SC_RUN_TEST(calibrate_open_question);
     SC_RUN_TEST(calibrate_long_story);
+    SC_RUN_TEST(calibrate_good_news);
+    SC_RUN_TEST(calibrate_bad_news);
+    SC_RUN_TEST(calibrate_teasing);
+    SC_RUN_TEST(calibrate_vulnerable);
+    SC_RUN_TEST(calibrate_tone_present_in_greeting);
+    SC_RUN_TEST(calibrate_tone_present_in_emotional);
     SC_RUN_TEST(calibrate_null_returns_zero);
     SC_RUN_TEST(calibrate_rapid_fire_momentum);
 
