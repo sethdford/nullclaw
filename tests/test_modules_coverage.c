@@ -249,6 +249,31 @@ static void test_apply_patch_create_null_out_fails(void) {
     SC_ASSERT_NEQ(err, SC_OK);
 }
 
+static void test_apply_patch_rejects_path_traversal(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_security_policy_t policy = {0};
+    policy.workspace_dir = "/tmp";
+    policy.workspace_only = true;
+    sc_tool_t tool = {0};
+    sc_error_t cr = sc_apply_patch_create(&alloc, &policy, &tool);
+    SC_ASSERT_EQ(cr, SC_OK);
+    sc_json_value_t *args = sc_json_object_new(&alloc);
+    sc_json_object_set(&alloc, args, "file", sc_json_string_new(&alloc, "../etc/passwd", 13));
+    sc_json_object_set(&alloc, args, "patch",
+                       sc_json_string_new(&alloc, "@@ -1 +1 @@\n+line\n", 18));
+    sc_tool_result_t result = {0};
+    sc_error_t err = tool.vtable->execute(tool.ctx, &alloc, args, &result);
+    sc_json_free(&alloc, args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(!result.success);
+    SC_ASSERT_NOT_NULL(result.error_msg);
+    SC_ASSERT_TRUE(strstr(result.error_msg, "path traversal") != NULL ||
+                   strstr(result.error_msg, "path not allowed") != NULL);
+    sc_tool_result_free(&alloc, &result);
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
+}
+
 static void test_send_message_create(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_mailbox_t *mbox = sc_mailbox_create(&alloc, 4);
@@ -475,6 +500,7 @@ void run_modules_coverage_tests(void) {
     SC_RUN_TEST(test_diff_rejects_absolute_path);
     SC_RUN_TEST(test_apply_patch_create);
     SC_RUN_TEST(test_apply_patch_create_null_out_fails);
+    SC_RUN_TEST(test_apply_patch_rejects_path_traversal);
     SC_RUN_TEST(test_send_message_create);
     SC_RUN_TEST(test_send_message_create_null_mailbox);
 

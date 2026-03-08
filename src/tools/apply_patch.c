@@ -1,6 +1,7 @@
 #include "seaclaw/tools/apply_patch.h"
 #include "seaclaw/core/json.h"
 #include "seaclaw/core/string.h"
+#include "seaclaw/tools/validation.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +21,7 @@ typedef struct {
 
 static sc_error_t apply_patch_execute(void *ctx, sc_allocator_t *alloc, const sc_json_value_t *args,
                                       sc_tool_result_t *out) {
-    (void)ctx;
+    apply_patch_ctx_t *c = (apply_patch_ctx_t *)ctx;
     if (!out)
         return SC_ERR_INVALID_ARGUMENT;
     if (!args) {
@@ -33,8 +34,11 @@ static sc_error_t apply_patch_execute(void *ctx, sc_allocator_t *alloc, const sc
         *out = sc_tool_result_fail("missing file or patch", 21);
         return SC_OK;
     }
-    if (strstr(file, "..") != NULL) {
-        *out = sc_tool_result_fail("path traversal rejected", 23);
+    const char *ws = (c && c->policy && c->policy->workspace_dir) ? c->policy->workspace_dir : NULL;
+    size_t ws_len = ws ? strlen(ws) : 0;
+    sc_error_t path_err = sc_tool_validate_path(file, ws, ws_len);
+    if (path_err != SC_OK) {
+        *out = sc_tool_result_fail("path traversal or invalid path", 30);
         return SC_OK;
     }
     if (strlen(patch) > 1048576) {
