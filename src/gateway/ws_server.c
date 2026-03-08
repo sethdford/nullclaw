@@ -421,7 +421,11 @@ void sc_ws_server_close_conn(sc_ws_server_t *srv, sc_ws_conn_t *conn) {
     char close_frame[4];
     close_frame[0] = (char)(0x80 | SC_WS_OP_CLOSE);
     close_frame[1] = 0;
-    (void)send(conn->fd, close_frame, 2, MSG_NOSIGNAL);
+    ssize_t n = send(conn->fd, close_frame, 2, MSG_NOSIGNAL);
+    if (n < 0)
+        (void)fprintf(stderr, "[ws] close frame send failed: %s\n", strerror(errno));
+    else if ((size_t)n < 2)
+        (void)fprintf(stderr, "[ws] close frame partial send (%zd/2)\n", n);
     close(conn->fd);
 #endif
     if (srv && srv->on_close)
@@ -496,7 +500,13 @@ sc_error_t sc_ws_server_process(sc_ws_server_t *srv, sc_ws_conn_t *conn) {
             pong[1] = (char)(plen & 0x7F);
             if (plen > 0)
                 memcpy(pong + 2, payload, plen);
-            (void)send(conn->fd, pong, 2 + plen, MSG_NOSIGNAL);
+            ssize_t wn = send(conn->fd, pong, 2 + plen, MSG_NOSIGNAL);
+            if (wn < 0 || (size_t)wn < 2 + plen) {
+                (void)fprintf(stderr, "[ws] pong send failed: %s\n",
+                              wn < 0 ? strerror(errno) : "partial write");
+                sc_ws_server_close_conn(srv, conn);
+                return SC_ERR_IO;
+            }
 #endif
             break;
         }

@@ -1,10 +1,12 @@
 #include "seaclaw/gateway/event_bridge.h"
 #include "seaclaw/core/allocator.h"
+#include "seaclaw/core/error.h"
 #include "seaclaw/core/json.h"
 #ifdef SC_HAS_PUSH
 #include "seaclaw/gateway/push.h"
 #endif
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 
 #ifdef SC_GATEWAY_POSIX
@@ -95,7 +97,10 @@ static bool bus_callback(sc_bus_event_type_t type, const sc_bus_event_t *ev, voi
                 title = (type == SC_BUS_MESSAGE_SENT) ? "New Message" : "Error";
             }
             const char *body = msg_text ? msg_text : event_name;
-            sc_push_send(bridge->push, title, body, payload_str);
+            sc_error_t push_err = sc_push_send(bridge->push, title, body, payload_str);
+            if (push_err != SC_OK)
+                (void)fprintf(stderr, "[event_bridge] push send failed: %s\n",
+                              sc_error_string(push_err));
         }
 #endif
         bridge->proto->alloc->free(bridge->proto->alloc->ctx, payload_str, payload_len + 1);
