@@ -1,6 +1,7 @@
 #include "seaclaw/memory/graph.h"
 #include "seaclaw/core/string.h"
 #include <ctype.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,7 +33,7 @@ static int64_t now_ms(void) {
 #ifdef SC_ENABLE_SQLITE
 
 #if !defined(SC_IS_TEST) || SC_IS_TEST == 0
-static sc_error_t ensure_parent_dir(const char *path, size_t path_len) {
+static sc_error_t ensure_parent_dir(sc_allocator_t *alloc, const char *path, size_t path_len) {
 #if !defined(_WIN32) && !defined(__CYGWIN__)
     const char *last_slash = NULL;
     for (size_t i = 0; i < path_len; i++) {
@@ -41,15 +42,20 @@ static sc_error_t ensure_parent_dir(const char *path, size_t path_len) {
     }
     if (last_slash && last_slash > path) {
         size_t dir_len = (size_t)(last_slash - path);
-        char *dir = (char *)malloc(dir_len + 1);
+        char *dir = (char *)alloc->alloc(alloc->ctx, dir_len + 1);
         if (!dir)
             return SC_ERR_OUT_OF_MEMORY;
         memcpy(dir, path, dir_len);
         dir[dir_len] = '\0';
-        mkdir(dir, 0755);
-        free(dir);
+        int rc = mkdir(dir, 0755);
+        alloc->free(alloc->ctx, dir, dir_len + 1);
+        if (rc != 0 && errno != EEXIST)
+            return SC_ERR_IO;
     }
 #endif
+    (void)alloc;
+    (void)path;
+    (void)path_len;
     return SC_OK;
 }
 #endif /* !SC_IS_TEST */
@@ -101,7 +107,7 @@ sc_error_t sc_graph_open(sc_allocator_t *alloc, const char *db_path, size_t db_p
     path_to_use = ":memory:";
 #else
     char path_buf[1024];
-    if (ensure_parent_dir(db_path, db_path_len) != SC_OK) {
+    if (ensure_parent_dir(alloc, db_path, db_path_len) != SC_OK) {
         alloc->free(alloc->ctx, g, sizeof(sc_graph_t));
         return SC_ERR_IO;
     }
@@ -716,35 +722,56 @@ sc_error_t sc_graph_build_communities(sc_graph_t *g, sc_allocator_t *alloc, size
     }
     sqlite3_finalize(stmt);
 
-    for (int t = 0; t < 7 && total_len < max_chars; t++) {
+    for (int t = 0; t < 7; t++) {
         if (type_counts[t] == 0)
             continue;
-        const char *label = type_labels[t];
-        int w = snprintf(buf + total_len, max_chars - total_len + 1, "- %s: [", label);
-        if (w <= 0)
-            break;
-        total_len += (size_t)w;
 
-        for (size_t i = 0; i < type_counts[t] && total_len < max_chars; i++) {
+        if (total_len < max_chars) {
+            const char *label = type_labels[t];
+            int w = snprintf(buf + total_len, max_chars - total_len + 1, "- %s: [", label);
+            if (w <= 0)
+                goto free_remaining;
+            total_len += (size_t)w;
+        }
+
+        for (size_t i = 0; i < type_counts[t]; i++) {
             char *nm = type_names[t][i];
             if (!nm)
                 continue;
             size_t nlen = strlen(nm);
-            if (i > 0) {
-                int c = snprintf(buf + total_len, max_chars - total_len + 1, ", ");
-                if (c > 0)
-                    total_len += (size_t)c;
-            }
-            if (total_len + nlen + 2 <= max_chars) {
-                memcpy(buf + total_len, nm, nlen + 1);
-                total_len += nlen;
+            if (total_len < max_chars) {
+                if (i > 0) {
+                    int c = snprintf(buf + total_len, max_chars - total_len + 1, ", ");
+                    if (c > 0)
+                        total_len += (size_t)c;
+                }
+                if (total_len + nlen + 2 <= max_chars) {
+                    memcpy(buf + total_len, nm, nlen + 1);
+                    total_len += nlen;
+                }
             }
             alloc->free(alloc->ctx, nm, nlen + 1);
         }
-        int c = snprintf(buf + total_len, max_chars - total_len + 1, "]\n");
-        if (c > 0)
-            total_len += (size_t)c;
+
+        if (total_len < max_chars) {
+            int c = snprintf(buf + total_len, max_chars - total_len + 1, "]\n");
+            if (c > 0)
+                total_len += (size_t)c;
+        }
     }
+    goto done;
+
+free_remaining:
+    for (int t = 0; t < 7; t++) {
+        for (size_t i = 0; i < type_counts[t]; i++) {
+            if (type_names[t][i]) {
+                size_t nlen = strlen(type_names[t][i]);
+                alloc->free(alloc->ctx, type_names[t][i], nlen + 1);
+            }
+        }
+    }
+
+done:
 
     buf[total_len] = '\0';
     *out = buf;

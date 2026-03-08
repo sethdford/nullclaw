@@ -10,7 +10,7 @@ Last updated: 2026-03-08
 | ------------------------------ | -------------------- |
 | Source files (src/ + include/) | **~594**             |
 | Lines of C/H code              | **~101,017**         |
-| Test files                     | 116                  |
+| Test files                     | 125                  |
 | Tests passing                  | **3371/3371 (100%)** |
 | Binary size (MinSizeRel+LTO)   | **~528 KB (full)**   |
 | Core binary (no curl/channels) | **463 KB**           |

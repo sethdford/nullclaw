@@ -365,14 +365,19 @@ static const char *get_cors_origin_for_response(void) {
     return cors;
 }
 
-static void send_all(int fd, const char *buf, size_t len) {
+static bool send_all(int fd, const char *buf, size_t len) {
     size_t sent = 0;
     while (sent < len) {
         ssize_t n = send(fd, buf + sent, len - sent, 0);
-        if (n <= 0)
-            break;
+        if (n < 0 && errno == EINTR)
+            continue;
+        if (n <= 0) {
+            fprintf(stderr, "[gateway] send_all: write failed after %zu/%zu bytes\n", sent, len);
+            return false;
+        }
         sent += (size_t)n;
     }
+    return true;
 }
 
 static void send_response(int fd, int status, const char *content_type, const char *body,
@@ -619,22 +624,28 @@ static void http_worker_fn(void *arg) {
     alloc->free(alloc->ctx, work, sizeof(sc_http_work_t));
 }
 
+/* Constant-time comparison that does not leak length via timing. */
+static bool sc_secure_token_eq(const char *a, size_t a_len, const char *b, size_t b_len) {
+    volatile unsigned char d = (a_len != b_len) ? 1 : 0;
+    size_t cmp_len = a_len < b_len ? a_len : b_len;
+    for (size_t i = 0; i < cmp_len; i++)
+        d |= (unsigned char)a[i] ^ (unsigned char)b[i];
+    /* Iterate remaining bytes against zero to prevent length-dependent timing */
+    for (size_t i = cmp_len; i < (a_len > b_len ? a_len : b_len); i++)
+        d |= 1;
+    return d == 0;
+}
+
 /* Returns true if request is authenticated (or auth not required). */
 static bool v1_auth_ok(const sc_gateway_config_t *cfg, const char *auth_header) {
     if (!cfg->auth_token || !cfg->auth_token[0])
-        return true; /* Auth disabled — allow unauthenticated */
+        return true;
     if (!auth_header || !auth_header[0])
         return false;
     if (strncmp(auth_header, "Bearer ", 7) != 0)
         return false;
     const char *tok = auth_header + 7;
-    size_t tok_len = strlen(tok);
-    size_t exp_len = strlen(cfg->auth_token);
-    unsigned char d = (tok_len != exp_len) ? 1 : 0;
-    size_t cmp_len = tok_len < exp_len ? tok_len : exp_len;
-    for (size_t i = 0; i < cmp_len; i++)
-        d |= (unsigned char)tok[i] ^ (unsigned char)cfg->auth_token[i];
-    return d == 0;
+    return sc_secure_token_eq(tok, strlen(tok), cfg->auth_token, strlen(cfg->auth_token));
 }
 
 static void handle_http_request(sc_gateway_state_t *gw, int fd, const char *method,

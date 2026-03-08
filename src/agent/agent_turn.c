@@ -948,7 +948,7 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
                 }
                 if (response_len_out)
                     *response_len_out = final_len;
-                sc_agent_internal_maybe_tts(agent, final_content, final_len);
+                sc_agent_internal_maybe_tts(agent, *response_out, final_len);
             }
             sc_chat_response_free(agent->alloc, &resp);
             sc_agent_clear_current_for_tools();

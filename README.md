@@ -642,9 +642,9 @@ Channel CJM coverage (ingress parsing/filtering, session key routing, account pr
 ```
 
 Language: C11 + ASM (aarch64, x86_64)
-Source files: 661
-Lines of code: ~117K
-Test files: 116
+Source files: 679
+Lines of code: ~126K
+Test files: 125
 Tests: 3371
 Binary: ~561 KB (MinSizeRel + LTO, all channels)
 Peak RSS: ~5.7 MB
@@ -674,7 +674,7 @@ config.c Config loading/merging (~/.seaclaw/config.json)
 ...
 
 include/seaclaw/ Public C headers
-tests/ 116 test files, 3371 tests
+tests/ 125 test files, 3371 tests
 asm/ Platform-specific assembly (aarch64, x86_64, generic C)
 
 ui/ Web UI (LitElement + Vite)

@@ -91,8 +91,10 @@ sc_error_t sc_persona_cli_parse(int argc, const char **argv, sc_persona_cli_args
                     out->facebook_export_path = argv[i + 1];
                     i++;
                 }
-            } else if (strcmp(argv[i], "--from-response") == 0 && i + 1 < argc)
+            }             else if (strcmp(argv[i], "--from-response") == 0 && i + 1 < argc)
                 out->response_file = argv[++i];
+            else if (strcmp(argv[i], "--with-contact") == 0 && i + 1 < argc)
+                out->with_contact = argv[++i];
             else if (strcmp(argv[i], "--interactive") == 0)
                 out->interactive = true;
         }
@@ -116,8 +118,10 @@ sc_error_t sc_persona_cli_parse(int argc, const char **argv, sc_persona_cli_args
                     out->facebook_export_path = argv[i + 1];
                     i++;
                 }
-            } else if (strcmp(argv[i], "--from-response") == 0 && i + 1 < argc)
+            }             else if (strcmp(argv[i], "--from-response") == 0 && i + 1 < argc)
                 out->response_file = argv[++i];
+            else if (strcmp(argv[i], "--with-contact") == 0 && i + 1 < argc)
+                out->with_contact = argv[++i];
             else if (strcmp(argv[i], "--interactive") == 0)
                 out->interactive = true;
         }
@@ -764,6 +768,141 @@ sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t
                 fprintf(stderr, "Could not open iMessage chat.db (Full Disk Access required)\n");
                 return SC_ERR_IO;
             }
+
+            /* Contact-scoped conversation extraction */
+            if (args->with_contact) {
+                char query[512];
+                size_t query_len = 0;
+                sc_error_t qerr = sc_persona_sampler_imessage_conversation_query(
+                    args->with_contact, strlen(args->with_contact), query, sizeof(query),
+                    &query_len, 1000);
+                if (qerr != SC_OK) {
+                    sqlite3_close(db);
+                    return qerr;
+                }
+                sqlite3_stmt *stmt = NULL;
+                if (sqlite3_prepare_v2(db, query, -1, &stmt, NULL) != SQLITE_OK) {
+                    sqlite3_close(db);
+                    return SC_ERR_IO;
+                }
+                size_t raw_cap = 1000;
+                sc_sampler_raw_msg_t *raw =
+                    (sc_sampler_raw_msg_t *)alloc->alloc(alloc->ctx, raw_cap * sizeof(*raw));
+                char **text_bufs = (char **)alloc->alloc(alloc->ctx, raw_cap * sizeof(char *));
+                if (!raw || !text_bufs) {
+                    if (raw)
+                        alloc->free(alloc->ctx, raw, raw_cap * sizeof(*raw));
+                    if (text_bufs)
+                        alloc->free(alloc->ctx, text_bufs, raw_cap * sizeof(char *));
+                    sqlite3_finalize(stmt);
+                    sqlite3_close(db);
+                    return SC_ERR_OUT_OF_MEMORY;
+                }
+                memset(raw, 0, raw_cap * sizeof(*raw));
+                memset(text_bufs, 0, raw_cap * sizeof(char *));
+                size_t raw_count = 0;
+                while (sqlite3_step(stmt) == SQLITE_ROW && raw_count < raw_cap) {
+                    const char *text = (const char *)sqlite3_column_text(stmt, 0);
+                    int from_me = sqlite3_column_int(stmt, 1);
+                    int64_t date = sqlite3_column_int64(stmt, 2);
+                    if (text && text[0]) {
+                        text_bufs[raw_count] = sc_strdup(alloc, text);
+                        if (!text_bufs[raw_count])
+                            break;
+                        raw[raw_count].text = text_bufs[raw_count];
+                        raw[raw_count].text_len = strlen(text);
+                        raw[raw_count].is_from_me = (from_me != 0);
+                        raw[raw_count].timestamp = date / 1000000000;
+                        raw_count++;
+                    }
+                }
+                sqlite3_finalize(stmt);
+                sqlite3_close(db);
+                fprintf(stdout, "Found %zu messages with contact %s\n", raw_count,
+                        args->with_contact);
+
+                sc_persona_example_t *examples = NULL;
+                size_t example_count = 0;
+                sc_error_t eerr = sc_persona_sampler_build_examples(alloc, raw, raw_count,
+                                                                    &examples, &example_count);
+                sc_sampler_contact_stats_t stats;
+                (void)sc_persona_sampler_detect_contact(alloc, raw, raw_count, &stats);
+
+                for (size_t ri = 0; ri < raw_count; ri++) {
+                    if (text_bufs[ri])
+                        alloc->free(alloc->ctx, text_bufs[ri], strlen(text_bufs[ri]) + 1);
+                }
+                alloc->free(alloc->ctx, text_bufs, raw_cap * sizeof(char *));
+                alloc->free(alloc->ctx, raw, raw_cap * sizeof(*raw));
+
+                if (eerr == SC_OK && example_count > 0) {
+                    char examples_path[SC_PERSONA_PATH_MAX];
+                    int en = snprintf(examples_path, sizeof(examples_path),
+                                      "%s/%s_examples_%s.json", pending_dir, args->name,
+                                      args->with_contact);
+                    if (en > 0 && (size_t)en < sizeof(examples_path)) {
+                        FILE *ef = fopen(examples_path, "wb");
+                        if (ef) {
+                            fputs("[\n", ef);
+                            for (size_t ei = 0; ei < example_count; ei++) {
+                                if (ei > 0)
+                                    fputs(",\n", ef);
+                                fprintf(ef,
+                                        "  {\"context\": \"%s\", \"incoming\": \"",
+                                        examples[ei].context ? examples[ei].context : "");
+                                for (const char *p = examples[ei].incoming; p && *p; p++) {
+                                    if (*p == '"')
+                                        fputs("\\\"", ef);
+                                    else if (*p == '\n')
+                                        fputs("\\n", ef);
+                                    else if (*p == '\\')
+                                        fputs("\\\\", ef);
+                                    else
+                                        fputc(*p, ef);
+                                }
+                                fputs("\", \"response\": \"", ef);
+                                for (const char *p = examples[ei].response; p && *p; p++) {
+                                    if (*p == '"')
+                                        fputs("\\\"", ef);
+                                    else if (*p == '\n')
+                                        fputs("\\n", ef);
+                                    else if (*p == '\\')
+                                        fputs("\\\\", ef);
+                                    else
+                                        fputc(*p, ef);
+                                }
+                                fputs("\"}", ef);
+                            }
+                            fputs("\n]\n", ef);
+                            fclose(ef);
+                            fprintf(stdout, "Wrote %zu example conversations to %s\n",
+                                    example_count, examples_path);
+                        }
+                    }
+                    for (size_t ei = 0; ei < example_count; ei++) {
+                        if (examples[ei].context)
+                            alloc->free(alloc->ctx, examples[ei].context,
+                                        strlen(examples[ei].context) + 1);
+                        if (examples[ei].incoming)
+                            alloc->free(alloc->ctx, examples[ei].incoming,
+                                        strlen(examples[ei].incoming) + 1);
+                        if (examples[ei].response)
+                            alloc->free(alloc->ctx, examples[ei].response,
+                                        strlen(examples[ei].response) + 1);
+                    }
+                    alloc->free(alloc->ctx, examples, example_count * sizeof(*examples));
+                }
+                fprintf(stdout, "Contact stats: %zu their msgs, %zu my msgs, "
+                                "avg_their=%zu, avg_mine=%zu, emoji=%s, links=%s, "
+                                "bursts=%s, short=%s\n",
+                        stats.their_msg_count, stats.my_msg_count, stats.avg_their_len,
+                        stats.avg_my_len, stats.uses_emoji ? "yes" : "no",
+                        stats.sends_links ? "yes" : "no",
+                        stats.texts_in_bursts ? "yes" : "no", stats.prefers_short ? "yes" : "no");
+                wrote_prompt = true;
+                return SC_OK;
+            }
+
             char query[512];
             size_t query_len = 0;
             sc_error_t qerr =

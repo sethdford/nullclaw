@@ -90,9 +90,9 @@ Extend via: `src/persona/` (persona.c, creator.c, analyzer.c, sampler.c, example
 
 | Path                           | What                                           |
 | ------------------------------ | ---------------------------------------------- |
-| `src/`                         | All C source (~661 files, ~117K lines)         |
+| `src/`                         | All C source (~679 files, ~126K lines)         |
 | `include/seaclaw/`             | Public headers                                 |
-| `tests/`                       | 116 test files, 3371+ tests                    |
+| `tests/`                       | 125 test files, 3371+ tests                    |
 | `fuzz/`                        | libFuzzer harnesses                            |
 | `ui/`                          | LitElement web dashboard                       |
 | `website/`                     | Astro marketing site                           |

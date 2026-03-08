@@ -850,6 +850,9 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
 #ifdef SC_HAS_CRON
     time_t last_cron_minute = 0;
 #endif
+#ifdef SC_HAS_PERSONA
+    time_t proactive_due_at = 0;
+#endif
 
     sc_graph_t *graph = NULL;
 #ifdef SC_ENABLE_SQLITE
@@ -907,8 +910,9 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                 sc_service_run_agent_cron(alloc, agent, channels, channel_count);
 #ifdef SC_HAS_PERSONA
                 /* Run proactive check-ins at the top of each hour.
-                 * Add jitter (0-30 min) to avoid exact scheduling. */
-                if (current_minute % 60 == 0) {
+                 * Add jitter (0-30 min) via deferred scheduling to avoid
+                 * blocking the daemon loop. */
+                if (current_minute % 60 == 0 && proactive_due_at == 0) {
                     unsigned int jitter_sec = 0;
 #if defined(__APPLE__) || (defined(__linux__) && defined(__GLIBC__))
                     jitter_sec = (unsigned int)arc4random_uniform(1801);
@@ -919,8 +923,10 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                         jitter_sec = (unsigned int)((s >> 16u) & 0x7fffu) % 1801u;
                     }
 #endif
-                    if (jitter_sec > 0)
-                        sleep(jitter_sec);
+                    proactive_due_at = t + (time_t)jitter_sec;
+                }
+                if (proactive_due_at > 0 && t >= proactive_due_at) {
+                    proactive_due_at = 0;
                     sc_service_run_proactive_checkins(alloc, agent, channels, channel_count);
                     if (agent && agent->bth_metrics)
                         sc_bth_metrics_log(agent->bth_metrics);

@@ -320,6 +320,40 @@ sc_error_t sc_persona_feedback_apply(sc_allocator_t *alloc, const char *persona_
 
 /* Message sampler — builds SQL / parses exports for persona creation pipeline */
 sc_error_t sc_persona_sampler_imessage_query(char *buf, size_t cap, size_t *out_len, size_t limit);
+sc_error_t sc_persona_sampler_imessage_conversation_query(const char *handle_id,
+                                                         size_t handle_id_len, char *buf,
+                                                         size_t cap, size_t *out_len,
+                                                         size_t limit);
+
+/* Raw message from a conversation sampler (used by example bank builder) */
+typedef struct sc_sampler_raw_msg {
+    const char *text;
+    size_t text_len;
+    int64_t timestamp;
+    bool is_from_me;
+} sc_sampler_raw_msg_t;
+
+/* Build example bank entries from raw two-sided conversation messages */
+sc_error_t sc_persona_sampler_build_examples(sc_allocator_t *alloc,
+                                             const sc_sampler_raw_msg_t *msgs, size_t msg_count,
+                                             sc_persona_example_t **out, size_t *out_count);
+
+/* Auto-detect contact profile stats from conversation messages */
+typedef struct sc_sampler_contact_stats {
+    size_t their_msg_count;
+    size_t my_msg_count;
+    size_t avg_their_len;
+    size_t avg_my_len;
+    bool uses_emoji;
+    bool sends_links;
+    bool texts_in_bursts;
+    bool prefers_short;
+} sc_sampler_contact_stats_t;
+
+sc_error_t sc_persona_sampler_detect_contact(sc_allocator_t *alloc,
+                                             const sc_sampler_raw_msg_t *msgs, size_t msg_count,
+                                             sc_sampler_contact_stats_t *out);
+
 sc_error_t sc_persona_sampler_facebook_parse(const char *json, size_t json_len, char ***out,
                                              size_t *out_count);
 sc_error_t sc_persona_sampler_gmail_parse(const char *json, size_t json_len, char ***out,
@@ -364,7 +398,8 @@ typedef struct sc_persona_cli_args {
     bool interactive;
     const char *facebook_export_path;
     const char *gmail_export_path;
-    const char *response_file; /* --from-response <path> */
+    const char *response_file;    /* --from-response <path> */
+    const char *with_contact;     /* --with-contact <handle_id> for conversation extraction */
     const char **merge_sources;
     size_t merge_sources_count;
     const char *import_file; /* --from-file <path> or NULL for --from-stdin */
