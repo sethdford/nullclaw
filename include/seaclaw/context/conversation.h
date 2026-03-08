@@ -91,6 +91,17 @@ size_t sc_conversation_split_response(sc_allocator_t *alloc, const char *respons
                                       size_t response_len, sc_message_fragment_t *fragments,
                                       size_t max_fragments);
 
+/* ── Situational length calibration ───────────────────────────────────── */
+
+/* Classify the last incoming message and produce human-level length guidance.
+ * Analyzes message type (question, emotional, greeting, logistics, etc.) and
+ * produces a short directive string for the prompt like:
+ *   "CALIBRATION: They asked a direct question. Answer it, add one detail. 5-15 words."
+ * Writes into buf (up to cap bytes). Returns bytes written (0 if nothing useful). */
+size_t sc_conversation_calibrate_length(const char *last_msg, size_t last_msg_len,
+                                        const sc_channel_history_entry_t *entries, size_t count,
+                                        char *buf, size_t cap);
+
 /* ── Texting style analysis ───────────────────────────────────────────── */
 
 /* Analyze the other person's texting style from conversation history.

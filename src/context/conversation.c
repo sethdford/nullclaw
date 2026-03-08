@@ -509,6 +509,25 @@ char *sc_conversation_build_awareness(sc_allocator_t *alloc,
         POS_ADVANCE(w, pos, CTX_BUF_CAP);
     }
 
+    /* Situational length calibration from the last incoming message */
+    if (entries && count > 0) {
+        const char *last_their_msg = NULL;
+        size_t last_their_len = 0;
+        for (size_t i = count; i > 0; i--) {
+            if (!entries[i - 1].from_me) {
+                last_their_msg = entries[i - 1].text;
+                last_their_len = strlen(last_their_msg);
+                break;
+            }
+        }
+        if (last_their_msg && last_their_len > 0) {
+            size_t cal_len = sc_conversation_calibrate_length(last_their_msg, last_their_len,
+                                                              entries, count, buf + pos,
+                                                              CTX_BUF_CAP - pos);
+            pos += cal_len;
+        }
+    }
+
     buf[pos] = '\0';
     *out_len = pos;
     return buf;
@@ -1106,6 +1125,262 @@ size_t sc_conversation_split_response(sc_allocator_t *alloc, const char *respons
     }
 
     return frag_count;
+}
+
+/* ── Situational length calibration ───────────────────────────────────── */
+
+/*
+ * Instead of "keep under 50 chars", tell the model WHY a certain length
+ * is right. Humans calibrate response length by message type, not by
+ * counting characters. This function classifies the incoming message
+ * and produces a directive that mimics human instinct.
+ */
+
+size_t sc_conversation_calibrate_length(const char *last_msg, size_t last_msg_len,
+                                        const sc_channel_history_entry_t *entries, size_t count,
+                                        char *buf, size_t cap) {
+    if (!last_msg || last_msg_len == 0 || !buf || cap < 64)
+        return 0;
+
+    size_t pos = 0;
+    int w;
+
+    /* Classify the message */
+    bool is_question = false;
+    bool is_yes_no_question = false;
+    bool is_greeting = false;
+    bool is_emotional = false;
+    bool is_logistics = false;
+    bool is_link_share = false;
+    bool is_short_react = false;
+    bool is_long_story = false;
+    bool is_apology = false;
+    bool is_compliment = false;
+
+    for (size_t i = 0; i < last_msg_len; i++) {
+        if (last_msg[i] == '?')
+            is_question = true;
+    }
+
+    /* Yes/no questions start with auxiliary verbs */
+    if (is_question && last_msg_len > 3) {
+        static const char *yn_starters[] = {
+            "are you",  "do you",    "did you",  "have you", "will you", "can you",
+            "is it",    "is that",   "was it",   "would you", "should i", "could you",
+            "are we",   "do we",     "shall we", "wanna",    "you coming", "you going",
+            "you ok",   "you good",  NULL,
+        };
+        for (int j = 0; yn_starters[j]; j++) {
+            size_t sl = strlen(yn_starters[j]);
+            if (last_msg_len >= sl) {
+                bool match = true;
+                for (size_t k = 0; k < sl; k++) {
+                    char a = last_msg[k];
+                    char b = yn_starters[j][k];
+                    if (a >= 'A' && a <= 'Z')
+                        a += 32;
+                    if (a != b) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    is_yes_no_question = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (last_msg_len < 12) {
+        static const char *greetings[] = {
+            "hey", "hi", "yo", "sup", "what's up", "whats up", "wassup", "morning",
+            "good morning", "gm", "heyy", "heyyy", NULL,
+        };
+        for (int j = 0; greetings[j]; j++) {
+            size_t gl = strlen(greetings[j]);
+            if (last_msg_len >= gl && last_msg_len <= gl + 3) {
+                bool match = true;
+                for (size_t k = 0; k < gl; k++) {
+                    char a = last_msg[k];
+                    char b = greetings[j][k];
+                    if (a >= 'A' && a <= 'Z')
+                        a += 32;
+                    if (a != b) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    is_greeting = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    static const char *emo_words[] = {
+        "stressed", "sad",     "anxious",     "worried",    "scared",   "hurt",
+        "miss you", "love you", "upset",       "frustrated", "crying",   "depressed",
+        "lonely",   "nervous", "overwhelmed", "exhausted",  "burned out", NULL,
+    };
+    for (int j = 0; emo_words[j]; j++) {
+        if (str_contains_ci(last_msg, last_msg_len, emo_words[j])) {
+            is_emotional = true;
+            break;
+        }
+    }
+
+    static const char *logistics_words[] = {
+        "what time", "where",    "address",   "meet at",    "pick up",
+        "flight",    "arriving", "leaving at", "reservation", "booking",
+        "dinner at", "lunch at", "meeting at", NULL,
+    };
+    for (int j = 0; logistics_words[j]; j++) {
+        if (str_contains_ci(last_msg, last_msg_len, logistics_words[j])) {
+            is_logistics = true;
+            break;
+        }
+    }
+
+    if (str_contains_ci(last_msg, last_msg_len, "http") ||
+        str_contains_ci(last_msg, last_msg_len, ".com") ||
+        str_contains_ci(last_msg, last_msg_len, "check this"))
+        is_link_share = true;
+
+    if (last_msg_len <= 6) {
+        static const char *reacts[] = {
+            "lol", "haha", "nice", "ok", "k", "ya", "yep", "true",
+            "same", "mood", "bet",  "word", "right", "wow", NULL,
+        };
+        for (int j = 0; reacts[j]; j++) {
+            size_t rl = strlen(reacts[j]);
+            if (last_msg_len >= rl) {
+                bool match = true;
+                for (size_t k = 0; k < rl; k++) {
+                    char a = last_msg[k];
+                    char b = reacts[j][k];
+                    if (a >= 'A' && a <= 'Z')
+                        a += 32;
+                    if (a != b) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    is_short_react = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (last_msg_len > 150)
+        is_long_story = true;
+
+    if (str_contains_ci(last_msg, last_msg_len, "sorry") ||
+        str_contains_ci(last_msg, last_msg_len, "my bad") ||
+        str_contains_ci(last_msg, last_msg_len, "i apologize"))
+        is_apology = true;
+
+    if (str_contains_ci(last_msg, last_msg_len, "proud of") ||
+        str_contains_ci(last_msg, last_msg_len, "you're amazing") ||
+        str_contains_ci(last_msg, last_msg_len, "you're the best") ||
+        str_contains_ci(last_msg, last_msg_len, "love that") ||
+        str_contains_ci(last_msg, last_msg_len, "so cool"))
+        is_compliment = true;
+
+    /* Produce the directive — pick the most specific match */
+    w = snprintf(buf + pos, cap - pos, "\n--- Response calibration ---\n");
+    POS_ADVANCE(w, pos, cap);
+
+    if (is_greeting) {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Greeting.\n"
+                     "CALIBRATION: Match their energy. 1-4 words. "
+                     "'hey what's up' or 'heyy' — don't over-respond to a greeting.\n");
+    } else if (is_short_react) {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Short reaction (lol, nice, etc).\n"
+                     "CALIBRATION: One word back, an emoji, or nothing. "
+                     "Don't turn 'lol' into a conversation. Match their low effort.\n");
+    } else if (is_emotional) {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Emotional share.\n"
+                     "CALIBRATION: Validate FIRST in one short sentence. "
+                     "Then ask ONE follow-up question. Two short messages total. "
+                     "Do NOT give advice unless they ask. Do NOT minimize.\n");
+    } else if (is_apology) {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Apology.\n"
+                     "CALIBRATION: Accept it warmly and move forward. 1 short sentence. "
+                     "'all good don't even worry about it' — don't lecture or pile on.\n");
+    } else if (is_compliment) {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Compliment or affirmation.\n"
+                     "CALIBRATION: Accept it naturally, maybe deflect with humor. "
+                     "1 short sentence. Don't over-thank or be awkward about it.\n");
+    } else if (is_yes_no_question) {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Yes/no question.\n"
+                     "CALIBRATION: Answer the question first (yes/no/probably). "
+                     "Add ONE relevant detail. 5-15 words total. "
+                     "'yeah I'll be there around 8' not a paragraph.\n");
+    } else if (is_logistics) {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Logistics/plans.\n"
+                     "CALIBRATION: Be specific — time, place, or next action. "
+                     "1-2 short sentences. No filler. "
+                     "'cool let's do 7pm at that place on main' — direct and useful.\n");
+    } else if (is_link_share) {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Link or media share.\n"
+                     "CALIBRATION: React to what they shared — don't ignore it. "
+                     "1 short reaction + maybe a question. 'oh sick' or 'wait that's hilarious'.\n");
+    } else if (is_question && !is_yes_no_question) {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Open question.\n"
+                     "CALIBRATION: Answer thoughtfully but concisely. "
+                     "1-2 sentences. Give a real answer, not a hedge. "
+                     "If you don't know, say so briefly.\n");
+    } else if (is_long_story) {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Long message / story.\n"
+                     "CALIBRATION: They put effort in. Match with a real response "
+                     "but don't match their length — 2-3 sentences max. "
+                     "Reference something specific they said.\n");
+    } else {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: General statement.\n"
+                     "CALIBRATION: React naturally. 1-2 sentences. "
+                     "Build on what they said or ask a genuine follow-up. "
+                     "Not everything needs a big response.\n");
+    }
+    POS_ADVANCE(w, pos, cap);
+
+    /* Conversation momentum — are we in rapid-fire mode? */
+    if (entries && count >= 4) {
+        size_t rapid_exchanges = 0;
+        bool prev_from_me = entries[count > 6 ? count - 6 : 0].from_me;
+        for (size_t i = (count > 6 ? count - 6 : 0); i < count; i++) {
+            if (entries[i].from_me != prev_from_me) {
+                rapid_exchanges++;
+                prev_from_me = entries[i].from_me;
+            }
+        }
+        if (rapid_exchanges >= 4) {
+            w = snprintf(buf + pos, cap - pos,
+                         "MOMENTUM: Rapid-fire exchange. Keep responses extra short — "
+                         "you're in real-time back-and-forth. One thought per message.\n");
+            POS_ADVANCE(w, pos, cap);
+        }
+    }
+
+    w = snprintf(buf + pos, cap - pos, "--- End calibration ---\n");
+    POS_ADVANCE(w, pos, cap);
+
+    buf[pos] = '\0';
+    return pos;
 }
 
 /* ── Texting style analysis ───────────────────────────────────────────── */

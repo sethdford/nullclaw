@@ -410,6 +410,95 @@ static void honesty_null_for_normal_message(void) {
     SC_ASSERT_NULL(result);
 }
 
+/* ── Length calibration tests ──────────────────────────────────────── */
+
+static void calibrate_greeting_short(void) {
+    char buf[1024];
+    size_t len = sc_conversation_calibrate_length("hey", 3, NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "Greeting"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "1-4 words"));
+}
+
+static void calibrate_yes_no_question(void) {
+    char buf[1024];
+    size_t len =
+        sc_conversation_calibrate_length("are you coming tonight?", 23, NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "Yes/no question"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "5-15 words"));
+}
+
+static void calibrate_emotional_message(void) {
+    char buf[1024];
+    size_t len = sc_conversation_calibrate_length("I'm really stressed about this job thing", 40,
+                                                   NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "Emotional"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "Validate"));
+}
+
+static void calibrate_logistics(void) {
+    char buf[1024];
+    size_t len = sc_conversation_calibrate_length("what time should we meet at the restaurant?", 43,
+                                                   NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "Logistics"));
+}
+
+static void calibrate_short_react(void) {
+    char buf[1024];
+    size_t len = sc_conversation_calibrate_length("lol", 3, NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "Short reaction"));
+}
+
+static void calibrate_link_share(void) {
+    char buf[1024];
+    size_t len = sc_conversation_calibrate_length("check this out https://example.com", 34, NULL, 0,
+                                                   buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "Link"));
+}
+
+static void calibrate_open_question(void) {
+    char buf[1024];
+    const char *msg = "what do you think about all that?";
+    size_t len =
+        sc_conversation_calibrate_length(msg, strlen(msg), NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "Open question"));
+}
+
+static void calibrate_long_story(void) {
+    char msg[256];
+    memset(msg, 'a', 200);
+    msg[200] = '\0';
+    char buf[1024];
+    size_t len = sc_conversation_calibrate_length(msg, 200, NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "Long message"));
+}
+
+static void calibrate_null_returns_zero(void) {
+    char buf[64];
+    SC_ASSERT_EQ(sc_conversation_calibrate_length(NULL, 0, NULL, 0, buf, sizeof(buf)), 0u);
+}
+
+static void calibrate_rapid_fire_momentum(void) {
+    sc_channel_history_entry_t entries[] = {
+        make_entry(false, "hey", "10:00"),       make_entry(true, "hey", "10:00"),
+        make_entry(false, "what's up", "10:01"),  make_entry(true, "nm you?", "10:01"),
+        make_entry(false, "same lol", "10:01"),   make_entry(true, "haha", "10:02"),
+        make_entry(false, "wanna grab food?", "10:02"),
+    };
+    char buf[1024];
+    size_t len = sc_conversation_calibrate_length("wanna grab food?", 16, entries, 7, buf,
+                                                   sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "MOMENTUM"));
+}
+
 /* ── Typing quirk post-processing tests ────────────────────────────── */
 
 static void quirks_lowercase_applies(void) {
@@ -536,6 +625,18 @@ void run_conversation_tests(void) {
     /* Honesty guardrail */
     SC_RUN_TEST(honesty_detects_action_query);
     SC_RUN_TEST(honesty_null_for_normal_message);
+
+    /* Length calibration */
+    SC_RUN_TEST(calibrate_greeting_short);
+    SC_RUN_TEST(calibrate_yes_no_question);
+    SC_RUN_TEST(calibrate_emotional_message);
+    SC_RUN_TEST(calibrate_logistics);
+    SC_RUN_TEST(calibrate_short_react);
+    SC_RUN_TEST(calibrate_link_share);
+    SC_RUN_TEST(calibrate_open_question);
+    SC_RUN_TEST(calibrate_long_story);
+    SC_RUN_TEST(calibrate_null_returns_zero);
+    SC_RUN_TEST(calibrate_rapid_fire_momentum);
 
     /* Typing quirk post-processing */
     SC_RUN_TEST(quirks_lowercase_applies);
