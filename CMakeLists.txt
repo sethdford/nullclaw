@@ -394,6 +394,10 @@ set(SC_CORE_SOURCES
     src/memory/engines/registry.c
     src/memory/factory.c
     src/memory/util.c
+    src/memory/stm.c
+    src/memory/fast_capture.c
+    src/memory/promotion.c
+    src/memory/deep_extract.c
     src/memory/lifecycle/cache.c
     src/memory/lifecycle/hygiene.c
     src/memory/lifecycle/snapshot.c
@@ -1379,6 +1383,11 @@ set(SC_TEST_SOURCES
     tests/test_episodic.c
     tests/test_reflection.c
     tests/test_input_guard.c
+    tests/test_conversation.c
+    tests/test_stm.c
+    tests/test_fast_capture.c
+    tests/test_promotion.c
+    tests/test_deep_extract.c
 )
 if(SC_ENABLE_PERSONA)
     list(APPEND SC_TEST_SOURCES tests/test_persona.c)
