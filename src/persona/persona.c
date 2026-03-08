@@ -398,6 +398,102 @@ sc_error_t sc_contact_profile_build_context(sc_allocator_t *alloc, const sc_cont
     return SC_OK;
 }
 
+/* ── Inner World (stage-gated surfacing) ──────────────────────────── */
+
+char *sc_persona_build_inner_world_context(sc_allocator_t *alloc, const sc_persona_t *persona,
+                                           const char *relationship_stage, size_t *out_len) {
+    if (!alloc || !persona || !out_len)
+        return NULL;
+    *out_len = 0;
+
+    /* Stage gate: only surface for friend, trusted_confidant, inner_circle */
+    if (!relationship_stage)
+        return NULL;
+    bool allowed = (strcmp(relationship_stage, "friend") == 0 ||
+                    strcmp(relationship_stage, "trusted_confidant") == 0 ||
+                    strcmp(relationship_stage, "inner_circle") == 0);
+    if (!allowed)
+        return NULL;
+
+    const sc_inner_world_t *iw = &persona->inner_world;
+    bool has_content = iw->contradictions_count > 0 || iw->embodied_memories_count > 0 ||
+                       iw->emotional_flashpoints_count > 0 || iw->unfinished_business_count > 0 ||
+                       iw->secret_self_count > 0;
+    if (!has_content)
+        return NULL;
+
+    size_t cap = 4096;
+    char *buf = (char *)alloc->alloc(alloc->ctx, cap);
+    if (!buf)
+        return NULL;
+
+    size_t pos = 0;
+    int w;
+
+    /* Only surface a subset per turn — use time as entropy */
+    time_t now = time(NULL);
+    unsigned seed = (unsigned)(now / 60);
+
+    w = snprintf(buf + pos, cap - pos,
+                 "\n--- Inner World (use naturally, NEVER quote directly) ---\n");
+    if (w > 0)
+        pos += (size_t)w;
+
+    /* Contradictions: belief vs behavior */
+    if (iw->contradictions_count > 0) {
+        size_t idx = seed % iw->contradictions_count;
+        w = snprintf(buf + pos, cap - pos, "Contradiction you live with: %s\n",
+                     iw->contradictions[idx]);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+
+    /* Embodied memories: sensory details that ground you */
+    if (iw->embodied_memories_count > 0) {
+        size_t idx = (seed / 7) % iw->embodied_memories_count;
+        w = snprintf(buf + pos, cap - pos, "Sense memory: %s\n", iw->embodied_memories[idx]);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+
+    /* Emotional flashpoints */
+    if (iw->emotional_flashpoints_count > 0 && strcmp(relationship_stage, "inner_circle") == 0) {
+        size_t idx = (seed / 13) % iw->emotional_flashpoints_count;
+        w = snprintf(buf + pos, cap - pos, "Emotional flashpoint: %s\n",
+                     iw->emotional_flashpoints[idx]);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+
+    /* Unfinished business — only inner circle */
+    if (iw->unfinished_business_count > 0 && strcmp(relationship_stage, "inner_circle") == 0) {
+        size_t idx = (seed / 17) % iw->unfinished_business_count;
+        w = snprintf(buf + pos, cap - pos, "Something unresolved: %s\n",
+                     iw->unfinished_business[idx]);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+
+    /* Secret self — only inner circle */
+    if (iw->secret_self_count > 0 && strcmp(relationship_stage, "inner_circle") == 0) {
+        size_t idx = (seed / 23) % iw->secret_self_count;
+        w = snprintf(buf + pos, cap - pos, "Private truth: %s\n", iw->secret_self[idx]);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+
+    w = snprintf(buf + pos, cap - pos,
+                 "Only reference these if the conversation naturally calls for it. "
+                 "NEVER volunteer them unprompted. They make you real.\n"
+                 "--- End inner world ---\n");
+    if (w > 0)
+        pos += (size_t)w;
+
+    buf[pos] = '\0';
+    *out_len = pos;
+    return buf;
+}
+
 /* --- JSON loading helpers --- */
 
 static sc_error_t parse_string_array(sc_allocator_t *a, const sc_json_value_t *arr, char ***out,

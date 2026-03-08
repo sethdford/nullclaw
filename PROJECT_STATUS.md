@@ -6,7 +6,7 @@ Last updated: 2026-03-07
 
 | Metric                         | Value                |
 | ------------------------------ | -------------------- |
-| Source files (src/ + include/) | **615**              |
+| Source files (src/ + include/) | **619**              |
 | Lines of C/H/ASM code          | **~111K**            |
 | Test files                     | 102                  |
 | Tests passing                  | **3215/3215 (100%)** |

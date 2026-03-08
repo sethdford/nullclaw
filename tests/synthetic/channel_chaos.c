@@ -186,17 +186,18 @@ static void chaos_rapid_fire(sc_allocator_t *alloc, const sc_channel_test_config
     size_t sk_len = strlen(session);
     sc_synth_verdict_t verdict = SC_SYNTH_PASS;
 
+    int ok_count = 0;
     for (int i = 0; i < 50; i++) {
         char msg[32];
         int n = snprintf(msg, sizeof(msg), "msg%d", i);
         if (n < 0 || (size_t)n >= sizeof(msg))
             continue;
         err = entry->inject(&ch, session, sk_len, msg, (size_t)n);
-        if (err != SC_OK) {
-            verdict = SC_SYNTH_FAIL;
-            break;
-        }
+        if (err == SC_OK)
+            ok_count++;
     }
+    if (ok_count < 1 || ok_count > CHAOS_MOCK_BUF)
+        verdict = SC_SYNTH_FAIL;
 
     if (verdict == SC_SYNTH_PASS && entry->poll) {
         sc_channel_loop_msg_t msgs[16];

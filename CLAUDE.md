@@ -88,7 +88,7 @@ Extend via: `src/persona/` (persona.c, creator.c, analyzer.c, sampler.c, example
 
 | Path               | What                                           |
 | ------------------ | ---------------------------------------------- |
-| `src/`             | All C source (~615 files, ~111K lines)         |
+| `src/`             | All C source (~619 files, ~111K lines)         |
 | `include/seaclaw/` | Public headers                                 |
 | `tests/`           | 102 test files, 3215+ tests                    |
 | `fuzz/`            | libFuzzer harnesses                            |
