@@ -2709,6 +2709,38 @@ describe("sc-message-thread", () => {
     };
     expect(typeof el.scrollToBottom).toBe("function");
   });
+  it("should render load-earlier button when hasEarlierMessages is true", async () => {
+    const el = document.createElement("sc-message-thread") as HTMLElement & {
+      hasEarlierMessages: boolean;
+      loadingEarlier: boolean;
+      updateComplete: Promise<boolean>;
+    };
+    el.hasEarlierMessages = true;
+    el.loadingEarlier = false;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    const btn = el.shadowRoot?.querySelector(".load-earlier-btn");
+    expect(btn).toBeTruthy();
+    expect(btn?.textContent).toContain("Load earlier messages");
+    el.remove();
+  });
+  it("should fire sc-load-earlier event on button click", async () => {
+    const el = document.createElement("sc-message-thread") as HTMLElement & {
+      hasEarlierMessages: boolean;
+      loadingEarlier: boolean;
+      updateComplete: Promise<boolean>;
+    };
+    el.hasEarlierMessages = true;
+    el.loadingEarlier = false;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    let fired = false;
+    el.addEventListener("sc-load-earlier", () => (fired = true));
+    const btn = el.shadowRoot?.querySelector(".load-earlier-btn") as HTMLElement;
+    btn?.click();
+    expect(fired).toBe(true);
+    el.remove();
+  });
 });
 
 describe("sc-chart", () => {

@@ -40,6 +40,8 @@ export class ScMessageThread extends LitElement {
   @property({ type: Boolean }) isWaiting = false;
   @property({ type: String }) streamElapsed = "";
   @property({ type: Boolean }) historyLoading = false;
+  @property({ type: Boolean }) hasEarlierMessages = false;
+  @property({ type: Boolean }) loadingEarlier = false;
 
   @state() private showScrollPill = false;
   @query("#scroll-container") private scrollContainer!: HTMLElement;
@@ -239,6 +241,29 @@ export class ScMessageThread extends LitElement {
         padding: var(--sc-space-sm);
       }
     }
+    .load-earlier {
+      display: flex;
+      justify-content: center;
+      padding: var(--sc-space-md) 0;
+    }
+    .load-earlier-btn {
+      padding: var(--sc-space-xs) var(--sc-space-md);
+      background: transparent;
+      color: var(--sc-text-muted);
+      border: 1px solid var(--sc-border-subtle);
+      border-radius: var(--sc-radius);
+      font-size: var(--sc-text-xs);
+      font-family: var(--sc-font);
+      cursor: pointer;
+    }
+    .load-earlier-btn:hover {
+      color: var(--sc-accent);
+      border-color: var(--sc-accent);
+    }
+    .load-earlier-btn:focus-visible {
+      outline: 2px solid var(--sc-accent);
+      outline-offset: 2px;
+    }
     @media (prefers-reduced-motion: reduce) {
       .messages {
         scroll-behavior: auto;
@@ -366,6 +391,10 @@ export class ScMessageThread extends LitElement {
     );
   }
 
+  private _onLoadEarlier(): void {
+    this.dispatchEvent(new CustomEvent("sc-load-earlier", { bubbles: true, composed: true }));
+  }
+
   private _renderMessageGroup(
     block: Extract<Block, { type: "message-group" }>,
   ): ReturnType<typeof html> {
@@ -475,6 +504,21 @@ export class ScMessageThread extends LitElement {
               </div>
             `
           : html`
+              ${this.hasEarlierMessages
+                ? html`
+                    <div class="load-earlier">
+                      ${this.loadingEarlier
+                        ? html`<sc-skeleton variant="card" height="40px"></sc-skeleton>`
+                        : html`<button
+                            class="load-earlier-btn"
+                            @click=${this._onLoadEarlier}
+                            aria-label="Load earlier messages"
+                          >
+                            Load earlier messages
+                          </button>`}
+                    </div>
+                  `
+                : nothing}
               ${blocks.map((block) => {
                 if (block.type === "time-divider")
                   return html`<div class="time-divider">

@@ -447,9 +447,12 @@ export class ScChatView extends GatewayAwareLitElement {
             .isWaiting=${this.chat.isWaiting}
             .streamElapsed=${this.chat.streamElapsed}
             .historyLoading=${this.chat.historyLoading}
+            .hasEarlierMessages=${this.chat.hasEarlierMessages}
+            .loadingEarlier=${this.chat.loadingEarlier}
             @sc-context-menu=${(e: CustomEvent<{ event: MouseEvent; item: ChatItem }>) =>
               this._onMessageContextMenu(e.detail.event, e.detail.item)}
             @sc-abort=${() => this.handleAbort()}
+            @sc-load-earlier=${() => this.chat.loadEarlier()}
             @sc-branch-navigate=${(e: CustomEvent<{ index: number; direction: number }>) => {
               const item = this.chat.items[e.detail.index];
               if (item?.type === "message" && item.id && item.branchCount && item.branchCount > 1) {
