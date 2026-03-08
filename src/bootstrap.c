@@ -13,6 +13,8 @@
 #include "seaclaw/memory/factory.h"
 #include "seaclaw/memory/retrieval.h"
 #include "seaclaw/memory/vector.h"
+#include "seaclaw/memory/vector/embedder_gemini_adapter.h"
+#include "seaclaw/memory/vector/embeddings_gemini.h"
 #include "seaclaw/observability/log_observer.h"
 #include "seaclaw/plugin.h"
 #include "seaclaw/plugin_loader.h"
@@ -516,7 +518,14 @@ sc_error_t sc_app_bootstrap(sc_app_ctx_t *ctx, sc_allocator_t *alloc, const char
         ctx->provider = &bi->provider;
         ctx->provider_ok = true;
 
-        bi->embedder = sc_embedder_local_create(alloc);
+        const char *gemini_key = getenv("GEMINI_API_KEY");
+        if (gemini_key && gemini_key[0]) {
+            sc_embedding_provider_t gem_provider =
+                sc_embedding_gemini_create(alloc, gemini_key, NULL, 0);
+            bi->embedder = sc_embedder_gemini_adapter_create(alloc, gem_provider);
+        } else {
+            bi->embedder = sc_embedder_local_create(alloc);
+        }
         bi->vector_store = sc_vector_store_mem_create(alloc);
         bi->retrieval_engine =
             sc_retrieval_create_with_vector(alloc, &bi->memory, &bi->embedder, &bi->vector_store);

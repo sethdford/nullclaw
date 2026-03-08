@@ -99,7 +99,7 @@ export class ScChatSearch extends LitElement {
 
     .clear-btn:hover {
       color: var(--sc-text);
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
 
     .clear-btn:focus-visible {
@@ -174,7 +174,7 @@ export class ScChatSearch extends LitElement {
 
     .close-btn:hover {
       color: var(--sc-text);
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
 
     .close-btn:focus-visible {

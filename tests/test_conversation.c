@@ -290,6 +290,50 @@ static void classify_vulnerable_is_delayed(void) {
     SC_ASSERT_TRUE(delay >= 5000);
 }
 
+/* ── Two-phase thinking response tests ─────────────────────────────────── */
+
+static void thinking_triggers_on_complex_question(void) {
+    const char *msg =
+        "What do you think about moving to a new city? I've been going back and forth on it for "
+        "weeks and I'm not sure what the right call is";
+    sc_thinking_response_t out;
+    bool ok = sc_conversation_classify_thinking(msg, strlen(msg), NULL, 0, &out, 42);
+    SC_ASSERT_TRUE(ok);
+    SC_ASSERT_TRUE(out.filler_len > 0);
+    SC_ASSERT_TRUE(out.delay_ms >= 30000 && out.delay_ms <= 60000);
+}
+
+static void thinking_no_trigger_simple_message(void) {
+    const char *msg = "hey what's up";
+    sc_thinking_response_t out;
+    bool ok = sc_conversation_classify_thinking(msg, strlen(msg), NULL, 0, &out, 42);
+    SC_ASSERT_FALSE(ok);
+}
+
+static void thinking_triggers_on_advice(void) {
+    const char *msg = "should I take the new job or stay where I am?";
+    sc_thinking_response_t out;
+    bool ok = sc_conversation_classify_thinking(msg, strlen(msg), NULL, 0, &out, 42);
+    SC_ASSERT_TRUE(ok);
+    SC_ASSERT_TRUE(out.filler_len > 0);
+    SC_ASSERT_TRUE(out.delay_ms >= 30000 && out.delay_ms <= 60000);
+}
+
+static void thinking_filler_varies_by_seed(void) {
+    const char *msg =
+        "What do you think about moving to a new city? I've been going back and forth on it for "
+        "weeks and I'm not sure what the right call is";
+    sc_thinking_response_t out0, out1;
+    bool ok0 = sc_conversation_classify_thinking(msg, strlen(msg), NULL, 0, &out0, 0);
+    bool ok1 = sc_conversation_classify_thinking(msg, strlen(msg), NULL, 0, &out1, 1);
+    SC_ASSERT_TRUE(ok0);
+    SC_ASSERT_TRUE(ok1);
+    /* Different seeds should produce different fillers (6 options, LCG varies) */
+    bool same = (out0.filler_len == out1.filler_len &&
+                 memcmp(out0.filler, out1.filler, out0.filler_len) == 0);
+    SC_ASSERT_FALSE(same);
+}
+
 /* ── Quality evaluator enhanced tests ────────────────────────────────── */
 
 static void quality_penalizes_semicolons(void) {
@@ -644,6 +688,46 @@ static void calibrate_rapid_fire_momentum(void) {
     SC_ASSERT_NOT_NULL(strstr(buf, "MOMENTUM"));
 }
 
+/* ── Typo correction fragment tests ─────────────────────────────────── */
+
+static void correction_detects_typo(void) {
+    char buf[64];
+    const char *orig = "meeting at noon";
+    const char *typo = "meting at noon";
+    size_t n = sc_conversation_generate_correction(orig, strlen(orig), typo, strlen(typo), buf,
+                                                   sizeof(buf), 12345u, 100u);
+    SC_ASSERT_EQ(n, 8u);
+    SC_ASSERT_STR_EQ(buf, "*meeting");
+}
+
+static void correction_no_typo_no_output(void) {
+    char buf[64];
+    const char *s = "meeting at noon";
+    size_t n = sc_conversation_generate_correction(s, strlen(s), s, strlen(s), buf, sizeof(buf),
+                                                   12345u, 100u);
+    SC_ASSERT_EQ(n, 0u);
+}
+
+static void correction_chance_zero_no_output(void) {
+    char buf[64];
+    const char *orig = "meeting at noon";
+    const char *typo = "meting at noon";
+    size_t n = sc_conversation_generate_correction(orig, strlen(orig), typo, strlen(typo), buf,
+                                                   sizeof(buf), 12345u, 0u);
+    SC_ASSERT_EQ(n, 0u);
+}
+
+static void correction_respects_buffer_cap(void) {
+    char buf[6];
+    const char *orig = "meeting at noon";
+    const char *typo = "meting at noon";
+    size_t n = sc_conversation_generate_correction(orig, strlen(orig), typo, strlen(typo), buf,
+                                                   sizeof(buf), 12345u, 100u);
+    SC_ASSERT_EQ(n, 5u);
+    SC_ASSERT_EQ(strlen(buf), 5u);
+    SC_ASSERT_TRUE(memcmp(buf, "*meet", 5) == 0);
+}
+
 /* ── Typing quirk post-processing tests ────────────────────────────── */
 
 static void quirks_lowercase_applies(void) {
@@ -707,6 +791,51 @@ static void quirks_empty_quirks_noop(void) {
     size_t len = sc_conversation_apply_typing_quirks(buf, strlen(buf), NULL, 0);
     SC_ASSERT_STR_EQ(buf, "Hello World.");
     SC_ASSERT_EQ(len, 12u);
+}
+
+/* ── Typo simulation tests ────────────────────────────────────────────── */
+
+static void typo_applies_with_right_seed(void) {
+    /* Seed 0 yields val=0 from first prng_next, so 0%100<15 triggers typo */
+    char buf[64];
+    const char *input = "hello there friend";
+    size_t len = strlen(input);
+    memcpy(buf, input, len + 1);
+    size_t out = sc_conversation_apply_typos(buf, len, sizeof(buf), 0);
+    SC_ASSERT_TRUE(out != len || memcmp(buf, input, len + 1) != 0);
+}
+
+static void typo_preserves_short_words(void) {
+    /* "I am ok" - all words <= 2 chars, no eligible words */
+    char buf[64];
+    const char *input = "I am ok";
+    size_t len = strlen(input);
+    memcpy(buf, input, len + 1);
+    size_t out = sc_conversation_apply_typos(buf, len, sizeof(buf), 0);
+    SC_ASSERT_STR_EQ(buf, "I am ok");
+    SC_ASSERT_EQ(out, len);
+}
+
+static void typo_deterministic(void) {
+    char buf1[64], buf2[64];
+    const char *input = "sounds good to me";
+    size_t len = strlen(input);
+    memcpy(buf1, input, len + 1);
+    memcpy(buf2, input, len + 1);
+    size_t out1 = sc_conversation_apply_typos(buf1, len, sizeof(buf1), 42);
+    size_t out2 = sc_conversation_apply_typos(buf2, len, sizeof(buf2), 42);
+    SC_ASSERT_EQ(out1, out2);
+    SC_ASSERT_TRUE(memcmp(buf1, buf2, (out1 > out2 ? out1 : out2) + 1) == 0);
+}
+
+static void typo_never_exceeds_cap(void) {
+    char buf[32];
+    const char *input = "hello there friend";
+    size_t len = strlen(input);
+    size_t cap = len + 2;
+    memcpy(buf, input, len + 1);
+    size_t out = sc_conversation_apply_typos(buf, len, cap, 0);
+    SC_ASSERT_TRUE(out <= cap - 1);
 }
 
 /* ── Anti-repetition detection tests ──────────────────────────────────── */
@@ -788,7 +917,8 @@ static void relationship_acquaintance(void) {
 static void relationship_null_fields(void) {
     char buf[512];
     size_t len = sc_conversation_calibrate_relationship(NULL, NULL, NULL, buf, sizeof(buf));
-    SC_ASSERT_TRUE(len > 0); /* Still writes header/footer */
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "Relationship context"));
 }
 
 /* ── Group chat classifier tests ─────────────────────────────────────── */
@@ -828,18 +958,175 @@ static void group_empty_skips(void) {
     SC_ASSERT_EQ(r, SC_GROUP_SKIP);
 }
 
+/* ── Thread callback tests ──────────────────────────────────────────── */
+
+static void callback_finds_dropped_topic(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    /* Work discussed early (first half), then shifts to cooking (recent 3).
+     * Last message "nice" has hash mod 5 == 0 so callback triggers (~20% probability). */
+    sc_channel_history_entry_t entries[10] = {
+        make_entry(false, "what about work? how's it going?", "12:00"),
+        make_entry(true, "work has been crazy lately", "12:01"),
+        make_entry(false, "tell me about work", "12:02"),
+        make_entry(true, "it's busy but ok", "12:03"),
+        make_entry(false, "got it", "12:04"),
+        make_entry(true, "what's for dinner?", "12:05"),
+        make_entry(false, "thinking about cooking", "12:06"),
+        make_entry(true, "i'm making pasta", "12:07"),
+        make_entry(false, "cooking is fun", "12:08"),
+        make_entry(true, "nice", "12:09"),
+    };
+    size_t len = 0;
+    char *ctx = sc_conversation_build_callback(&alloc, entries, 10, &len);
+    SC_ASSERT_NOT_NULL(ctx);
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_TRUE(strstr(ctx, "work") != NULL);
+    SC_ASSERT_TRUE(strstr(ctx, "Thread Callback") != NULL);
+    alloc.free(alloc.ctx, ctx, len + 1);
+}
+
+static void callback_no_candidate_short_history(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_history_entry_t entries[3] = {
+        make_entry(false, "hey", "12:00"),
+        make_entry(true, "hi", "12:01"),
+        make_entry(false, "what's up", "12:02"),
+    };
+    size_t len = 0;
+    char *ctx = sc_conversation_build_callback(&alloc, entries, 3, &len);
+    SC_ASSERT_NULL(ctx);
+    SC_ASSERT_EQ(len, 0u);
+}
+
+static void callback_null_entries(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    size_t len = 0;
+    char *ctx = sc_conversation_build_callback(&alloc, NULL, 10, &len);
+    SC_ASSERT_NULL(ctx);
+    SC_ASSERT_EQ(len, 0u);
+}
+
+/* ── Reaction classifier tests ───────────────────────────────────────── */
+
+static void reaction_funny_message(void) {
+    /* "lol that's hilarious" matches funny pattern; seed 0 yields roll<30 → HAHA */
+    sc_reaction_type_t r = sc_conversation_classify_reaction(
+        "lol that's hilarious", 19, false, NULL, 0, 0u);
+    SC_ASSERT_NEQ(r, SC_REACTION_NONE);
+    SC_ASSERT_EQ(r, SC_REACTION_HAHA);
+}
+
+static void reaction_loving_message(void) {
+    /* "love you" matches loving pattern; seed 0 yields roll<30 → HEART */
+    sc_reaction_type_t r =
+        sc_conversation_classify_reaction("love you", 8, false, NULL, 0, 0u);
+    SC_ASSERT_EQ(r, SC_REACTION_HEART);
+}
+
+static void reaction_normal_message_no_reaction(void) {
+    /* "what time is dinner?" needs a text response → NONE */
+    sc_reaction_type_t r = sc_conversation_classify_reaction(
+        "what time is dinner?", 20, false, NULL, 0, 0u);
+    SC_ASSERT_EQ(r, SC_REACTION_NONE);
+}
+
+static void reaction_from_me_no_reaction(void) {
+    /* from_me=true → always NONE */
+    sc_reaction_type_t r =
+        sc_conversation_classify_reaction("love you", 8, true, NULL, 0, 0u);
+    SC_ASSERT_EQ(r, SC_REACTION_NONE);
+}
+
+/* ── URL extraction tests ────────────────────────────────────────────── */
+
+static void url_extract_finds_https(void) {
+    const char *text = "check out https://example.com/page cool right?";
+    sc_url_extract_t urls[4];
+    size_t n = sc_conversation_extract_urls(text, strlen(text), urls, 4);
+    SC_ASSERT_EQ(n, 1u);
+    SC_ASSERT_EQ(urls[0].len, 24u);
+    SC_ASSERT_TRUE(memcmp(urls[0].start, "https://example.com/page", 24) == 0);
+}
+
+static void url_extract_multiple(void) {
+    const char *text = "see https://a.com and http://b.org/foo";
+    sc_url_extract_t urls[4];
+    size_t n = sc_conversation_extract_urls(text, strlen(text), urls, 4);
+    SC_ASSERT_EQ(n, 2u);
+    SC_ASSERT_TRUE(strncmp(urls[0].start, "https://a.com", urls[0].len) == 0);
+    SC_ASSERT_TRUE(strncmp(urls[1].start, "http://b.org/foo", urls[1].len) == 0);
+}
+
+static void url_extract_no_urls(void) {
+    const char *text = "hello world";
+    sc_url_extract_t urls[4];
+    size_t n = sc_conversation_extract_urls(text, strlen(text), urls, 4);
+    SC_ASSERT_EQ(n, 0u);
+}
+
+/* ── Link-sharing detection tests ─────────────────────────────────────── */
+
+static void should_share_link_recommendation(void) {
+    sc_channel_history_entry_t entries[1] = {
+        make_entry(false, "you should check this out", "12:00"),
+    };
+    bool ok = sc_conversation_should_share_link("you should check this out", 25, entries, 1);
+    SC_ASSERT_TRUE(ok);
+}
+
+static void should_share_link_normal(void) {
+    sc_channel_history_entry_t entries[1] = {
+        make_entry(false, "how are you doing", "12:00"),
+    };
+    bool ok = sc_conversation_should_share_link("how are you doing", 17, entries, 1);
+    SC_ASSERT_FALSE(ok);
+}
+
+static void should_share_link_case_insensitive(void) {
+    bool ok = sc_conversation_should_share_link("CHECK THIS OUT", 15, NULL, 0);
+    SC_ASSERT_TRUE(ok);
+}
+
+/* ── Attachment context tests ─────────────────────────────────────────── */
+
+static void attachment_context_with_photo(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_history_entry_t entries[2] = {
+        make_entry(true, "hey", "12:00"),
+        make_entry(false, "[Photo shared]", "12:01"),
+    };
+    size_t len = 0;
+    char *ctx = sc_conversation_attachment_context(&alloc, entries, 2, &len);
+    SC_ASSERT_NOT_NULL(ctx);
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(ctx, "photo"));
+    alloc.free(alloc.ctx, ctx, len + 1);
+}
+
+static void attachment_context_with_imessage_placeholder(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_history_entry_t entries[2] = {
+        make_entry(true, "hey", "12:00"),
+        make_entry(false, "[image or attachment]", "12:01"),
+    };
+    size_t len = 0;
+    char *ctx = sc_conversation_attachment_context(&alloc, entries, 2, &len);
+    SC_ASSERT_NOT_NULL(ctx);
+    SC_ASSERT_TRUE(len > 0);
+    alloc.free(alloc.ctx, ctx, len + 1);
+}
+
 /* ── Time-of-day calibration test ────────────────────────────────────── */
 
-static void calibrate_includes_time_directive(void) {
+static void calibrate_length_runs_without_crash(void) {
     char buf[2048];
     const char *msg = "hey what's up";
     size_t len =
         sc_conversation_calibrate_length(msg, strlen(msg), NULL, 0, buf, sizeof(buf));
     SC_ASSERT_TRUE(len > 0);
-    /* TIME: directive only appears during non-daytime hours (9-17).
-     * We can't guarantee the test runs at a specific time, so just check
-     * that the function produces output without crashing. */
     SC_ASSERT_NOT_NULL(strstr(buf, "calibration"));
+    /* TIME: directive appears only outside daytime (9-17), so we verify
+     * the function completes without crashing at any hour. */
 }
 
 /* ── Test suite registration ─────────────────────────────────────────── */
@@ -880,6 +1167,12 @@ void run_conversation_tests(void) {
     SC_RUN_TEST(classify_bad_news_is_delayed);
     SC_RUN_TEST(classify_good_news_is_delayed);
     SC_RUN_TEST(classify_vulnerable_is_delayed);
+
+    /* Two-phase thinking response */
+    SC_RUN_TEST(thinking_triggers_on_complex_question);
+    SC_RUN_TEST(thinking_no_trigger_simple_message);
+    SC_RUN_TEST(thinking_triggers_on_advice);
+    SC_RUN_TEST(thinking_filler_varies_by_seed);
 
     /* Quality evaluator */
     SC_RUN_TEST(quality_penalizes_semicolons);
@@ -933,6 +1226,18 @@ void run_conversation_tests(void) {
     SC_RUN_TEST(calibrate_null_returns_zero);
     SC_RUN_TEST(calibrate_rapid_fire_momentum);
 
+    /* Typo correction fragment */
+    SC_RUN_TEST(correction_detects_typo);
+    SC_RUN_TEST(correction_no_typo_no_output);
+    SC_RUN_TEST(correction_chance_zero_no_output);
+    SC_RUN_TEST(correction_respects_buffer_cap);
+
+    /* Typo simulation */
+    SC_RUN_TEST(typo_applies_with_right_seed);
+    SC_RUN_TEST(typo_preserves_short_words);
+    SC_RUN_TEST(typo_deterministic);
+    SC_RUN_TEST(typo_never_exceeds_cap);
+
     /* Typing quirk post-processing */
     SC_RUN_TEST(quirks_lowercase_applies);
     SC_RUN_TEST(quirks_no_periods_strips_sentence_end);
@@ -961,6 +1266,27 @@ void run_conversation_tests(void) {
     SC_RUN_TEST(group_too_many_responses_skips);
     SC_RUN_TEST(group_empty_skips);
 
+    /* Reaction classifier */
+    SC_RUN_TEST(reaction_funny_message);
+    SC_RUN_TEST(reaction_loving_message);
+    SC_RUN_TEST(reaction_normal_message_no_reaction);
+    SC_RUN_TEST(reaction_from_me_no_reaction);
+
     /* Time-of-day */
-    SC_RUN_TEST(calibrate_includes_time_directive);
+    SC_RUN_TEST(calibrate_length_runs_without_crash);
+
+    /* Thread callback */
+    SC_RUN_TEST(callback_finds_dropped_topic);
+    SC_RUN_TEST(callback_no_candidate_short_history);
+    SC_RUN_TEST(callback_null_entries);
+
+    /* URL extraction and link-sharing */
+    SC_RUN_TEST(url_extract_finds_https);
+    SC_RUN_TEST(url_extract_multiple);
+    SC_RUN_TEST(url_extract_no_urls);
+    SC_RUN_TEST(should_share_link_recommendation);
+    SC_RUN_TEST(should_share_link_normal);
+    SC_RUN_TEST(should_share_link_case_insensitive);
+    SC_RUN_TEST(attachment_context_with_photo);
+    SC_RUN_TEST(attachment_context_with_imessage_placeholder);
 }

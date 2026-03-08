@@ -39,6 +39,8 @@ typedef struct sc_imessage_ctx {
         char content[4096];
     } mock_msgs[8];
     size_t mock_count;
+    sc_reaction_type_t last_reaction;
+    int64_t last_reaction_message_id;
 #endif
 } sc_imessage_ctx_t;
 
@@ -369,6 +371,9 @@ static sc_error_t imessage_load_conversation_history(void *ctx, sc_allocator_t *
         } else if (entries[count].from_me) {
             snprintf(entries[count].text, sizeof(entries[0].text), "[you replied]");
         } else {
+            /* Empty text = attachment. Use generic placeholder; prompt builder
+             * should call sc_conversation_attachment_context() to inject guidance
+             * for natural acknowledgment ("love that!", "that looks great", etc.). */
             snprintf(entries[count].text, sizeof(entries[0].text), "[image or attachment]");
         }
         if (ts) {
@@ -409,6 +414,33 @@ static sc_error_t imessage_get_response_constraints(void *ctx,
     return SC_OK;
 }
 
+static sc_error_t imessage_react(void *ctx, const char *target, size_t target_len,
+                                 int64_t message_id, sc_reaction_type_t reaction) {
+    (void)target;
+    (void)target_len;
+#if SC_IS_TEST
+    sc_imessage_ctx_t *c = (sc_imessage_ctx_t *)ctx;
+    if (!c)
+        return SC_ERR_INVALID_ARGUMENT;
+    c->last_reaction = reaction;
+    c->last_reaction_message_id = message_id;
+    return SC_OK;
+#else
+    (void)ctx;
+    (void)message_id;
+    (void)reaction;
+#if defined(__APPLE__) && defined(__MACH__)
+    /* Stub: UI scripting for tapbacks requires System Events accessibility
+     * permissions and is fragile. Log the attempt for now. */
+    if (getenv("SC_DEBUG"))
+        fprintf(stderr, "[imessage] tapback stub: message_id=%lld reaction=%d (JXA/UI scripting "
+                        "not implemented)\n",
+                (long long)message_id, (int)reaction);
+#endif
+    return SC_OK;
+#endif
+}
+
 static const sc_channel_vtable_t imessage_vtable = {
     .start = imessage_start,
     .stop = imessage_stop,
@@ -420,6 +452,7 @@ static const sc_channel_vtable_t imessage_vtable = {
     .stop_typing = NULL,
     .load_conversation_history = imessage_load_conversation_history,
     .get_response_constraints = imessage_get_response_constraints,
+    .react = imessage_react,
 };
 
 sc_error_t sc_imessage_create(sc_allocator_t *alloc, const char *default_target,
@@ -511,6 +544,7 @@ sc_error_t sc_imessage_poll(void *channel_ctx, sc_allocator_t *alloc, sc_channel
             for (size_t i = 0; i < n; i++) {
                 memcpy(msgs[i].session_key, c->mock_msgs[i].session_key, 128);
                 memcpy(msgs[i].content, c->mock_msgs[i].content, 4096);
+                msgs[i].message_id = -1;
             }
             *out_count = n;
             c->mock_count = 0;
@@ -672,5 +706,14 @@ const char *sc_imessage_test_get_last_message(sc_channel_t *ch, size_t *out_len)
     if (out_len)
         *out_len = c->last_message_len;
     return c->last_message;
+}
+
+void sc_imessage_test_get_last_reaction(sc_channel_t *ch, sc_reaction_type_t *out_reaction,
+                                        int64_t *out_message_id) {
+    if (!ch || !ch->ctx || !out_reaction || !out_message_id)
+        return;
+    sc_imessage_ctx_t *c = (sc_imessage_ctx_t *)ch->ctx;
+    *out_reaction = c->last_reaction;
+    *out_message_id = c->last_reaction_message_id;
 }
 #endif

@@ -146,6 +146,23 @@ sc_error_t sc_stm_turn_add_emotion(sc_stm_buffer_t *buf, size_t turn_idx, sc_emo
     return SC_OK;
 }
 
+sc_error_t sc_stm_turn_set_primary_topic(sc_stm_buffer_t *buf, size_t turn_idx, const char *topic,
+                                         size_t topic_len) {
+    sc_stm_turn_t *t = get_turn_mutable(buf, turn_idx);
+    if (!t)
+        return SC_ERR_INVALID_ARGUMENT;
+    if (t->primary_topic) {
+        buf->alloc.free(buf->alloc.ctx, t->primary_topic, strlen(t->primary_topic) + 1);
+        t->primary_topic = NULL;
+    }
+    if (!topic || topic_len == 0)
+        return SC_OK;
+    t->primary_topic = sc_strndup(&buf->alloc, topic, topic_len);
+    if (!t->primary_topic)
+        return SC_ERR_OUT_OF_MEMORY;
+    return SC_OK;
+}
+
 size_t sc_stm_count(const sc_stm_buffer_t *buf) {
     if (!buf)
         return 0;

@@ -76,7 +76,9 @@ export class ScSidebar extends LitElement {
           var(--sc-border) var(--sc-glass-standard-border-opacity, 10%),
           transparent
         );
-      transition: width var(--sc-duration-normal) var(--sc-ease-out);
+      transition:
+        width var(--sc-duration-normal) var(--sc-ease-out),
+        min-width var(--sc-duration-normal) var(--sc-ease-out);
       overflow: hidden;
     }
 
@@ -197,7 +199,7 @@ export class ScSidebar extends LitElement {
     }
 
     .nav-item:hover:not(.active) {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
       color: var(--sc-text);
     }
 
@@ -273,7 +275,7 @@ export class ScSidebar extends LitElement {
     }
 
     .theme-toggle:hover {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
       color: var(--sc-text);
     }
 
@@ -314,7 +316,7 @@ export class ScSidebar extends LitElement {
     }
 
     .collapse-btn:hover {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
       color: var(--sc-text);
     }
 

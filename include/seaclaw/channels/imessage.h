@@ -25,6 +25,8 @@ sc_error_t sc_imessage_test_inject_mock(sc_channel_t *ch, const char *session_ke
                                         size_t session_key_len, const char *content,
                                         size_t content_len);
 const char *sc_imessage_test_get_last_message(sc_channel_t *ch, size_t *out_len);
+void sc_imessage_test_get_last_reaction(sc_channel_t *ch, sc_reaction_type_t *out_reaction,
+                                        int64_t *out_message_id);
 #endif
 
 #endif /* SC_CHANNELS_IMESSAGE_H */

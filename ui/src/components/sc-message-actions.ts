@@ -61,7 +61,7 @@ export class ScMessageActions extends LitElement {
 
     .action-btn:hover {
       color: var(--sc-text);
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
 
     .action-btn:focus-visible {

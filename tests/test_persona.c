@@ -585,7 +585,7 @@ static void test_persona_full_round_trip(void) {
 
     char *prompt = NULL;
     size_t prompt_len = 0;
-    err = sc_persona_build_prompt(&alloc, &p, "imessage", 8, &prompt, &prompt_len);
+    err = sc_persona_build_prompt(&alloc, &p, "imessage", 8, NULL, 0, &prompt, &prompt_len);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_TRUE(strstr(prompt, "roundtrip") != NULL);
     SC_ASSERT_TRUE(strstr(prompt, "casual") != NULL);
@@ -643,7 +643,7 @@ static void test_persona_build_prompt_core(void) {
 
     char *out = NULL;
     size_t out_len = 0;
-    sc_error_t err = sc_persona_build_prompt(&alloc, &p, NULL, 0, &out, &out_len);
+    sc_error_t err = sc_persona_build_prompt(&alloc, &p, NULL, 0, NULL, 0, &out, &out_len);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_NOT_NULL(out);
     SC_ASSERT_TRUE(out_len > 0);
@@ -875,14 +875,14 @@ static void test_persona_prompt_with_channel_overlay(void) {
     /* Without channel — no overlay */
     char *prompt1 = NULL;
     size_t len1 = 0;
-    err = sc_persona_build_prompt(&alloc, &p, NULL, 0, &prompt1, &len1);
+    err = sc_persona_build_prompt(&alloc, &p, NULL, 0, NULL, 0, &prompt1, &len1);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_TRUE(strstr(prompt1, "imessage") == NULL);
 
     /* With channel — overlay applied */
     char *prompt2 = NULL;
     size_t len2 = 0;
-    err = sc_persona_build_prompt(&alloc, &p, "imessage", 8, &prompt2, &len2);
+    err = sc_persona_build_prompt(&alloc, &p, "imessage", 8, NULL, 0, &prompt2, &len2);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_TRUE(strstr(prompt2, "casual") != NULL);
     SC_ASSERT_TRUE(strstr(prompt2, "no caps") != NULL);
@@ -916,7 +916,7 @@ static void test_persona_build_prompt_includes_examples(void) {
 
     char *prompt = NULL;
     size_t plen = 0;
-    err = sc_persona_build_prompt(&alloc, &p, "cli", 3, &prompt, &plen);
+    err = sc_persona_build_prompt(&alloc, &p, "cli", 3, NULL, 0, &prompt, &plen);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_TRUE(strstr(prompt, "Hey what's up") != NULL);
     SC_ASSERT_TRUE(strstr(prompt, "Not much, you?") != NULL);
@@ -1006,7 +1006,7 @@ static void test_persona_build_prompt_with_overlay(void) {
 
     char *out = NULL;
     size_t out_len = 0;
-    sc_error_t err = sc_persona_build_prompt(&alloc, &p, "imessage", 8, &out, &out_len);
+    sc_error_t err = sc_persona_build_prompt(&alloc, &p, "imessage", 8, NULL, 0, &out, &out_len);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_NOT_NULL(strstr(out, "imessage"));
     SC_ASSERT_NOT_NULL(strstr(out, "casual"));
@@ -1075,7 +1075,7 @@ static void test_persona_prompt_respects_size_cap(void) {
 
     char *out = NULL;
     size_t out_len = 0;
-    err = sc_persona_build_prompt(&alloc, &p, NULL, 0, &out, &out_len);
+    err = sc_persona_build_prompt(&alloc, &p, NULL, 0, NULL, 0, &out, &out_len);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_NOT_NULL(out);
     SC_ASSERT_TRUE(out_len <= (size_t)SC_PERSONA_PROMPT_MAX_BYTES);
@@ -1095,7 +1095,7 @@ static void test_persona_build_prompt_empty_persona(void) {
     p.name_len = 5;
     char *prompt = NULL;
     size_t len = 0;
-    sc_error_t e = sc_persona_build_prompt(&alloc, &p, NULL, 0, &prompt, &len);
+    sc_error_t e = sc_persona_build_prompt(&alloc, &p, NULL, 0, NULL, 0, &prompt, &len);
     SC_ASSERT_EQ(e, SC_OK);
     SC_ASSERT_TRUE(prompt != NULL);
     SC_ASSERT_TRUE(len > 0);
@@ -1732,7 +1732,7 @@ static void test_overlay_typing_quirks_in_prompt(void) {
 
     char *out = NULL;
     size_t out_len = 0;
-    sc_error_t err = sc_persona_build_prompt(&alloc, &p, "imessage", 8, &out, &out_len);
+    sc_error_t err = sc_persona_build_prompt(&alloc, &p, "imessage", 8, NULL, 0, &out, &out_len);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_NOT_NULL(strstr(out, "Typing quirks"));
     SC_ASSERT_NOT_NULL(strstr(out, "lowercase"));

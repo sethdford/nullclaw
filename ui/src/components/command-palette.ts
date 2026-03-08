@@ -170,11 +170,11 @@ export class ScCommandPalette extends LitElement {
     }
 
     .item:hover {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
 
     .item.selected {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
 
     .icon {

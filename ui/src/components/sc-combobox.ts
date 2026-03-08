@@ -118,7 +118,7 @@ export class ScCombobox extends LitElement {
 
     .option:hover,
     .option[aria-selected="true"] {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
 
     .option .highlight {

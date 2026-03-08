@@ -38,6 +38,9 @@ static bool key_matches_contact(const char *key, size_t key_len, const char *con
     return true;
 }
 
+/* Parse emotion JSON from memory entry content. content must be non-NULL and
+ * null-terminated — all memory backends (sc_memory_entry_t.content) guarantee
+ * null-termination. strstr/strchr rely on this. */
 static bool parse_emotion_json(const char *content, size_t content_len, char *tag_out,
                                 size_t tag_cap, double *intensity_out) {
     if (!content || content_len < 10 || !tag_out || tag_cap < 2 || !intensity_out)

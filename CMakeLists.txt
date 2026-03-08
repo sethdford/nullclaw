@@ -373,6 +373,7 @@ set(SC_CORE_SOURCES
     src/context/event_extract.c
     src/agent/episodic.c
     src/agent/reflection.c
+    src/agent/ab_response.c
     src/agent/input_guard.c
     src/agent/commitment.c
     src/agent/commitment_store.c
@@ -410,6 +411,7 @@ set(SC_CORE_SOURCES
     src/memory/factory.c
     src/memory/util.c
     src/memory/stm.c
+    src/memory/emotional_graph.c
     src/memory/fast_capture.c
     src/memory/promotion.c
     src/memory/consolidation.c
@@ -510,6 +512,7 @@ set(SC_CORE_SOURCES
     src/memory/vector/chunker.c
     src/memory/vector/store_mem.c
     src/memory/vector/embedder_local.c
+    src/memory/vector/embedder_gemini_adapter.c
     src/memory/vector/embeddings.c
     src/memory/vector/embeddings_gemini.c
     src/memory/vector/embeddings_ollama.c
@@ -587,6 +590,7 @@ if(SC_ENABLE_PERSONA)
         src/persona/creator.c
         src/persona/cli.c
         src/persona/feedback.c
+        src/persona/replay.c
         src/persona/circadian.c
         src/persona/relationship.c
         src/tools/persona.c
@@ -1145,7 +1149,7 @@ if(NOT SC_ENABLE_PERSONA)
     list(APPEND SC_TEST_EXTRA_MODULES
         src/persona/persona.c src/persona/examples.c src/persona/sampler.c
         src/persona/analyzer.c src/persona/creator.c         src/persona/cli.c src/persona/feedback.c
-        src/persona/circadian.c src/persona/relationship.c src/tools/persona.c)
+        src/persona/replay.c src/persona/circadian.c src/persona/relationship.c src/tools/persona.c)
 endif()
 add_library(seaclaw_core_test STATIC ${SC_CORE_SOURCES} ${SC_TEST_EXTRA_CHANNELS} ${SC_TEST_EXTRA_MODULES} ${SC_CRYPTO_SOURCES} ${SC_ASM_SOURCES})
 target_include_directories(seaclaw_core_test PUBLIC ${SC_ROOT}/include)
@@ -1402,8 +1406,10 @@ set(SC_TEST_SOURCES
     tests/test_reflection.c
     tests/test_input_guard.c
     tests/test_conversation.c
+    tests/test_ab_response.c
     tests/test_event_extract.c
     tests/test_stm.c
+    tests/test_emotional_graph.c
     tests/test_fast_capture.c
     tests/test_promotion.c
     tests/test_consolidation.c
@@ -1418,7 +1424,7 @@ set(SC_TEST_SOURCES
     tests/test_bth_e2e.c
 )
 if(SC_ENABLE_PERSONA)
-    list(APPEND SC_TEST_SOURCES tests/test_persona.c tests/test_circadian.c tests/test_relationship.c)
+    list(APPEND SC_TEST_SOURCES tests/test_persona.c tests/test_circadian.c tests/test_relationship.c tests/test_replay.c)
 endif()
 
 add_executable(seaclaw_tests ${SC_TEST_SOURCES} wasm/wasm_alloc.c)

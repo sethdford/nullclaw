@@ -131,8 +131,8 @@ sc_error_t sc_persona_examples_load_json(sc_allocator_t *alloc, const char *chan
 void sc_persona_deinit(sc_allocator_t *alloc, sc_persona_t *persona);
 
 sc_error_t sc_persona_build_prompt(sc_allocator_t *alloc, const sc_persona_t *persona,
-                                   const char *channel, size_t channel_len, char **out,
-                                   size_t *out_len);
+                                   const char *channel, size_t channel_len, const char *topic,
+                                   size_t topic_len, char **out, size_t *out_len);
 
 sc_error_t sc_persona_select_examples(const sc_persona_t *persona, const char *channel,
                                       size_t channel_len, const char *topic, size_t topic_len,

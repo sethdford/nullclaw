@@ -111,6 +111,10 @@ struct sc_agent {
     size_t conversation_context_len;
     uint32_t max_response_chars;
 
+    /* Per-turn A/B evaluation: channel history for quality scoring (set by daemon, not owned) */
+    const sc_channel_history_entry_t *ab_history_entries;
+    size_t ab_history_count;
+
     /* Per-contact memory scoping (set by daemon, not owned) */
     const char *memory_session_id;
     size_t memory_session_id_len;

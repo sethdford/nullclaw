@@ -82,7 +82,7 @@ export class ScChatSessionsPanel extends LitElement {
     }
 
     .new-chat-btn:hover {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
       border-color: var(--sc-accent);
       color: var(--sc-accent-text, var(--sc-accent));
     }

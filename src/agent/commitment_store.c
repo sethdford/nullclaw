@@ -77,7 +77,7 @@ sc_error_t sc_commitment_store_create(sc_allocator_t *alloc, sc_memory_t *memory
 sc_error_t sc_commitment_store_save(sc_commitment_store_t *store,
                                     const sc_commitment_t *commitment,
                                     const char *session_id, size_t session_id_len) {
-    if (!store || !commitment || !store->memory->vtable)
+    if (!store || !commitment || !store->memory || !store->memory->vtable)
         return SC_ERR_INVALID_ARGUMENT;
 
     sc_json_value_t *obj = sc_json_object_new(store->alloc);
@@ -139,7 +139,7 @@ sc_error_t sc_commitment_store_save(sc_commitment_store_t *store,
 sc_error_t sc_commitment_store_list_active(sc_commitment_store_t *store, sc_allocator_t *alloc,
                                            const char *session_id, size_t session_id_len,
                                            sc_commitment_t **out, size_t *out_count) {
-    if (!store || !alloc || !out || !out_count)
+    if (!store || !alloc || !out || !out_count || !store->memory || !store->memory->vtable)
         return SC_ERR_INVALID_ARGUMENT;
     *out = NULL;
     *out_count = 0;

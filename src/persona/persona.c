@@ -1118,10 +1118,12 @@ static sc_error_t append_prompt(sc_allocator_t *alloc, char **buf, size_t *len, 
 }
 
 sc_error_t sc_persona_build_prompt(sc_allocator_t *alloc, const sc_persona_t *persona,
-                                   const char *channel, size_t channel_len, char **out,
-                                   size_t *out_len) {
+                                   const char *channel, size_t channel_len, const char *topic,
+                                   size_t topic_len, char **out, size_t *out_len) {
     if (!alloc || !persona || !out || !out_len)
         return SC_ERR_INVALID_ARGUMENT;
+    if (!topic)
+        topic_len = 0;
     size_t cap = SC_PERSONA_PROMPT_INIT_CAP;
     char *buf = (char *)alloc->alloc(alloc->ctx, cap);
     if (!buf)
@@ -1453,8 +1455,8 @@ sc_error_t sc_persona_build_prompt(sc_allocator_t *alloc, const sc_persona_t *pe
     if (persona->example_banks && persona->example_banks_count > 0) {
         const sc_persona_example_t *sel_buf[8];
         size_t selected_count = 0;
-        sc_error_t sel_err = sc_persona_select_examples(persona, channel, channel_len, NULL, 0,
-                                                        sel_buf, &selected_count, 5);
+        sc_error_t sel_err = sc_persona_select_examples(persona, channel, channel_len, topic,
+                                                        topic_len, sel_buf, &selected_count, 5);
         if (sel_err == SC_OK && selected_count > 0) {
             static const char examples_header[] = "Example conversations showing your style:\n";
             err = append_prompt(alloc, &buf, &len, &cap, examples_header,

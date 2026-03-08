@@ -143,10 +143,12 @@ static sc_error_t poll_return_two(void *ctx, sc_allocator_t *alloc, sc_channel_l
     msgs[0].session_key[sizeof(msgs[0].session_key) - 1] = '\0';
     strncpy(msgs[0].content, "hello", sizeof(msgs[0].content) - 1);
     msgs[0].content[sizeof(msgs[0].content) - 1] = '\0';
+    msgs[0].message_id = -1;
     strncpy(msgs[1].session_key, "sess2", sizeof(msgs[1].session_key) - 1);
     msgs[1].session_key[sizeof(msgs[1].session_key) - 1] = '\0';
     strncpy(msgs[1].content, "world", sizeof(msgs[1].content) - 1);
     msgs[1].content[sizeof(msgs[1].content) - 1] = '\0';
+    msgs[1].message_id = -1;
     *out_count = 2;
     return SC_OK;
 }

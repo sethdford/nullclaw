@@ -198,7 +198,7 @@ sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t
         }
         char *prompt = NULL;
         size_t prompt_len = 0;
-        err = sc_persona_build_prompt(alloc, &p, NULL, 0, &prompt, &prompt_len);
+        err = sc_persona_build_prompt(alloc, &p, NULL, 0, NULL, 0, &prompt, &prompt_len);
         if (err == SC_OK && prompt) {
             fprintf(stdout, "%s", prompt);
             alloc->free(alloc->ctx, prompt, prompt_len + 1);

@@ -8,6 +8,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* Thread callback detection: identify opportunities to naturally return to
+ * a topic from earlier in the conversation or from a previous session.
+ * Scans history for topic transitions and identifies the best callback candidate.
+ * Returns a context injection string or NULL if no good callback found.
+ * Caller owns returned string. */
+char *sc_conversation_build_callback(sc_allocator_t *alloc,
+                                     const sc_channel_history_entry_t *entries, size_t count,
+                                     size_t *out_len);
+
 /* Build a complete conversation awareness context string from channel history.
  * Includes: conversation thread, emotional analysis, verbosity mirroring,
  * conversation phase, time-of-day triggers, detected user states.
@@ -73,6 +82,18 @@ typedef struct sc_emotional_state {
 sc_emotional_state_t sc_conversation_detect_emotion(const sc_channel_history_entry_t *entries,
                                                     size_t count);
 
+/* ── Typo correction fragment (*meant) ─────────────────────────────────── */
+
+/* Check if a typo was introduced and generate a correction fragment.
+ * Compares original text with typo-applied text to find the changed word.
+ * If a typo was found, writes a correction like "*meeting" into out_buf.
+ * Returns length of correction (0 if no typo detected or no correction needed).
+ * correction_chance is probability 0-100 of generating correction (suggest ~40). */
+size_t sc_conversation_generate_correction(const char *original, size_t original_len,
+                                            const char *typo_applied, size_t typo_applied_len,
+                                            char *out_buf, size_t out_cap,
+                                            uint32_t seed, uint32_t correction_chance);
+
 /* ── Multi-message splitting ──────────────────────────────────────────── */
 
 /* Split a single response into multiple message fragments for natural delivery.
@@ -121,6 +142,14 @@ char *sc_conversation_analyze_style(sc_allocator_t *alloc,
 size_t sc_conversation_apply_typing_quirks(char *buf, size_t len, const char *const *quirks,
                                            size_t quirks_count);
 
+/* Apply realistic typo simulation to a response. Introduces at most 1 typo
+ * per message segment. Controlled by seed for determinism in tests.
+ * Never introduces typos into proper nouns (words starting with uppercase
+ * that aren't the first word of a sentence).
+ * Returns the new length (may grow by at most 1 char for transposition).
+ * buf must have capacity for len+1 chars. */
+size_t sc_conversation_apply_typos(char *buf, size_t len, size_t cap, uint32_t seed);
+
 /* ── Response action classification ───────────────────────────────────── */
 
 typedef enum sc_response_action {
@@ -128,13 +157,58 @@ typedef enum sc_response_action {
     SC_RESPONSE_BRIEF = 1, /* ultra-short: "yeah", "lol", "nice" */
     SC_RESPONSE_SKIP = 2,  /* don't respond at all */
     SC_RESPONSE_DELAY = 3, /* full response but with extra delay */
+    SC_RESPONSE_THINKING = 4, /* two-phase: send filler first, then real response after delay */
 } sc_response_action_t;
+
+typedef struct sc_thinking_response {
+    char filler[64];      /* "hmm", "that's a good question", "let me think about that" */
+    size_t filler_len;
+    uint32_t delay_ms;    /* delay before the real response (30000-60000ms) */
+} sc_thinking_response_t;
+
+/* Classify whether this message warrants a "thinking" response.
+ * Returns true if the message is complex/emotional enough.
+ * Fills out the thinking response with an appropriate filler message. */
+bool sc_conversation_classify_thinking(const char *msg, size_t msg_len,
+                                       const sc_channel_history_entry_t *entries,
+                                       size_t entry_count, sc_thinking_response_t *out,
+                                       uint32_t seed);
 
 /* Classify how to respond, factoring in conversation context. */
 sc_response_action_t sc_conversation_classify_response(const char *msg, size_t msg_len,
                                                        const sc_channel_history_entry_t *entries,
                                                        size_t entry_count,
                                                        uint32_t *delay_extra_ms);
+
+/* ── URL extraction and link-sharing detection ───────────────────────── */
+
+/* Extract URLs from a text message. Returns count of URLs found.
+ * Each URL is written as a separate entry in urls[] (up to max_urls).
+ * Caller provides pre-allocated url_buf entries. */
+typedef struct sc_url_extract {
+    const char *start; /* pointer into the original text */
+    size_t len;
+} sc_url_extract_t;
+
+size_t sc_conversation_extract_urls(const char *text, size_t text_len,
+                                    sc_url_extract_t *urls, size_t max_urls);
+
+/* Detect if a message context suggests sharing a link.
+ * Returns true if the LLM should be prompted to find and share a URL.
+ * Triggers on: recommendations, "check this out", "have you seen", "look at this",
+ * "you should try", "here's a link" */
+bool sc_conversation_should_share_link(const char *msg, size_t msg_len,
+                                       const sc_channel_history_entry_t *entries,
+                                       size_t entry_count);
+
+/* ── Attachment context for prompts ──────────────────────────────────── */
+
+/* Generate context for the prompt when attachments are detected in history.
+ * Scans for [Photo shared], [Attachment shared], [image or attachment], etc.
+ * Returns allocated string; caller must free. NULL if no attachments found. */
+char *sc_conversation_attachment_context(sc_allocator_t *alloc,
+                                          const sc_channel_history_entry_t *entries,
+                                          size_t count, size_t *out_len);
 
 /* ── Anti-repetition detection ───────────────────────────────────────── */
 
@@ -167,5 +241,14 @@ sc_group_response_t sc_conversation_classify_group(const char *msg, size_t msg_l
                                                    const char *bot_name, size_t bot_name_len,
                                                    const sc_channel_history_entry_t *entries,
                                                    size_t count);
+
+/* ── Reaction classifier ───────────────────────────────────────────────── */
+
+/* Classify whether to send a reaction instead of (or in addition to) a text reply.
+ * Returns SC_REACTION_NONE if a text reply is more appropriate.
+ * Takes into account message content, conversation flow, and randomness via seed. */
+sc_reaction_type_t sc_conversation_classify_reaction(const char *msg, size_t msg_len, bool from_me,
+                                                     const sc_channel_history_entry_t *entries,
+                                                     size_t entry_count, uint32_t seed);
 
 #endif /* SC_CONTEXT_CONVERSATION_H */

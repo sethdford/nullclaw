@@ -65,7 +65,7 @@ export class ScSearch extends LitElement {
 
     .icon-end:hover:not(:disabled) {
       color: var(--sc-text);
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
 
     .icon-end:focus-visible {

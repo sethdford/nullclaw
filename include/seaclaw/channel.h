@@ -72,6 +72,16 @@ typedef struct sc_channel_response_constraints {
     uint32_t max_chars; /* 0 = unlimited */
 } sc_channel_response_constraints_t;
 
+typedef enum sc_reaction_type {
+    SC_REACTION_NONE = 0,
+    SC_REACTION_HEART,
+    SC_REACTION_THUMBS_UP,
+    SC_REACTION_THUMBS_DOWN,
+    SC_REACTION_HAHA,
+    SC_REACTION_EMPHASIS, /* !! */
+    SC_REACTION_QUESTION, /* ? */
+} sc_reaction_type_t;
+
 /* ──────────────────────────────────────────────────────────────────────────
  * Channel vtable
  * ────────────────────────────────────────────────────────────────────────── */
@@ -110,6 +120,12 @@ typedef struct sc_channel_vtable {
     /* Optional — return per-channel response constraints (max length, etc.).
      * NULL = no constraints. */
     sc_error_t (*get_response_constraints)(void *ctx, sc_channel_response_constraints_t *out);
+
+    /* Optional — send a reaction to a specific message.
+     * message_id is the platform message ID (e.g., ROWID for iMessage).
+     * NULL = channel does not support reactions. */
+    sc_error_t (*react)(void *ctx, const char *target, size_t target_len, int64_t message_id,
+                        sc_reaction_type_t reaction);
 } sc_channel_vtable_t;
 
 #endif /* SC_CHANNEL_H */

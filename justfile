@@ -85,16 +85,62 @@ check-untested:
 
 # Install and start as macOS LaunchAgent
 install: release
-    cp build/seaclaw ~/.local/bin/seaclaw
-    ~/.local/bin/seaclaw service install
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir -p ~/bin
+    cp build/seaclaw ~/bin/seaclaw
+    # Code-sign so macOS preserves Full Disk Access across rebuilds
+    if security find-identity -v -p codesigning 2>/dev/null | grep -q "SeaClaw Local Dev"; then
+        codesign -f -s "SeaClaw Local Dev" ~/bin/seaclaw
+        echo "Signed with SeaClaw Local Dev identity"
+    else
+        echo "WARNING: No 'SeaClaw Local Dev' signing identity found."
+        echo "  FDA will be revoked on each rebuild. Run: just setup-codesign"
+    fi
+    # Restart LaunchAgent if loaded
+    if launchctl list 2>/dev/null | grep -q com.seaclaw.agent; then
+        launchctl bootout gui/$(id -u)/com.seaclaw.agent 2>/dev/null || true
+        sleep 2
+    fi
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.seaclaw.agent.plist 2>/dev/null || \
+        launchctl load -w ~/Library/LaunchAgents/com.seaclaw.agent.plist 2>/dev/null || true
+    echo "Installed and service restarted"
+
+# One-time setup: create a local code-signing certificate so FDA persists across rebuilds
+setup-codesign:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if security find-identity -v -p codesigning 2>/dev/null | grep -q "SeaClaw Local Dev"; then
+        echo "SeaClaw Local Dev certificate already exists"
+        exit 0
+    fi
+    echo "Creating self-signed code-signing certificate..."
+    openssl req -x509 -newkey rsa:2048 \
+        -keyout /tmp/sc-key.pem -out /tmp/sc-cert.pem \
+        -days 3650 -nodes \
+        -subj "/CN=SeaClaw Local Dev" \
+        -addext "keyUsage=digitalSignature" \
+        -addext "extendedKeyUsage=codeSigning" 2>/dev/null
+    openssl pkcs12 -export -out /tmp/sc-sign.p12 \
+        -inkey /tmp/sc-key.pem -in /tmp/sc-cert.pem \
+        -passout pass:sc -certpbe PBE-SHA1-3DES -keypbe PBE-SHA1-3DES -macalg SHA1 2>/dev/null
+    security import /tmp/sc-sign.p12 -k ~/Library/Keychains/login.keychain-db \
+        -T /usr/bin/codesign -P sc
+    security find-certificate -c "SeaClaw Local Dev" -p ~/Library/Keychains/login.keychain-db > /tmp/sc-cert-export.pem
+    security add-trusted-cert -d -r trustRoot -p codeSign \
+        -k ~/Library/Keychains/login.keychain-db /tmp/sc-cert-export.pem
+    rm -f /tmp/sc-key.pem /tmp/sc-cert.pem /tmp/sc-sign.p12 /tmp/sc-cert-export.pem
+    echo "Done! Certificate valid for 10 years."
+    security find-identity -v -p codesigning
 
 # Uninstall LaunchAgent
 uninstall:
-    ~/.local/bin/seaclaw service uninstall
+    launchctl bootout gui/$(id -u)/com.seaclaw.agent 2>/dev/null || true
+    echo "Service stopped"
 
 # Show service status
 status:
-    @~/.local/bin/seaclaw service status 2>&1 || true
+    @launchctl list 2>/dev/null | grep seaclaw || echo "Not in launchctl"
     @ps aux | grep "[s]eaclaw service" | grep -v zsh || echo "Not running"
 
 # View service logs

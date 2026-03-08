@@ -64,7 +64,7 @@ static sc_error_t do_show(sc_allocator_t *alloc, const char *name, sc_tool_resul
     }
     char *prompt = NULL;
     size_t prompt_len = 0;
-    err = sc_persona_build_prompt(alloc, &p, NULL, 0, &prompt, &prompt_len);
+    err = sc_persona_build_prompt(alloc, &p, NULL, 0, NULL, 0, &prompt, &prompt_len);
     sc_persona_deinit(alloc, &p);
     if (err != SC_OK) {
         *out = sc_tool_result_fail("failed to build prompt", 22);

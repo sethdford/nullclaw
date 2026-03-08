@@ -21,6 +21,8 @@ sc_error_t sc_proactive_check_silence(sc_allocator_t *alloc, uint64_t last_conta
         return SC_ERR_INVALID_ARGUMENT;
     if (!config->enabled || last_contact_ms == 0)
         return SC_OK;
+    if (now_ms <= last_contact_ms)
+        return SC_OK; /* clock skew or equal timestamps — avoid uint64_t underflow */
 
     uint64_t elapsed_hours = (now_ms - last_contact_ms) / MS_PER_HOUR;
     if (elapsed_hours < config->threshold_hours)
@@ -157,10 +159,13 @@ sc_error_t sc_proactive_check_extended(sc_allocator_t *alloc, uint32_t session_c
             if (out->count >= SC_PROACTIVE_MAX_ACTIONS)
                 break;
             char msg[256];
+            size_t sublen = strlen(subject);
+            if (sublen > 200)
+                sublen = 200;
             int n = snprintf(msg, sizeof(msg),
-                            "'%s' has come up %u times in your conversations. This seems "
+                            "'%.*s' has come up %u times in your conversations. This seems "
                             "important to you.",
-                            subject, (unsigned)pattern_counts[i]);
+                            (int)sublen, subject, (unsigned)pattern_counts[i]);
             if (n > 0 && (size_t)n < sizeof(msg)) {
                 sc_proactive_action_t *act = &out->actions[out->count];
                 act->type = SC_PROACTIVE_PATTERN_INSIGHT;

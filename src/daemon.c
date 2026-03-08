@@ -1,13 +1,22 @@
 #include "seaclaw/daemon.h"
 #include "seaclaw/agent.h"
+#include "seaclaw/agent/episodic.h"
+#include "seaclaw/agent/outcomes.h"
+#include "seaclaw/agent/proactive.h"
+#include "seaclaw/memory/consolidation.h"
+#include "seaclaw/memory/deep_extract.h"
 #include "seaclaw/config.h"
 #include "seaclaw/context/conversation.h"
+#include "seaclaw/context/event_extract.h"
 #include "seaclaw/context/mood.h"
+#include "seaclaw/memory/emotional_graph.h"
+#include "seaclaw/memory/promotion.h"
 #include "seaclaw/core/error.h"
 #include "seaclaw/core/process_util.h"
 #include "seaclaw/core/string.h"
 #ifdef SC_HAS_PERSONA
 #include "seaclaw/persona.h"
+#include "seaclaw/persona/replay.h"
 #endif
 #ifdef SC_HAS_CRON
 #include "seaclaw/cron.h"
@@ -40,6 +49,7 @@
         }                        \
     } while (0)
 
+#ifndef SC_IS_TEST
 /* Build conversation callback context from memory.
  * Queries memory for past topics relevant to the current message.
  * Returns an allocated string (caller frees) or NULL. */
@@ -103,6 +113,60 @@ static char *build_callback_context(sc_allocator_t *alloc, sc_memory_t *memory,
     *out_len = pos;
     return result;
 }
+
+/* Store a conversation summary as long-term memory.
+ * Concatenates the user message and agent response, runs deep-extract
+ * on the full exchange, and stores extracted facts scoped to the contact. */
+static void store_conversation_summary(sc_allocator_t *alloc, sc_memory_t *memory,
+                                       const char *session_id, size_t session_id_len,
+                                       const char *user_msg, size_t user_msg_len,
+                                       const char *response, size_t response_len) {
+    if (!alloc || !memory || !memory->vtable || !memory->vtable->store)
+        return;
+    if (!user_msg || user_msg_len == 0)
+        return;
+
+    /* Build "them: ... | me: ..." for richer extraction context */
+    size_t total = user_msg_len + response_len + 16;
+    char *combined = (char *)alloc->alloc(alloc->ctx, total + 1);
+    if (!combined)
+        return;
+    int n = snprintf(combined, total + 1, "them: %.*s | me: %.*s", (int)user_msg_len, user_msg,
+                     (int)response_len, response);
+    if (n <= 0) {
+        alloc->free(alloc->ctx, combined, total + 1);
+        return;
+    }
+    size_t combined_len = (size_t)n < total ? (size_t)n : total;
+
+    sc_deep_extract_result_t de;
+    memset(&de, 0, sizeof(de));
+    sc_error_t err = sc_deep_extract_lightweight(alloc, combined, combined_len, &de);
+    if (err == SC_OK && de.fact_count > 0) {
+        static const char cat_name[] = "conversation_summary";
+        sc_memory_category_t cat = {
+            .tag = SC_MEMORY_CATEGORY_CUSTOM,
+            .data.custom = {.name = cat_name, .name_len = sizeof(cat_name) - 1},
+        };
+        for (size_t i = 0; i < de.fact_count; i++) {
+            const sc_extracted_fact_t *f = &de.facts[i];
+            if (!f->subject || !f->predicate || !f->object)
+                continue;
+            char key_buf[256];
+            int kn = snprintf(key_buf, sizeof(key_buf), "%s:%s:%s", f->subject, f->predicate,
+                              f->object);
+            if (kn > 0 && (size_t)kn < sizeof(key_buf)) {
+                (void)memory->vtable->store(memory->ctx, key_buf, (size_t)kn, f->object,
+                                            strlen(f->object), &cat,
+                                            session_id ? session_id : "",
+                                            session_id ? session_id_len : 0);
+            }
+        }
+    }
+    sc_deep_extract_result_deinit(&de, alloc);
+    alloc->free(alloc->ctx, combined, total + 1);
+}
+#endif /* !SC_IS_TEST */
 
 static sc_error_t validate_home(const char *home) {
     if (!home || !home[0]) {
@@ -375,59 +439,61 @@ sc_error_t sc_service_run_agent_cron(sc_allocator_t *alloc, sc_agent_t *agent,
 
 /* ── Proactive check-in ──────────────────────────────────────────────── */
 
-#ifdef SC_HAS_PERSONA
+#if defined(SC_HAS_PERSONA) && !defined(SC_IS_TEST)
 
 static char *proactive_prompt_for_contact(sc_allocator_t *alloc, sc_memory_t *memory,
                                           const sc_contact_profile_t *cp, size_t *out_len) {
-    char buf[1024];
-    size_t pos = 0;
-    int w = snprintf(buf, sizeof(buf),
-                     "You're initiating a casual check-in text to %s. ",
-                     cp->name ? cp->name : "this person");
-    if (w > 0)
-        pos = (size_t)w;
-
-    /* Pull relevant memory for context */
-    if (memory && memory->vtable && memory->vtable->recall && cp->contact_id) {
-        sc_memory_entry_t *entries = NULL;
-        size_t count = 0;
-        size_t cid_len = strlen(cp->contact_id);
-        sc_error_t err = memory->vtable->recall(memory->ctx, alloc, "recent conversation topics",
-                                                26, 2, cp->contact_id, cid_len, &entries, &count);
-        if (err == SC_OK && entries && count > 0) {
-            w = snprintf(buf + pos, sizeof(buf) - pos, "Recent topics: ");
-            if (w > 0)
-                pos += (size_t)w;
-            for (size_t i = 0; i < count && i < 2; i++) {
-                if (entries[i].content && entries[i].content_len > 0) {
-                    size_t show = entries[i].content_len;
-                    if (show > 80)
-                        show = 80;
-                    w = snprintf(buf + pos, sizeof(buf) - pos, "'%.*s' ", (int)show,
-                                 entries[i].content);
-                    if (w > 0 && pos + (size_t)w < sizeof(buf))
-                        pos += (size_t)w;
-                }
-            }
-            for (size_t i = 0; i < count; i++)
-                sc_memory_entry_free_fields(alloc, &entries[i]);
-            alloc->free(alloc->ctx, entries, count * sizeof(sc_memory_entry_t));
-        }
+    char *starter = NULL;
+    size_t starter_len = 0;
+    if (memory && cp->contact_id) {
+        (void)sc_proactive_build_starter(alloc, memory, cp->contact_id, strlen(cp->contact_id),
+                                         &starter, &starter_len);
     }
 
-    w = snprintf(buf + pos, sizeof(buf) - pos,
-                 "\nRules: "
-                 "1. One short natural message (not 'hey how are you' — too generic). "
-                 "2. Reference something specific you know about them or ask about "
-                 "something from a previous conversation. "
-                 "3. Keep it under 10 words. "
-                 "4. If you have nothing specific, share something you saw/did "
-                 "that made you think of them. "
-                 "5. Reply SKIP if you genuinely have nothing natural to say.");
-    if (w > 0 && pos + (size_t)w < sizeof(buf))
-        pos += (size_t)w;
+    static const char RULES[] =
+        "\nRules: "
+        "1. One short natural message (not 'hey how are you' — too generic). "
+        "2. Reference something specific you know about them or ask about "
+        "something from a previous conversation. "
+        "3. Keep it under 10 words. "
+        "4. If you have nothing specific, share something you saw/did "
+        "that made you think of them. "
+        "5. Reply SKIP if you genuinely have nothing natural to say.";
+    size_t rules_len = sizeof(RULES) - 1;
 
-    char *result = sc_strndup(alloc, buf, pos);
+    char base_buf[256];
+    int w = snprintf(base_buf, sizeof(base_buf),
+                     "You're initiating a casual check-in text to %s. ",
+                     cp->name ? cp->name : "this person");
+    size_t base_len = (w > 0 && (size_t)w < sizeof(base_buf)) ? (size_t)w : 0;
+
+    size_t total = base_len + rules_len;
+    if (starter && starter_len > 0)
+        total += 2 + starter_len; /* "\n\n" + starter */
+
+    char *result = (char *)alloc->alloc(alloc->ctx, total + 1);
+    if (!result) {
+        if (starter)
+            alloc->free(alloc->ctx, starter, starter_len + 1);
+        *out_len = 0;
+        return NULL;
+    }
+
+    size_t pos = 0;
+    memcpy(result, base_buf, base_len);
+    pos = base_len;
+
+    if (starter && starter_len > 0) {
+        result[pos++] = '\n';
+        result[pos++] = '\n';
+        memcpy(result + pos, starter, starter_len);
+        pos += starter_len;
+        alloc->free(alloc->ctx, starter, starter_len + 1);
+    }
+
+    memcpy(result + pos, RULES, rules_len);
+    pos += rules_len;
+    result[pos] = '\0';
     *out_len = pos;
     return result;
 }
@@ -470,6 +536,9 @@ void sc_service_run_proactive_checkins(sc_allocator_t *alloc, sc_agent_t *agent,
 
         /* Check last interaction time via conversation history */
         for (size_t c = 0; c < channel_count; c++) {
+            char *silence_ctx = NULL;
+            size_t silence_ctx_len = 0;
+
             if (!channels[c].channel || !channels[c].channel->vtable ||
                 !channels[c].channel->vtable->name)
                 continue;
@@ -483,31 +552,116 @@ void sc_service_run_proactive_checkins(sc_allocator_t *alloc, sc_agent_t *agent,
             sc_channel_history_entry_t *entries = NULL;
             size_t entry_count = 0;
             channels[c].channel->vtable->load_conversation_history(
-                channels[c].channel->ctx, alloc, cp->contact_id, strlen(cp->contact_id), 1,
+                channels[c].channel->ctx, alloc, cp->contact_id, strlen(cp->contact_id), 15,
                 &entries, &entry_count);
 
             bool should_checkin = true;
             if (entries && entry_count > 0) {
-                /* Parse last message timestamp to check if recent */
                 struct tm last_tm = {0};
-                if (strptime(entries[0].timestamp, "%Y-%m-%d %H:%M", &last_tm)) {
+                if (strptime(entries[entry_count - 1].timestamp, "%Y-%m-%d %H:%M", &last_tm)) {
                     time_t last_time = mktime(&last_tm);
                     double hours_since = difftime(now, last_time) / 3600.0;
                     if (hours_since < 24.0)
                         should_checkin = false;
                 }
             }
+
+            /* Build combined text from user messages for event extraction */
+            char combined[4096];
+            size_t combined_len = 0;
+            if (entries && entry_count > 0) {
+                for (size_t e = 0; e < entry_count; e++) {
+                    if (entries[e].from_me)
+                        continue;
+                    size_t tlen = strlen(entries[e].text);
+                    if (tlen == 0)
+                        continue;
+                    if (combined_len + tlen + 2 >= sizeof(combined))
+                        break;
+                    if (combined_len > 0)
+                        combined[combined_len++] = '\n';
+                    memcpy(combined + combined_len, entries[e].text, tlen);
+                    combined_len += tlen;
+                }
+                combined[combined_len] = '\0';
+            }
             if (entries)
                 alloc->free(alloc->ctx, entries, entry_count * sizeof(*entries));
+
+#ifndef SC_IS_TEST
+            /* Silence check-in: if channel has been quiet, consider reaching out */
+            {
+                sc_silence_config_t silence_cfg = SC_SILENCE_DEFAULTS;
+                sc_proactive_result_t silence_result;
+                memset(&silence_result, 0, sizeof(silence_result));
+                uint64_t now_ms = (uint64_t)now * 1000ULL;
+                if (sc_proactive_check_silence(alloc, channels[c].last_contact_ms, now_ms,
+                                               &silence_cfg, &silence_result) == SC_OK &&
+                    silence_result.count > 0) {
+                    should_checkin = true;
+                    sc_proactive_build_context(&silence_result, alloc, 3, &silence_ctx,
+                                              &silence_ctx_len);
+                }
+                sc_proactive_result_deinit(&silence_result, alloc);
+            }
+#endif
 
             if (!should_checkin)
                 break;
 
 #ifndef SC_IS_TEST
+            /* Event-triggered follow-ups from recent messages */
+            char *event_ctx = NULL;
+            size_t event_ctx_len = 0;
+            if (combined_len > 0) {
+                sc_event_extract_result_t extract_result;
+                memset(&extract_result, 0, sizeof(extract_result));
+                if (sc_event_extract(alloc, combined, combined_len, &extract_result) == SC_OK &&
+                    extract_result.event_count > 0) {
+                    sc_proactive_result_t event_result;
+                    memset(&event_result, 0, sizeof(event_result));
+                    if (sc_proactive_check_events(alloc, extract_result.events,
+                                                  extract_result.event_count,
+                                                  &event_result) == SC_OK &&
+                        event_result.count > 0) {
+                        sc_proactive_build_context(&event_result, alloc, 3, &event_ctx,
+                                                   &event_ctx_len);
+                    }
+                    sc_proactive_result_deinit(&event_result, alloc);
+                }
+                sc_event_extract_result_deinit(&extract_result, alloc);
+            }
+
             /* Build and send the check-in */
             size_t prompt_len = 0;
             char *prompt =
                 proactive_prompt_for_contact(alloc, agent->memory, cp, &prompt_len);
+            if (prompt && event_ctx && event_ctx_len > 0) {
+                size_t merged_len = prompt_len + 1 + event_ctx_len + 1;
+                char *merged = (char *)alloc->alloc(alloc->ctx, merged_len);
+                if (merged) {
+                    memcpy(merged, prompt, prompt_len);
+                    merged[prompt_len] = '\n';
+                    memcpy(merged + prompt_len + 1, event_ctx, event_ctx_len);
+                    merged[prompt_len + 1 + event_ctx_len] = '\0';
+                    alloc->free(alloc->ctx, prompt, prompt_len + 1);
+                    prompt = merged;
+                    prompt_len = prompt_len + 1 + event_ctx_len;
+                }
+            }
+            if (prompt && silence_ctx && silence_ctx_len > 0) {
+                size_t merged_len = prompt_len + 1 + silence_ctx_len + 1;
+                char *merged = (char *)alloc->alloc(alloc->ctx, merged_len);
+                if (merged) {
+                    memcpy(merged, prompt, prompt_len);
+                    merged[prompt_len] = '\n';
+                    memcpy(merged + prompt_len + 1, silence_ctx, silence_ctx_len);
+                    merged[prompt_len + 1 + silence_ctx_len] = '\0';
+                    alloc->free(alloc->ctx, prompt, prompt_len + 1);
+                    prompt = merged;
+                    prompt_len = prompt_len + 1 + silence_ctx_len;
+                }
+            }
             if (prompt) {
                 sc_agent_clear_history(agent);
                 agent->active_channel = ch_part;
@@ -533,13 +687,17 @@ void sc_service_run_proactive_checkins(sc_allocator_t *alloc, sc_agent_t *agent,
                 alloc->free(alloc->ctx, prompt, prompt_len + 1);
                 sc_agent_clear_history(agent);
             }
+            if (event_ctx)
+                alloc->free(alloc->ctx, event_ctx, event_ctx_len + 1);
+            if (silence_ctx)
+                alloc->free(alloc->ctx, silence_ctx, silence_ctx_len + 1);
 #endif
             break;
         }
     }
 }
 
-#endif /* SC_HAS_PERSONA */
+#endif /* SC_HAS_PERSONA && !SC_IS_TEST */
 
 /* ── Signal handling (non-test only) ─────────────────────────────────── */
 
@@ -583,6 +741,12 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
     signal(SIGINT, service_signal_handler);
 #endif
 
+    /* Enable outcome tracking so persona feedback loop works in daemon */
+    sc_outcome_tracker_t daemon_outcomes;
+    sc_outcome_tracker_init(&daemon_outcomes, true);
+    if (agent && !agent->outcomes)
+        sc_agent_set_outcomes(agent, &daemon_outcomes);
+
 #ifdef SC_HAS_CRON
     time_t last_cron_minute = 0;
 #endif
@@ -591,8 +755,10 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
         struct timespec ts_now;
         clock_gettime(CLOCK_MONOTONIC, &ts_now);
         int64_t start = (int64_t)ts_now.tv_sec * 1000 + ts_now.tv_nsec / 1000000;
-        for (size_t i = 0; i < channel_count; i++)
+        for (size_t i = 0; i < channel_count; i++) {
             channels[i].last_poll_ms = start;
+            channels[i].last_contact_ms = 0;
+        }
     }
 
 #if !defined(_WIN32) && !defined(__CYGWIN__)
@@ -633,9 +799,12 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                 continue;
 
             sc_channel_loop_msg_t msgs[16];
+            memset(msgs, 0, sizeof(msgs));
             size_t count = 0;
             sc_error_t poll_err = ch->poll_fn(ch->channel_ctx, alloc, msgs, 16, &count);
             ch->last_poll_ms = tick_now;
+            if (count > 0)
+                ch->last_contact_ms = (uint64_t)time(NULL) * 1000ULL;
             if (poll_err != SC_OK && getenv("SC_DEBUG"))
                 fprintf(stderr, "[seaclaw] poll error on channel %zu: %d\n", i, (int)poll_err);
 
@@ -1051,12 +1220,73 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                 if (style_ctx)
                     alloc->free(alloc->ctx, style_ctx, style_ctx_len + 1);
 
-                /* 3b. Conversation callbacks: surface past topics from memory */
-                if (agent->memory && agent->memory->vtable && agent->memory->vtable->recall) {
+                /* 6. Attachment context: guidance when attachments detected in history */
+                if (history_entries && history_count > 0) {
+                    size_t attach_ctx_len = 0;
+                    char *attach_ctx =
+                        sc_conversation_attachment_context(alloc, history_entries, history_count,
+                                                          &attach_ctx_len);
+                    if (attach_ctx && attach_ctx_len > 0) {
+                        if (convo_ctx) {
+                            size_t total = convo_ctx_len + attach_ctx_len + 2;
+                            char *merged = (char *)alloc->alloc(alloc->ctx, total);
+                            if (merged) {
+                                memcpy(merged, convo_ctx, convo_ctx_len);
+                                merged[convo_ctx_len] = '\n';
+                                memcpy(merged + convo_ctx_len + 1, attach_ctx, attach_ctx_len);
+                                merged[total - 1] = '\0';
+                                alloc->free(alloc->ctx, convo_ctx, convo_ctx_len + 1);
+                                convo_ctx = merged;
+                                convo_ctx_len = total - 1;
+                            }
+                        } else {
+                            convo_ctx = attach_ctx;
+                            convo_ctx_len = attach_ctx_len;
+                            attach_ctx = NULL;
+                        }
+                        if (attach_ctx)
+                            alloc->free(alloc->ctx, attach_ctx, attach_ctx_len + 1);
+                    } else if (attach_ctx) {
+                        alloc->free(alloc->ctx, attach_ctx, attach_ctx_len + 1);
+                    }
+                }
+
+                /* 3b. Conversation callbacks: thread callback (history) + memory-based */
+                {
+                    char *thread_cb = NULL;
+                    size_t thread_cb_len = 0;
+                    char *mem_cb = NULL;
+                    size_t mem_cb_len = 0;
+                    if (history_entries && history_count > 0) {
+                        thread_cb = sc_conversation_build_callback(alloc, history_entries,
+                                                                   history_count,
+                                                                   &thread_cb_len);
+                    }
+                    if (agent->memory && agent->memory->vtable && agent->memory->vtable->recall) {
+                        mem_cb = build_callback_context(alloc, agent->memory, batch_key, key_len,
+                                                        combined, combined_len, &mem_cb_len);
+                    }
                     char *cb_ctx = NULL;
                     size_t cb_len = 0;
-                    cb_ctx = build_callback_context(alloc, agent->memory, batch_key, key_len,
-                                                    combined, combined_len, &cb_len);
+                    if (thread_cb && mem_cb) {
+                        size_t merged_len = thread_cb_len + mem_cb_len + 2;
+                        cb_ctx = (char *)alloc->alloc(alloc->ctx, merged_len + 1);
+                        if (cb_ctx) {
+                            memcpy(cb_ctx, thread_cb, thread_cb_len);
+                            cb_ctx[thread_cb_len] = '\n';
+                            memcpy(cb_ctx + thread_cb_len + 1, mem_cb, mem_cb_len);
+                            cb_ctx[merged_len] = '\0';
+                            cb_len = merged_len;
+                        }
+                        alloc->free(alloc->ctx, thread_cb, thread_cb_len + 1);
+                        alloc->free(alloc->ctx, mem_cb, mem_cb_len + 1);
+                    } else if (thread_cb) {
+                        cb_ctx = thread_cb;
+                        cb_len = thread_cb_len;
+                    } else if (mem_cb) {
+                        cb_ctx = mem_cb;
+                        cb_len = mem_cb_len;
+                    }
                     if (cb_ctx && convo_ctx) {
                         size_t merged_len = convo_ctx_len + cb_len + 1;
                         char *merged = (char *)alloc->alloc(alloc->ctx, merged_len + 1);
@@ -1075,6 +1305,35 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                         convo_ctx_len = cb_len;
                     }
                 }
+
+#ifndef SC_IS_TEST
+                /* Episodic: load recent sessions for context */
+                char *episodic_ctx = NULL;
+                size_t episodic_ctx_len = 0;
+                if (agent->memory) {
+                    sc_episodic_load(agent->memory, alloc, &episodic_ctx, &episodic_ctx_len);
+                }
+                if (episodic_ctx && episodic_ctx_len > 0) {
+                    if (convo_ctx) {
+                        size_t merged_len = convo_ctx_len + episodic_ctx_len + 2;
+                        char *merged = (char *)alloc->alloc(alloc->ctx, merged_len + 1);
+                        if (merged) {
+                            memcpy(merged, convo_ctx, convo_ctx_len);
+                            merged[convo_ctx_len] = '\n';
+                            memcpy(merged + convo_ctx_len + 1, episodic_ctx, episodic_ctx_len);
+                            merged[merged_len - 1] = '\n';
+                            merged[merged_len] = '\0';
+                            alloc->free(alloc->ctx, convo_ctx, convo_ctx_len + 1);
+                            convo_ctx = merged;
+                            convo_ctx_len = merged_len;
+                        }
+                        alloc->free(alloc->ctx, episodic_ctx, episodic_ctx_len + 1);
+                    } else {
+                        convo_ctx = episodic_ctx;
+                        convo_ctx_len = episodic_ctx_len;
+                    }
+                }
+#endif
 
                 /* 4. Response constraints via channel vtable */
                 uint32_t max_chars = 0;
@@ -1177,11 +1436,101 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                 }
 #endif
 
+                /* 6b. Link sharing context: when conversation calls for sharing a link */
+                if (sc_conversation_should_share_link(combined, combined_len, history_entries,
+                                                       history_count)) {
+                    static const char LINK_CTX[] =
+                        "\n### Link Sharing\nThe conversation naturally calls for sharing a link "
+                        "or recommendation. If you have a relevant URL, include it in your "
+                        "response.\n";
+                    size_t link_len = sizeof(LINK_CTX) - 1;
+                    if (convo_ctx) {
+                        size_t total = convo_ctx_len + link_len + 1;
+                        char *merged = (char *)alloc->alloc(alloc->ctx, total + 1);
+                        if (merged) {
+                            memcpy(merged, convo_ctx, convo_ctx_len);
+                            memcpy(merged + convo_ctx_len, LINK_CTX, link_len + 1);
+                            alloc->free(alloc->ctx, convo_ctx, convo_ctx_len + 1);
+                            convo_ctx = merged;
+                            convo_ctx_len = total;
+                        }
+                    } else {
+                        convo_ctx = (char *)alloc->alloc(alloc->ctx, link_len + 1);
+                        if (convo_ctx) {
+                            memcpy(convo_ctx, LINK_CTX, link_len + 1);
+                            convo_ctx_len = link_len;
+                        }
+                    }
+                }
+
+                /* 7. Emotional topic map: topics → dominant emotions from STM */
+                {
+                    sc_emotional_graph_t egraph;
+                    size_t egraph_len = 0;
+                    sc_egraph_init(&egraph, *alloc);
+                    (void)sc_egraph_populate_from_stm(&egraph, &agent->stm);
+                    char *egraph_ctx = sc_egraph_build_context(alloc, &egraph, &egraph_len);
+                    sc_egraph_deinit(&egraph);
+                    if (egraph_ctx && egraph_len > 0) {
+                        if (convo_ctx) {
+                            size_t total = convo_ctx_len + egraph_len + 2;
+                            char *merged = (char *)alloc->alloc(alloc->ctx, total);
+                            if (merged) {
+                                memcpy(merged, convo_ctx, convo_ctx_len);
+                                merged[convo_ctx_len] = '\n';
+                                memcpy(merged + convo_ctx_len + 1, egraph_ctx, egraph_len + 1);
+                                alloc->free(alloc->ctx, convo_ctx, convo_ctx_len + 1);
+                                convo_ctx = merged;
+                                convo_ctx_len = total - 1;
+                            }
+                        } else {
+                            convo_ctx = egraph_ctx;
+                            convo_ctx_len = egraph_len;
+                        }
+                        if (convo_ctx != egraph_ctx)
+                            alloc->free(alloc->ctx, egraph_ctx, egraph_len + 1);
+                    } else if (egraph_ctx) {
+                        alloc->free(alloc->ctx, egraph_ctx, egraph_len + 1);
+                    }
+                }
+
+                /* 7b. Mood context: recent emotional state from memory */
+                {
+                    char *mood_ctx = NULL;
+                    size_t mood_ctx_len = 0;
+                    if (agent->memory &&
+                        sc_mood_build_context(alloc, agent->memory, batch_key, key_len,
+                                              &mood_ctx, &mood_ctx_len) == SC_OK &&
+                        mood_ctx && mood_ctx_len > 0) {
+                        if (convo_ctx) {
+                            size_t total = convo_ctx_len + mood_ctx_len + 2;
+                            char *merged = (char *)alloc->alloc(alloc->ctx, total);
+                            if (merged) {
+                                memcpy(merged, convo_ctx, convo_ctx_len);
+                                merged[convo_ctx_len] = '\n';
+                                memcpy(merged + convo_ctx_len + 1, mood_ctx, mood_ctx_len);
+                                merged[total - 1] = '\0';
+                                alloc->free(alloc->ctx, convo_ctx, convo_ctx_len + 1);
+                                convo_ctx = merged;
+                                convo_ctx_len = total - 1;
+                            }
+                        } else {
+                            convo_ctx = mood_ctx;
+                            convo_ctx_len = mood_ctx_len;
+                            mood_ctx = NULL;
+                        }
+                        if (mood_ctx)
+                            alloc->free(alloc->ctx, mood_ctx, mood_ctx_len + 1);
+                    }
+                }
+
                 /* Set agent per-turn context fields (prompt builder reads these) */
                 agent->contact_context = contact_ctx;
                 agent->contact_context_len = contact_ctx_len;
                 agent->conversation_context = convo_ctx;
                 agent->conversation_context_len = convo_ctx_len;
+                agent->ab_history_entries = history_entries;
+                agent->ab_history_count = history_count;
                 agent->max_response_chars = max_chars;
 
                 /* Scope memory to this contact */
@@ -1195,6 +1544,37 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                 /* Start typing indicator before LLM call */
                 if (ch->channel->vtable->start_typing) {
                     ch->channel->vtable->start_typing(ch->channel->ctx, batch_key, key_len);
+                }
+
+                /* Thinking response: send filler first if message warrants it */
+                {
+                    sc_thinking_response_t thinking;
+                    memset(&thinking, 0, sizeof(thinking));
+                    bool needs_thinking =
+                        sc_conversation_classify_thinking(combined, combined_len, history_entries,
+                                                          history_count, &thinking,
+                                                          (uint32_t)time(NULL));
+                    if (needs_thinking && thinking.filler_len > 0) {
+                        ch->channel->vtable->send(ch->channel->ctx, batch_key, key_len,
+                                                  thinking.filler, thinking.filler_len, NULL, 0);
+#ifndef SC_IS_TEST
+                        usleep((useconds_t)(thinking.delay_ms * 1000));
+#endif
+                    }
+                }
+
+                /* Tapback reactions: check if reaction is more appropriate before text */
+                if (ch->channel->vtable->react) {
+                    sc_reaction_type_t reaction = sc_conversation_classify_reaction(
+                        combined, combined_len, false, history_entries, history_count,
+                        (uint32_t)time(NULL));
+                    if (reaction != SC_REACTION_NONE) {
+                        int64_t msg_id = msgs[batch_end].message_id;
+                        if (msg_id > 0) {
+                            ch->channel->vtable->react(ch->channel->ctx, batch_key, key_len,
+                                                        msg_id, reaction);
+                        }
+                    }
                 }
 #endif
 
@@ -1223,6 +1603,34 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                                 response_len > 40 ? response : response);
                     }
                 }
+
+#ifdef SC_HAS_PERSONA
+                /* Replay learning: analyze conversation and store insights for future prompts */
+                if (history_entries && history_count > 2 && agent->memory &&
+                    agent->memory->vtable && agent->memory->vtable->store) {
+                    sc_replay_result_t replay;
+                    memset(&replay, 0, sizeof(replay));
+                    sc_error_t rerr =
+                        sc_replay_analyze(alloc, history_entries, history_count, max_chars, &replay);
+                    if (rerr == SC_OK && replay.insight_count > 0) {
+                        size_t rctx_len = 0;
+                        char *rctx = sc_replay_build_context(alloc, &replay, &rctx_len);
+                        if (rctx && rctx_len > 0) {
+                            static const char cat_name[] = "replay_insights";
+                            sc_memory_category_t cat = {
+                                .tag = SC_MEMORY_CATEGORY_CUSTOM,
+                                .data.custom = {.name = cat_name, .name_len = sizeof(cat_name) - 1},
+                            };
+                            agent->memory->vtable->store(agent->memory->ctx, "replay:latest", 13,
+                                                        rctx, rctx_len, &cat, batch_key, key_len);
+                            alloc->free(alloc->ctx, rctx, rctx_len + 1);
+                        } else if (rctx) {
+                            alloc->free(alloc->ctx, rctx, rctx_len + 1);
+                        }
+                    }
+                    sc_replay_result_deinit(&replay, alloc);
+                }
+#endif
 #endif
 
                 /* Clear per-turn context and free */
@@ -1231,6 +1639,8 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                 agent->contact_context_len = 0;
                 agent->conversation_context = NULL;
                 agent->conversation_context_len = 0;
+                agent->ab_history_entries = NULL;
+                agent->ab_history_count = 0;
                 agent->max_response_chars = 0;
                 agent->memory_session_id = NULL;
                 agent->memory_session_id_len = 0;
@@ -1268,20 +1678,95 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                     }
                 }
 
+                /* Store conversation summary as long-term memory */
+                if (err == SC_OK && response && response_len > 0 && agent->memory) {
+                    store_conversation_summary(alloc, agent->memory, batch_key, key_len,
+                                               combined, combined_len, response, response_len);
+                }
+
+                /* Emotion promotion: promote emotions from STM to long-term memory */
+                if (err == SC_OK && response && response_len > 0 && agent->stm.turn_count > 0 &&
+                    agent->memory && agent->memory->vtable && agent->memory->vtable->store) {
+                    sc_promotion_run_emotions(alloc, &agent->stm, agent->memory, batch_key,
+                                              key_len);
+                }
+
                 size_t response_alloc_len = response_len;
+                uint32_t typo_seed = 0;
                 if (err == SC_OK && response && response_len > 0) {
 #ifndef SC_IS_TEST
 #ifdef SC_HAS_PERSONA
                     /* Apply typing quirks from persona overlay as post-processing.
                      * This shrinks the buffer in-place; keep original size for free. */
+                    const sc_persona_overlay_t *overlay = NULL;
                     if (agent->persona && agent->active_channel) {
-                        const sc_persona_overlay_t *ov = sc_persona_find_overlay(
-                            agent->persona, agent->active_channel, agent->active_channel_len);
-                        if (ov && ov->typing_quirks && ov->typing_quirks_count > 0) {
+                        overlay = sc_persona_find_overlay(agent->persona, agent->active_channel,
+                                                          agent->active_channel_len);
+                        if (overlay && overlay->typing_quirks && overlay->typing_quirks_count > 0) {
                             response_len = sc_conversation_apply_typing_quirks(
                                 response, response_len,
-                                (const char *const *)ov->typing_quirks, ov->typing_quirks_count);
+                                (const char *const *)overlay->typing_quirks,
+                                overlay->typing_quirks_count);
                         }
+                    }
+
+                    /* Typo simulation: requires "occasional_typos" quirk and buffer capacity */
+                    bool has_typo_quirk = false;
+                    if (overlay && overlay->typing_quirks) {
+                        for (size_t tq = 0; tq < overlay->typing_quirks_count; tq++) {
+                            if (overlay->typing_quirks[tq] &&
+                                strcmp(overlay->typing_quirks[tq], "occasional_typos") == 0) {
+                                has_typo_quirk = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    char *original_response = NULL;
+                    size_t original_len = 0;
+                    if (has_typo_quirk && response && response_len > 0) {
+                        original_response = (char *)alloc->alloc(alloc->ctx, response_len + 1);
+                        if (original_response) {
+                            memcpy(original_response, response, response_len);
+                            original_response[response_len] = '\0';
+                            original_len = response_len;
+                        }
+                    }
+
+                    if (has_typo_quirk && response && response_len > 0) {
+                        size_t cap = response_alloc_len + 1;
+                        if (cap <= response_len + 1) {
+                            char *grown = (char *)alloc->realloc(alloc->ctx, response,
+                                                                 response_alloc_len + 1,
+                                                                 response_len + 2);
+                            if (grown) {
+                                response = grown;
+                                response_alloc_len = response_len + 1;
+                                cap = response_len + 2;
+                            }
+                        }
+                        if (cap > response_len + 1) {
+                            typo_seed = (uint32_t)time(NULL);
+                            size_t new_len =
+                                sc_conversation_apply_typos(response, response_len, cap, typo_seed);
+                            response_len = new_len;
+                        }
+                    }
+                    if (original_response) {
+                        if (has_typo_quirk && typo_seed != 0 && response && response_len > 0) {
+                            char correction[128];
+                            size_t corr_len = sc_conversation_generate_correction(
+                                original_response, original_len, response, response_len, correction,
+                                sizeof(correction), typo_seed + 1, 40);
+                            if (corr_len > 0) {
+                                unsigned int delay_ms =
+                                    2500 + (unsigned int)(typo_seed % 2500);
+                                usleep((useconds_t)(delay_ms * 1000));
+                                ch->channel->vtable->send(ch->channel->ctx, batch_key, key_len,
+                                                          correction, corr_len, NULL, 0);
+                            }
+                        }
+                        alloc->free(alloc->ctx, original_response, original_len + 1);
                     }
 #endif
                     /* Split response into natural multi-message fragments */
@@ -1322,6 +1807,8 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
     }
 
 #undef SC_STOP_FLAG
+    if (agent && agent->outcomes == &daemon_outcomes)
+        agent->outcomes = NULL;
     return SC_OK;
 #endif /* SC_IS_TEST */
 }

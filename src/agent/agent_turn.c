@@ -1,5 +1,6 @@
 /* Core turn execution: sc_agent_turn and turn-local helpers */
 #include "agent_internal.h"
+#include "seaclaw/agent/ab_response.h"
 #include "seaclaw/agent/awareness.h"
 #include "seaclaw/agent/commitment.h"
 #include "seaclaw/agent/commitment_store.h"
@@ -23,6 +24,7 @@
 #endif
 #include "seaclaw/agent/reflection.h"
 #include "seaclaw/context.h"
+#include "seaclaw/context/conversation.h"
 #include "seaclaw/context_tokens.h"
 #include "seaclaw/core/json.h"
 #include "seaclaw/core/string.h"
@@ -96,6 +98,10 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
         err = sc_stm_record_turn(&agent->stm, "user", 4, msg, msg_len, ts_ms);
         if (err == SC_OK) {
             size_t last_idx = sc_stm_count(&agent->stm) - 1;
+            if (fc_result.primary_topic && fc_result.primary_topic[0]) {
+                (void)sc_stm_turn_set_primary_topic(&agent->stm, last_idx, fc_result.primary_topic,
+                                                     strlen(fc_result.primary_topic));
+            }
             for (size_t i = 0; i < fc_result.entity_count; i++) {
                 const sc_fc_entity_match_t *e = &fc_result.entities[i];
                 uint32_t mention = 1;
@@ -148,8 +154,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
         memset(&commit_result, 0, sizeof(commit_result));
         sc_error_t cerr = sc_commitment_detect(agent->alloc, msg, msg_len, "user", 4, &commit_result);
         if (cerr == SC_OK && commit_result.count > 0) {
-            const char *sess = agent->memory_session_id ? agent->memory_session_id : NULL;
-            size_t sess_len = agent->memory_session_id_len;
+            const char *sess = agent->memory_session_id;
+            size_t sess_len = agent->memory_session_id ? agent->memory_session_id_len : 0;
             for (size_t i = 0; i < commit_result.count; i++) {
                 (void)sc_commitment_store_save(agent->commitment_store, &commit_result.commitments[i],
                                                 sess, sess_len);
@@ -245,7 +251,11 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
         sc_memory_loader_t loader;
         sc_memory_loader_init(&loader, agent->alloc, agent->memory, agent->retrieval_engine, 10,
                               4000);
-        (void)sc_memory_loader_load(&loader, msg, msg_len, "", 0, &memory_ctx, &memory_ctx_len);
+        (void)sc_memory_loader_load(
+            &loader, msg, msg_len,
+            agent->memory_session_id ? agent->memory_session_id : "",
+            agent->memory_session_id ? agent->memory_session_id_len : 0,
+            &memory_ctx, &memory_ctx_len);
     }
 
     /* Build STM context for this turn */
@@ -257,8 +267,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
     char *commitment_ctx = NULL;
     size_t commitment_ctx_len = 0;
     if (agent->commitment_store) {
-        const char *sess = agent->memory_session_id ? agent->memory_session_id : NULL;
-        size_t sess_len = agent->memory_session_id_len;
+        const char *sess = agent->memory_session_id;
+        size_t sess_len = agent->memory_session_id ? agent->memory_session_id_len : 0;
         (void)sc_commitment_store_build_context(agent->commitment_store, agent->alloc, sess,
                                                  sess_len, &commitment_ctx, &commitment_ctx_len);
     }
@@ -281,18 +291,66 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
 #ifndef SC_IS_TEST
         {
             time_t now = time(NULL);
-            struct tm *lt = localtime(&now);
+            struct tm lt_buf;
+            struct tm *lt = localtime_r(&now, &lt_buf);
             if (lt)
                 hour = (uint8_t)(lt->tm_hour & 0xFF);
         }
 #endif
         sc_proactive_result_t proactive_result;
         memset(&proactive_result, 0, sizeof(proactive_result));
-        if (sc_proactive_check(agent->alloc, session_count, hour, &proactive_result) == SC_OK &&
-            proactive_result.count > 0) {
+        sc_commitment_t *commitments = NULL;
+        size_t commitment_count = 0;
+        if (agent->commitment_store && agent->memory_session_id && agent->memory_session_id_len > 0) {
+            (void)sc_commitment_store_list_active(agent->commitment_store, agent->alloc,
+                                                  agent->memory_session_id,
+                                                  agent->memory_session_id_len, &commitments,
+                                                  &commitment_count);
+        }
+        sc_error_t proactive_err =
+            sc_proactive_check_extended(agent->alloc, session_count, hour, commitments,
+                                         commitment_count, NULL, NULL, 0, &proactive_result);
+        if (commitments) {
+            for (size_t ci = 0; ci < commitment_count; ci++)
+                sc_commitment_deinit(&commitments[ci], agent->alloc);
+            agent->alloc->free(agent->alloc->ctx, commitments,
+                               commitment_count * sizeof(sc_commitment_t));
+        }
+        if (proactive_err == SC_OK && proactive_result.count > 0) {
             (void)sc_proactive_build_context(&proactive_result, agent->alloc, 8, &proactive_ctx,
                                              &proactive_ctx_len);
             sc_proactive_result_deinit(&proactive_result, agent->alloc);
+        }
+        /* Merge contextual conversation starter from memory when we have a contact */
+        if (agent->memory && agent->memory_session_id && agent->memory_session_id_len > 0) {
+            char *starter = NULL;
+            size_t starter_len = 0;
+            if (sc_proactive_build_starter(agent->alloc, agent->memory, agent->memory_session_id,
+                                           agent->memory_session_id_len, &starter, &starter_len) ==
+                    SC_OK &&
+                starter && starter_len > 0) {
+                if (proactive_ctx && proactive_ctx_len > 0) {
+                    size_t merged_len = proactive_ctx_len + 2 + starter_len;
+                    char *merged = (char *)agent->alloc->alloc(agent->alloc->ctx, merged_len + 1);
+                    if (merged) {
+                        memcpy(merged, proactive_ctx, proactive_ctx_len);
+                        merged[proactive_ctx_len] = '\n';
+                        merged[proactive_ctx_len + 1] = '\n';
+                        memcpy(merged + proactive_ctx_len + 2, starter, starter_len);
+                        merged[merged_len] = '\0';
+                        agent->alloc->free(agent->alloc->ctx, proactive_ctx,
+                                           proactive_ctx_len + 1);
+                        agent->alloc->free(agent->alloc->ctx, starter, starter_len + 1);
+                        proactive_ctx = merged;
+                        proactive_ctx_len = merged_len;
+                    } else {
+                        agent->alloc->free(agent->alloc->ctx, starter, starter_len + 1);
+                    }
+                } else {
+                    proactive_ctx = starter;
+                    proactive_ctx_len = starter_len;
+                }
+            }
         }
     }
 
@@ -315,7 +373,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
 #ifndef SC_IS_TEST
         {
             time_t now = time(NULL);
-            struct tm *lt = localtime(&now);
+            struct tm lt_buf;
+            struct tm *lt = localtime_r(&now, &lt_buf);
             if (lt)
                 hour = (uint8_t)(lt->tm_hour & 0xFF);
         }
@@ -369,13 +428,25 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
     if (agent->persona) {
         const char *ch = agent->active_channel;
         size_t ch_len = agent->active_channel_len;
-        sc_error_t perr = sc_persona_build_prompt(agent->alloc, agent->persona, ch, ch_len,
-                                                  &persona_prompt, &persona_prompt_len);
+        sc_error_t perr = sc_persona_build_prompt(agent->alloc, agent->persona, ch, ch_len, msg,
+                                                  msg_len, &persona_prompt, &persona_prompt_len);
         if (perr != SC_OK) {
             if (pref_ctx)
                 agent->alloc->free(agent->alloc->ctx, pref_ctx, pref_ctx_len + 1);
             if (memory_ctx)
                 agent->alloc->free(agent->alloc->ctx, memory_ctx, memory_ctx_len + 1);
+            if (stm_ctx)
+                agent->alloc->free(agent->alloc->ctx, stm_ctx, stm_ctx_len + 1);
+            if (commitment_ctx)
+                agent->alloc->free(agent->alloc->ctx, commitment_ctx, commitment_ctx_len + 1);
+            if (pattern_ctx)
+                agent->alloc->free(agent->alloc->ctx, pattern_ctx, pattern_ctx_len + 1);
+            if (proactive_ctx)
+                agent->alloc->free(agent->alloc->ctx, proactive_ctx, proactive_ctx_len + 1);
+            if (superhuman_ctx)
+                agent->alloc->free(agent->alloc->ctx, superhuman_ctx, superhuman_ctx_len + 1);
+            if (adaptive_ctx)
+                agent->alloc->free(agent->alloc->ctx, adaptive_ctx, adaptive_ctx_len + 1);
             if (awareness_ctx)
                 agent->alloc->free(agent->alloc->ctx, awareness_ctx, awareness_ctx_len + 1);
             if (outcome_ctx)
@@ -414,6 +485,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
                 agent->alloc->free(agent->alloc->ctx, proactive_ctx, proactive_ctx_len + 1);
             if (superhuman_ctx)
                 agent->alloc->free(agent->alloc->ctx, superhuman_ctx, superhuman_ctx_len + 1);
+            if (outcome_ctx)
+                agent->alloc->free(agent->alloc->ctx, outcome_ctx, outcome_ctx_len + 1);
             sc_agent_clear_current_for_tools();
             return err;
         }
@@ -737,9 +810,126 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
                         agent->alloc->free(agent->alloc->ctx, critique, critique_len + 1);
                 }
 
-                (void)sc_agent_internal_append_history(agent, SC_ROLE_ASSISTANT, resp.content,
-                                                       resp.content_len, NULL, 0, NULL, 0);
-                *response_out = sc_strndup(agent->alloc, resp.content, resp.content_len);
+                /* A/B: when first response quality < 70 and channel history available,
+                 * generate up to 2 more candidates and pick the best. */
+                const char *final_content = resp.content;
+                size_t final_len = resp.content_len;
+                bool ab_owned = false;
+                uint32_t max_chars = agent->max_response_chars ? agent->max_response_chars : 0;
+                if (agent->ab_history_entries && agent->ab_history_count > 0) {
+                    sc_quality_score_t q0 = sc_conversation_evaluate_quality(
+                        resp.content, resp.content_len, agent->ab_history_entries,
+                        agent->ab_history_count, max_chars);
+                    if (q0.total < 70) {
+                        sc_ab_result_t ab_result;
+                        memset(&ab_result, 0, sizeof(ab_result));
+                        ab_result.candidates[0].response =
+                            sc_strndup(agent->alloc, resp.content, resp.content_len);
+                        ab_result.candidates[0].response_len = resp.content_len;
+                        ab_result.candidate_count = 1;
+
+                        /* Generate 2nd candidate with alternative phrasing prompt */
+                        static const char alt_suffix[] = "\n\nAlternative phrasing:";
+                        size_t alt_len = system_prompt_len + sizeof(alt_suffix) - 1;
+                        char *alt_system =
+                            (char *)agent->alloc->alloc(agent->alloc->ctx, alt_len + 1);
+                        if (alt_system) {
+                            memcpy(alt_system, system_prompt, system_prompt_len);
+                            memcpy(alt_system + system_prompt_len, alt_suffix,
+                                   sizeof(alt_suffix) - 1);
+                            alt_system[alt_len] = '\0';
+                            size_t total = msgs_count;
+                            sc_chat_message_t *alt_all =
+                                (sc_chat_message_t *)agent->alloc->alloc(
+                                    agent->alloc->ctx, total * sizeof(sc_chat_message_t));
+                            if (alt_all) {
+                                alt_all[0].role = SC_ROLE_SYSTEM;
+                                alt_all[0].content = alt_system;
+                                alt_all[0].content_len = alt_len;
+                                alt_all[0].name = NULL;
+                                alt_all[0].name_len = 0;
+                                alt_all[0].tool_call_id = NULL;
+                                alt_all[0].tool_call_id_len = 0;
+                                alt_all[0].content_parts = NULL;
+                                alt_all[0].content_parts_count = 0;
+                                for (size_t i = 1; i < total; i++)
+                                    alt_all[i] = msgs[i];
+                                sc_chat_request_t alt_req = req;
+                                alt_req.messages = alt_all;
+                                alt_req.messages_count = total;
+
+                                sc_chat_response_t alt_resp;
+                                memset(&alt_resp, 0, sizeof(alt_resp));
+                                sc_error_t alt_err = agent->provider.vtable->chat(
+                                    agent->provider.ctx, agent->alloc, &alt_req,
+                                    agent->model_name, agent->model_name_len, agent->temperature,
+                                    &alt_resp);
+                                if (alt_err == SC_OK && alt_resp.content &&
+                                    alt_resp.content_len > 0) {
+                                    agent->total_tokens += alt_resp.usage.total_tokens;
+                                    turn_tokens += alt_resp.usage.total_tokens;
+                                    ab_result.candidates[1].response =
+                                        sc_strndup(agent->alloc, alt_resp.content,
+                                                   alt_resp.content_len);
+                                    ab_result.candidates[1].response_len = alt_resp.content_len;
+                                    ab_result.candidate_count = 2;
+                                    sc_chat_response_free(agent->alloc, &alt_resp);
+
+                                    sc_quality_score_t q1 = sc_conversation_evaluate_quality(
+                                        ab_result.candidates[1].response,
+                                        ab_result.candidates[1].response_len,
+                                        agent->ab_history_entries, agent->ab_history_count,
+                                        max_chars);
+                                    if (q1.total < 70) {
+                                        sc_chat_response_t alt2_resp;
+                                        memset(&alt2_resp, 0, sizeof(alt2_resp));
+                                        sc_error_t alt2_err = agent->provider.vtable->chat(
+                                            agent->provider.ctx, agent->alloc, &alt_req,
+                                            agent->model_name, agent->model_name_len,
+                                            agent->temperature, &alt2_resp);
+                                        if (alt2_err == SC_OK && alt2_resp.content &&
+                                            alt2_resp.content_len > 0) {
+                                            agent->total_tokens += alt2_resp.usage.total_tokens;
+                                            turn_tokens += alt2_resp.usage.total_tokens;
+                                            ab_result.candidates[2].response =
+                                                sc_strndup(agent->alloc, alt2_resp.content,
+                                                           alt2_resp.content_len);
+                                            ab_result.candidates[2].response_len =
+                                                alt2_resp.content_len;
+                                            ab_result.candidate_count = 3;
+                                        }
+                                        sc_chat_response_free(agent->alloc, &alt2_resp);
+                                    }
+                                } else {
+                                    sc_chat_response_free(agent->alloc, &alt_resp);
+                                }
+                                agent->alloc->free(agent->alloc->ctx, alt_all,
+                                                  total * sizeof(sc_chat_message_t));
+                            }
+                            agent->alloc->free(agent->alloc->ctx, alt_system, alt_len + 1);
+                        }
+
+                        if (sc_ab_evaluate(agent->alloc, &ab_result, agent->ab_history_entries,
+                                          agent->ab_history_count, max_chars) == SC_OK) {
+                            size_t bi = ab_result.best_idx;
+                            if (bi < ab_result.candidate_count &&
+                                ab_result.candidates[bi].response) {
+                                final_content = ab_result.candidates[bi].response;
+                                final_len = ab_result.candidates[bi].response_len;
+                                ab_result.candidates[bi].response = NULL;
+                                ab_result.candidates[bi].response_len = 0;
+                                ab_owned = true;
+                            }
+                        }
+                        sc_ab_result_deinit(&ab_result, agent->alloc);
+                    }
+                }
+
+                (void)sc_agent_internal_append_history(agent, SC_ROLE_ASSISTANT, final_content,
+                                                       final_len, NULL, 0, NULL, 0);
+                *response_out = sc_strndup(agent->alloc, final_content, final_len);
+                if (ab_owned)
+                    agent->alloc->free(agent->alloc->ctx, (void *)final_content, final_len + 1);
                 if (!*response_out) {
                     sc_agent_clear_current_for_tools();
                     sc_chat_response_free(agent->alloc, &resp);
@@ -750,8 +940,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
                     return SC_ERR_OUT_OF_MEMORY;
                 }
                 if (response_len_out)
-                    *response_len_out = resp.content_len;
-                sc_agent_internal_maybe_tts(agent, resp.content, resp.content_len);
+                    *response_len_out = final_len;
+                sc_agent_internal_maybe_tts(agent, final_content, final_len);
             }
             sc_chat_response_free(agent->alloc, &resp);
             sc_agent_clear_current_for_tools();
@@ -770,7 +960,7 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
                         .data.custom = {.name = facts_cat, .name_len = sizeof(facts_cat) - 1},
                     };
                     const char *sid = agent->memory->current_session_id;
-                    size_t sid_len = agent->memory->current_session_id_len;
+                    size_t sid_len = sid ? agent->memory->current_session_id_len : 0;
                     for (size_t fi = 0; fi < de_result.fact_count; fi++) {
                         const sc_extracted_fact_t *f = &de_result.facts[fi];
                         if (!f->subject || !f->predicate || !f->object)
@@ -790,6 +980,21 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
                     }
                 }
                 sc_deep_extract_result_deinit(&de_result, agent->alloc);
+            }
+            /* Track agent's own commitments ("I'll check on that", "let me look into it") */
+            if (agent->commitment_store && *response_out && *response_len_out > 0) {
+                sc_commitment_detect_result_t cr;
+                memset(&cr, 0, sizeof(cr));
+                sc_error_t cerr = sc_commitment_detect(agent->alloc, *response_out,
+                                                        *response_len_out, "assistant", 9, &cr);
+                if (cerr == SC_OK && cr.count > 0) {
+                    const char *sess = agent->memory_session_id;
+                    size_t sess_len = sess ? agent->memory_session_id_len : 0;
+                    for (size_t ci = 0; ci < cr.count; ci++)
+                        (void)sc_commitment_store_save(agent->commitment_store,
+                                                        &cr.commitments[ci], sess, sess_len);
+                }
+                sc_commitment_detect_result_deinit(&cr, agent->alloc);
             }
             if (system_prompt)
                 agent->alloc->free(agent->alloc->ctx, system_prompt, system_prompt_len + 1);

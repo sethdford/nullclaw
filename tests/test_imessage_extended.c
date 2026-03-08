@@ -95,6 +95,34 @@ static void test_imessage_poll_test_mode(void) {
     sc_imessage_destroy(&ch);
 }
 
+#if SC_IS_TEST
+static void test_imessage_react_test_records(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_channel_t ch;
+    sc_imessage_create(&alloc, "+15551234567", 11, NULL, 0, &ch);
+    SC_ASSERT_NOT_NULL(ch.vtable->react);
+
+    const char *target = "+15551234567";
+    sc_error_t err =
+        ch.vtable->react(ch.ctx, target, 11, 12345, SC_REACTION_HEART);
+    SC_ASSERT_EQ(err, SC_OK);
+
+    sc_reaction_type_t out_reaction = SC_REACTION_NONE;
+    int64_t out_message_id = -1;
+    sc_imessage_test_get_last_reaction(&ch, &out_reaction, &out_message_id);
+    SC_ASSERT_EQ(out_reaction, SC_REACTION_HEART);
+    SC_ASSERT_EQ(out_message_id, 12345);
+
+    err = ch.vtable->react(ch.ctx, target, 11, 67890, SC_REACTION_HAHA);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_imessage_test_get_last_reaction(&ch, &out_reaction, &out_message_id);
+    SC_ASSERT_EQ(out_reaction, SC_REACTION_HAHA);
+    SC_ASSERT_EQ(out_message_id, 67890);
+
+    sc_imessage_destroy(&ch);
+}
+#endif
+
 void run_imessage_extended_tests(void) {
     SC_TEST_SUITE("iMessage Extended");
 
@@ -111,6 +139,9 @@ void run_imessage_extended_tests(void) {
 #if defined(__APPLE__) && defined(__MACH__)
     SC_RUN_TEST(test_imessage_send_test_mode);
     SC_RUN_TEST(test_imessage_poll_test_mode);
+#endif
+#if SC_IS_TEST
+    SC_RUN_TEST(test_imessage_react_test_records);
 #endif
 }
 #else

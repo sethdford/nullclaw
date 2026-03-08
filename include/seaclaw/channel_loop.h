@@ -43,6 +43,7 @@ typedef struct sc_channel_loop_msg {
     char session_key[128];
     char content[4096];
     bool is_group;
+    int64_t message_id; /* platform message ID for reactions; -1 if unknown */
 } sc_channel_loop_msg_t;
 
 typedef sc_error_t (*sc_channel_loop_poll_fn)(void *channel_ctx, sc_allocator_t *alloc,

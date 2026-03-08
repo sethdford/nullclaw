@@ -72,6 +72,8 @@ sc_error_t sc_stm_turn_add_entity(sc_stm_buffer_t *buf, size_t turn_idx, const c
                                   uint32_t mention_count);
 sc_error_t sc_stm_turn_add_emotion(sc_stm_buffer_t *buf, size_t turn_idx, sc_emotion_tag_t tag,
                                    double intensity);
+sc_error_t sc_stm_turn_set_primary_topic(sc_stm_buffer_t *buf, size_t turn_idx, const char *topic,
+                                          size_t topic_len);
 size_t sc_stm_count(const sc_stm_buffer_t *buf);
 const sc_stm_turn_t *sc_stm_get(const sc_stm_buffer_t *buf, size_t idx);
 sc_error_t sc_stm_build_context(const sc_stm_buffer_t *buf, sc_allocator_t *alloc, char **out,

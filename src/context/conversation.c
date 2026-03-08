@@ -1,4 +1,6 @@
 #include "seaclaw/context/conversation.h"
+#include "seaclaw/core/string.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,6 +44,211 @@ static bool str_contains_ci(const char *haystack, size_t hlen, const char *needl
             return true;
     }
     return false;
+}
+
+#define SC_CALLBACK_MAX_TOPICS 32
+#define SC_CALLBACK_TOPIC_BUF  64
+#define SC_CALLBACK_SCORE_MIN  3
+
+typedef struct {
+    char phrase[SC_CALLBACK_TOPIC_BUF];
+    size_t phrase_len;
+    size_t first_idx;
+    size_t last_idx;
+    int turn_count;
+    bool has_unresolved_question;
+    int score;
+} sc_callback_topic_t;
+
+static void extract_topics_from_text(const char *text, size_t text_len,
+                                     sc_callback_topic_t *topics, size_t *topic_count) {
+    if (!text || text_len == 0 || !topics || !topic_count || *topic_count >= SC_CALLBACK_MAX_TOPICS)
+        return;
+    const char *p = text;
+    const char *end = text + text_len;
+    while (p < end && *topic_count < SC_CALLBACK_MAX_TOPICS) {
+        while (p < end && !isalnum((unsigned char)*p) && *p != '"' && *p != '\'')
+            p++;
+        if (p >= end)
+            break;
+        if (*p == '"' || *p == '\'') {
+            char q = *p++;
+            const char *start = p;
+            while (p < end && *p != q)
+                p++;
+            if (p > start && p - start < SC_CALLBACK_TOPIC_BUF - 1) {
+                size_t len = (size_t)(p - start);
+                memcpy(topics[*topic_count].phrase, start, len);
+                topics[*topic_count].phrase[len] = '\0';
+                topics[*topic_count].phrase_len = len;
+                (*topic_count)++;
+            }
+            if (p < end)
+                p++;
+            continue;
+        }
+        if (p + 6 <= end && strncasecmp(p, "about ", 6) == 0) {
+            const char *trigger = p + 6;
+            p = trigger;
+            while (p < end && (isalnum((unsigned char)*p) || *p == '_' || *p == '-'))
+                p++;
+            if (p > trigger && (size_t)(p - trigger) < SC_CALLBACK_TOPIC_BUF - 1) {
+                size_t len = (size_t)(p - trigger);
+                memcpy(topics[*topic_count].phrase, trigger, len);
+                topics[*topic_count].phrase[len] = '\0';
+                topics[*topic_count].phrase_len = len;
+                (*topic_count)++;
+            }
+            continue;
+        }
+        if (p + 10 <= end && strncasecmp(p, "regarding ", 10) == 0) {
+            const char *trigger = p + 10;
+            p = trigger;
+            while (p < end && (isalnum((unsigned char)*p) || *p == '_' || *p == '-'))
+                p++;
+            if (p > trigger && (size_t)(p - trigger) < SC_CALLBACK_TOPIC_BUF - 1) {
+                size_t len = (size_t)(p - trigger);
+                memcpy(topics[*topic_count].phrase, trigger, len);
+                topics[*topic_count].phrase[len] = '\0';
+                topics[*topic_count].phrase_len = len;
+                (*topic_count)++;
+            }
+            continue;
+        }
+        if (isupper((unsigned char)*p)) {
+            const char *start = p;
+            while (p < end && (isalnum((unsigned char)*p) || *p == '_' || *p == '-'))
+                p++;
+            if (p > start && (size_t)(p - start) >= 2 && (size_t)(p - start) < SC_CALLBACK_TOPIC_BUF - 1) {
+                size_t len = (size_t)(p - start);
+                memcpy(topics[*topic_count].phrase, start, len);
+                topics[*topic_count].phrase[len] = '\0';
+                topics[*topic_count].phrase_len = len;
+                (*topic_count)++;
+            }
+            continue;
+        }
+        p++;
+    }
+}
+
+static bool topic_in_recent(const sc_callback_topic_t *t, const sc_channel_history_entry_t *entries,
+                            size_t count, size_t recent_start) {
+    for (size_t i = recent_start; i < count; i++) {
+        const char *text = entries[i].text;
+        size_t len = strlen(text);
+        for (size_t j = 0; j + t->phrase_len <= len; j++) {
+            if (strncasecmp(text + j, t->phrase, t->phrase_len) != 0)
+                continue;
+            char before = (j > 0) ? (char)tolower((unsigned char)text[j - 1]) : ' ';
+            char after = (j + t->phrase_len < len)
+                            ? (char)tolower((unsigned char)text[j + t->phrase_len])
+                            : ' ';
+            if (!isalnum((unsigned char)before) && !isalnum((unsigned char)after))
+                return true;
+        }
+    }
+    return false;
+}
+
+char *sc_conversation_build_callback(sc_allocator_t *alloc,
+                                    const sc_channel_history_entry_t *entries, size_t count,
+                                    size_t *out_len) {
+    if (!alloc || !out_len)
+        return NULL;
+    *out_len = 0;
+    if (!entries || count < 6)
+        return NULL;
+
+    /* ~20% probability: use hash of last message as seed (avoids count%5 restriction) */
+    const sc_channel_history_entry_t *last = &entries[count - 1];
+    uint32_t hash = 0;
+    for (size_t i = 0; i < 20 && i < strlen(last->text); i++)
+        hash = hash * 31u + (uint32_t)(unsigned char)last->text[i];
+    if (hash % 5u != 0)
+        return NULL;
+
+    size_t half = count / 2;
+    size_t recent_start = count > 3 ? count - 3 : 0;
+
+    sc_callback_topic_t all_topics[SC_CALLBACK_MAX_TOPICS];
+    size_t num_topics = 0;
+    memset(all_topics, 0, sizeof(all_topics));
+
+    for (size_t i = 0; i < half && num_topics < SC_CALLBACK_MAX_TOPICS; i++) {
+        const char *text = entries[i].text;
+        size_t tl = strlen(text);
+        sc_callback_topic_t local[8];
+        size_t nlocal = 0;
+        memset(local, 0, sizeof(local));
+        extract_topics_from_text(text, tl, local, &nlocal);
+        for (size_t k = 0; k < nlocal && num_topics < SC_CALLBACK_MAX_TOPICS; k++) {
+            bool found = false;
+            for (size_t j = 0; j < num_topics; j++) {
+                if (all_topics[j].phrase_len == local[k].phrase_len &&
+                    strncasecmp(all_topics[j].phrase, local[k].phrase, local[k].phrase_len) == 0) {
+                    all_topics[j].last_idx = i;
+                    all_topics[j].turn_count++;
+                    if (strchr(text, '?'))
+                        all_topics[j].has_unresolved_question = true;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                all_topics[num_topics] = local[k];
+                all_topics[num_topics].first_idx = i;
+                all_topics[num_topics].last_idx = i;
+                all_topics[num_topics].turn_count = 1;
+                all_topics[num_topics].has_unresolved_question = (strchr(text, '?') != NULL);
+                num_topics++;
+            }
+        }
+    }
+
+    sc_callback_topic_t *best = NULL;
+    int best_score = SC_CALLBACK_SCORE_MIN - 1;
+    for (size_t i = 0; i < num_topics; i++) {
+        if (topic_in_recent(&all_topics[i], entries, count, recent_start))
+            continue;
+        if (all_topics[i].phrase_len < 2)
+            continue;
+        int score = (int)all_topics[i].turn_count * 2;
+        if (all_topics[i].has_unresolved_question)
+            score += 3;
+        size_t msgs_ago = count - 1 - all_topics[i].last_idx;
+        if (msgs_ago < 4)
+            score -= 2;
+        else if (msgs_ago >= 6)
+            score += 1;
+        all_topics[i].score = score;
+        if (score > best_score) {
+            best_score = score;
+            best = &all_topics[i];
+        }
+    }
+
+    if (!best || best_score < SC_CALLBACK_SCORE_MIN)
+        return NULL;
+
+    size_t msgs_ago = count - 1 - best->last_idx;
+    char buf[512];
+    int w = snprintf(buf, sizeof(buf),
+                    "\n### Thread Callback Opportunity\n"
+                    "An earlier topic that could be naturally revisited:\n"
+                    "Topic: \"%.*s\"\n"
+                    "Last discussed: %zu messages ago\n"
+                    "Consider: \"oh wait, going back to %.*s...\" or weave it in naturally\n"
+                    "Only use this if it fits the current flow — don't force it.\n",
+                    (int)best->phrase_len, best->phrase, msgs_ago, (int)best->phrase_len,
+                    best->phrase);
+    if (w <= 0 || (size_t)w >= sizeof(buf))
+        return NULL;
+
+    char *result = sc_strndup(alloc, buf, (size_t)w);
+    if (result)
+        *out_len = (size_t)w;
+    return result;
 }
 
 char *sc_conversation_build_awareness(sc_allocator_t *alloc,
@@ -132,7 +339,8 @@ char *sc_conversation_build_awareness(sc_allocator_t *alloc,
         /* Time-of-day context triggers */
         {
             time_t now = time(NULL);
-            struct tm *lt = localtime(&now);
+            struct tm lt_buf;
+            struct tm *lt = localtime_r(&now, &lt_buf);
             if (lt) {
                 int hour = lt->tm_hour;
                 int wday = lt->tm_wday;
@@ -217,7 +425,8 @@ char *sc_conversation_build_awareness(sc_allocator_t *alloc,
                 seems_rushed = true;
             {
                 time_t now = time(NULL);
-                struct tm *lt = localtime(&now);
+                struct tm lt_buf2;
+                struct tm *lt = localtime_r(&now, &lt_buf2);
                 if (lt && (lt->tm_hour >= 23 || lt->tm_hour < 5)) {
                     if (count > 0 && !entries[count - 1].from_me &&
                         strlen(entries[count - 1].text) < 30)
@@ -950,6 +1159,55 @@ sc_emotional_state_t sc_conversation_detect_emotion(const sc_channel_history_ent
     }
 
     return state;
+}
+
+/* ── Typo correction fragment (*meant) ─────────────────────────────────── */
+
+size_t sc_conversation_generate_correction(const char *original, size_t original_len,
+                                            const char *typo_applied, size_t typo_applied_len,
+                                            char *out_buf, size_t out_cap,
+                                            uint32_t seed, uint32_t correction_chance) {
+    if (!original || !typo_applied || !out_buf || out_cap < 4)
+        return 0;
+
+    /* Find first difference */
+    size_t diff_pos = 0;
+    size_t lim = original_len < typo_applied_len ? original_len : typo_applied_len;
+    while (diff_pos < lim && original[diff_pos] == typo_applied[diff_pos])
+        diff_pos++;
+
+    /* No difference: identical strings */
+    if (diff_pos >= lim && original_len == typo_applied_len)
+        return 0;
+
+    /* Find word boundaries in original: word = run of non-space chars bounded by space or start/end */
+    size_t word_start = diff_pos;
+    while (word_start > 0 && original[word_start - 1] != ' ')
+        word_start--;
+    size_t word_end = diff_pos;
+    while (word_end < original_len && original[word_end] != ' ')
+        word_end++;
+
+    size_t word_len = word_end - word_start;
+    if (word_len == 0)
+        return 0;
+
+    /* Seed-based PRNG: LCG for deterministic chance check */
+    uint32_t state = seed * 1103515245u + 12345u;
+    uint32_t roll = (state >> 16) % 100u;
+    if (roll >= correction_chance)
+        return 0;
+
+    /* Format "*<correct_word>" — need 1 + word_len + 1 for null */
+    if (out_cap < 2 + word_len)
+        word_len = out_cap > 2 ? out_cap - 2 : 0;
+    if (word_len == 0)
+        return 0;
+
+    int n = snprintf(out_buf, out_cap, "*%.*s", (int)word_len, original + word_start);
+    if (n < 0)
+        return 0;
+    return (size_t)((n >= (int)out_cap) ? out_cap - 1 : n);
 }
 
 /* ── Multi-message splitting ──────────────────────────────────────────── */
@@ -1745,6 +2003,246 @@ size_t sc_conversation_apply_typing_quirks(char *buf, size_t len, const char *co
     return len;
 }
 
+/* ── Typo simulation post-processor ──────────────────────────────────── */
+
+/* QWERTY adjacency: for each lowercase letter, neighbors on keyboard.
+ * Used for adjacent-key-swap typo. Index by (c - 'a'). */
+static const char *const QWERTY_NEIGHBORS[] = {
+    "sqwz",   /* a */
+    "vghn",   /* b */
+    "xdfv",   /* c */
+    "serfcx", /* d */
+    "wrds",   /* e */
+    "drtgvc", /* f */
+    "ftyhbv", /* g */
+    "gyujnb", /* h */
+    "uokj",   /* i */
+    "huikmn", /* j */
+    "jolm",   /* k */
+    "kop",    /* l */
+    "njk",    /* m */
+    "bhjm",   /* n */
+    "iplk",   /* o */
+    "ol",     /* p */
+    "wa",     /* q */
+    "etfd",   /* r */
+    "awedxz", /* s */
+    "ryfg",   /* t */
+    "yihj",   /* u */
+    "cfgxb",  /* v */
+    "qeas",   /* w */
+    "zsdc",   /* x */
+    "tugh",   /* y */
+    "asx",    /* z */
+};
+
+static uint32_t prng_next(uint32_t *seed) {
+    *seed = *seed * 1103515245u + 12345u;
+    return (*seed >> 16u) & 0x7fffu;
+}
+
+static bool is_word_char(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+size_t sc_conversation_apply_typos(char *buf, size_t len, size_t cap, uint32_t seed) {
+    if (!buf || len == 0)
+        return len;
+
+    uint32_t s = seed;
+    uint32_t val = prng_next(&s);
+    if (val % 100u >= 15u)
+        return len;
+
+    /* Collect eligible (word_start, word_len) where word_len >= 3 and
+     * we have at least one middle position (indices 1..len-2). */
+    typedef struct {
+        size_t start;
+        size_t word_len;
+    } word_t;
+    word_t words[64];
+    size_t word_count = 0;
+
+    size_t i = 0;
+    while (i < len && word_count < 64) {
+        while (i < len && !is_word_char(buf[i]))
+            i++;
+        if (i >= len)
+            break;
+        size_t start = i;
+        while (i < len && is_word_char(buf[i]))
+            i++;
+        size_t word_len = i - start;
+        if (word_len >= 3 && word_len > 2) {
+            words[word_count].start = start;
+            words[word_count].word_len = word_len;
+            word_count++;
+        }
+    }
+
+    if (word_count == 0)
+        return len;
+
+    val = prng_next(&s);
+    size_t word_idx = (size_t)(val % (uint32_t)word_count);
+    size_t wstart = words[word_idx].start;
+    size_t wlen = words[word_idx].word_len;
+    size_t middle_count = wlen - 2;
+    if (middle_count == 0)
+        return len;
+
+    val = prng_next(&s);
+    size_t pos_in_word = 1u + (size_t)(val % (uint32_t)middle_count);
+    size_t abs_pos = wstart + pos_in_word;
+
+    val = prng_next(&s);
+    uint32_t typo_type = val % 100u;
+
+    char c = buf[abs_pos];
+    char c_lower = (c >= 'A' && c <= 'Z') ? (char)(c + 32) : c;
+    if (c_lower < 'a' || c_lower > 'z')
+        return len;
+
+    if (typo_type < 40u) {
+        /* Adjacent key swap */
+        const char *neighbors = QWERTY_NEIGHBORS[(unsigned)(c_lower - 'a')];
+        size_t ncount = 0;
+        while (neighbors[ncount] != '\0')
+            ncount++;
+        if (ncount == 0)
+            return len;
+        val = prng_next(&s);
+        char repl = neighbors[val % (uint32_t)ncount];
+        if (c >= 'A' && c <= 'Z')
+            repl = (char)(repl - 32);
+        buf[abs_pos] = repl;
+    } else if (typo_type < 70u) {
+        /* Letter transposition: swap with next char (if letter) */
+        if (abs_pos + 1 >= len || !is_word_char(buf[abs_pos + 1]))
+            return len;
+        char tmp = buf[abs_pos];
+        buf[abs_pos] = buf[abs_pos + 1];
+        buf[abs_pos + 1] = tmp;
+    } else if (typo_type < 90u) {
+        /* Dropped letter */
+        memmove(buf + abs_pos, buf + abs_pos + 1, len - abs_pos - 1);
+        buf[len - 1] = '\0';
+        return len - 1;
+    } else {
+        /* Double letter: requires cap > len + 1 (len+1 chars + null) */
+        if (cap <= len + 1)
+            return len;
+        memmove(buf + abs_pos + 1, buf + abs_pos, len - abs_pos);
+        buf[abs_pos + 1] = buf[abs_pos];
+        buf[len + 1] = '\0';
+        return len + 1;
+    }
+    return len;
+}
+
+/* ── Two-phase "let me think" thinking response classifier ─────────────── */
+
+bool sc_conversation_classify_thinking(const char *msg, size_t msg_len,
+                                       const sc_channel_history_entry_t *entries,
+                                       size_t entry_count, sc_thinking_response_t *out,
+                                       uint32_t seed) {
+    (void)entries;
+    (void)entry_count;
+    if (!msg || msg_len == 0 || !out)
+        return false;
+
+    memset(out, 0, sizeof(*out));
+
+    bool triggered = false;
+
+    /* 1. Long questions (> 100 chars with "?" and "what do you think" / "how do you feel" /
+     *    "what should I do") */
+    bool has_question = false;
+    for (size_t i = 0; i < msg_len; i++) {
+        if (msg[i] == '?') {
+            has_question = true;
+            break;
+        }
+    }
+    if (has_question && msg_len > 100 &&
+        (str_contains_ci(msg, msg_len, "what do you think") ||
+         str_contains_ci(msg, msg_len, "how do you feel") ||
+         str_contains_ci(msg, msg_len, "what should i do")))
+        triggered = true;
+
+    /* 2. Deep/philosophical questions ("meaning of", "purpose of", "do you believe") */
+    if (!triggered &&
+        (str_contains_ci(msg, msg_len, "meaning of") ||
+         str_contains_ci(msg, msg_len, "purpose of") ||
+         str_contains_ci(msg, msg_len, "do you believe")))
+        triggered = true;
+
+    /* 3. Complex emotional messages (multiple emotion keywords + length > 80 chars) */
+    if (!triggered && msg_len > 80) {
+        static const char *emo[] = {
+            "stressed", "sad", "anxious", "worried", "scared", "hurt", "frustrated",
+            "depressed", "lonely", "nervous", "overwhelmed", "exhausted", NULL,
+        };
+        int emo_count = 0;
+        for (int i = 0; emo[i]; i++) {
+            if (str_contains_ci(msg, msg_len, emo[i]))
+                emo_count++;
+        }
+        if (emo_count >= 2)
+            triggered = true;
+    }
+
+    /* 4. Advice-seeking ("should I", "what would you do", "any advice") */
+    if (!triggered &&
+        (str_contains_ci(msg, msg_len, "should i") ||
+         str_contains_ci(msg, msg_len, "what would you do") ||
+         str_contains_ci(msg, msg_len, "any advice")))
+        triggered = true;
+
+    if (!triggered)
+        return false;
+
+    /* Select filler from set based on seed (LCG, same as Phase 4a) */
+    static const char *fillers[] = {
+        "hmm",
+        "hm good question",
+        "let me think about that",
+        "that's a really good question",
+        "oh wow",
+        "okay give me a sec",
+        NULL,
+    };
+    size_t filler_count = 0;
+    while (fillers[filler_count])
+        filler_count++;
+
+    uint32_t state = seed * 1103515245u + 12345u;
+    uint32_t idx = (state >> 16) % (uint32_t)filler_count;
+
+    const char *filler = fillers[idx];
+    size_t flen = strlen(filler);
+    if (flen >= sizeof(out->filler))
+        flen = sizeof(out->filler) - 1;
+    memcpy(out->filler, filler, flen);
+    out->filler[flen] = '\0';
+    out->filler_len = flen;
+
+    /* delay_ms between 30000-60000 based on message complexity (longer messages → longer delay) */
+    uint32_t base = 30000;
+    uint32_t extra = 0;
+    if (msg_len > 150)
+        extra = 30000;
+    else if (msg_len > 100)
+        extra = 15000;
+    else if (msg_len > 80)
+        extra = 10000;
+    out->delay_ms = base + extra;
+    if (out->delay_ms > 60000)
+        out->delay_ms = 60000;
+
+    return true;
+}
+
 /* ── Enhanced response action classification ──────────────────────────── */
 
 sc_response_action_t sc_conversation_classify_response(const char *msg, size_t msg_len,
@@ -1930,6 +2428,140 @@ sc_response_action_t sc_conversation_classify_response(const char *msg, size_t m
     }
 
     return SC_RESPONSE_FULL;
+}
+
+/* ── URL extraction ──────────────────────────────────────────────────── */
+
+size_t sc_conversation_extract_urls(const char *text, size_t text_len,
+                                    sc_url_extract_t *urls, size_t max_urls) {
+    if (!text || !urls || max_urls == 0)
+        return 0;
+
+    size_t count = 0;
+    const char *p = text;
+    const char *end = text + text_len;
+
+    while (p < end && count < max_urls) {
+        const char *start = NULL;
+        size_t url_len = 0;
+
+        if (p + 8 <= end && (strncmp(p, "https://", 8) == 0 || strncmp(p, "http://", 7) == 0)) {
+            start = p;
+            p += (p[4] == 's') ? 8 : 7;
+            while (p < end) {
+                char c = *p;
+                if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '>' || c == ')' ||
+                    c == ']' || c == '"' || c == '\'')
+                    break;
+                p++;
+            }
+            url_len = (size_t)(p - start);
+        } else {
+            p++;
+        }
+
+        if (start && url_len > 0) {
+            urls[count].start = start;
+            urls[count].len = url_len;
+            count++;
+        }
+    }
+    return count;
+}
+
+/* ── Link-sharing detection ───────────────────────────────────────────── */
+
+static bool msg_contains_recommendation_pattern(const char *msg, size_t msg_len) {
+    static const char *patterns[] = {
+        "check this out", "have you seen", "you should try", "recommend",
+        "link", "article", "look at this", "here's a link", "here is a link",
+        NULL,
+    };
+    for (int i = 0; patterns[i]; i++) {
+        if (str_contains_ci(msg, msg_len, patterns[i]))
+            return true;
+    }
+    return false;
+}
+
+bool sc_conversation_should_share_link(const char *msg, size_t msg_len,
+                                       const sc_channel_history_entry_t *entries,
+                                       size_t entry_count) {
+    if (!msg || msg_len == 0)
+        return false;
+
+    if (msg_contains_recommendation_pattern(msg, msg_len))
+        return true;
+
+    /* Check if our previous response (last from_me) mentions wanting to share something */
+    if (entries && entry_count > 0) {
+        for (size_t i = entry_count; i > 0; i--) {
+            if (entries[i - 1].from_me) {
+                const char *prev = entries[i - 1].text;
+                size_t prev_len = strlen(prev);
+                if (str_contains_ci(prev, prev_len, "share") ||
+                    str_contains_ci(prev, prev_len, "link") ||
+                    str_contains_ci(prev, prev_len, "check out") ||
+                    str_contains_ci(prev, prev_len, "here's") ||
+                    str_contains_ci(prev, prev_len, "here is"))
+                    return true;
+                break;
+            }
+        }
+    }
+    return false;
+}
+
+/* ── Attachment context for prompts ──────────────────────────────────── */
+
+static bool is_attachment_placeholder(const char *text, size_t len) {
+    if (!text || len < 10)
+        return false;
+    if (strstr(text, "[image or attachment]"))
+        return true;
+    if (strstr(text, "[Photo shared]"))
+        return true;
+    if (strstr(text, "[Video shared]"))
+        return true;
+    if (strstr(text, "[Audio message]"))
+        return true;
+    if (strstr(text, "[Attachment shared]"))
+        return true;
+    if (strstr(text, "[Document:"))
+        return true;
+    return false;
+}
+
+char *sc_conversation_attachment_context(sc_allocator_t *alloc,
+                                          const sc_channel_history_entry_t *entries,
+                                          size_t count, size_t *out_len) {
+    if (!alloc || !out_len || !entries || count == 0)
+        return NULL;
+    *out_len = 0;
+
+    bool found = false;
+    for (size_t i = 0; i < count; i++) {
+        if (entries[i].from_me)
+            continue;
+        const char *t = entries[i].text;
+        size_t tl = strlen(t);
+        if (is_attachment_placeholder(t, tl)) {
+            found = true;
+            break;
+        }
+    }
+    if (!found)
+        return NULL;
+
+    const char *ctx =
+        "The user shared a photo/attachment. Acknowledge it naturally — "
+        "\"love that!\", \"that looks great\", etc. Don't say \"I can see the image\" "
+        "if you can't actually analyze it.";
+    size_t ctx_len = strlen(ctx);
+    char *result = sc_strndup(alloc, ctx, ctx_len);
+    if (result)
+        *out_len = ctx_len;
+    return result;
 }
 
 /* ── Anti-repetition detection ────────────────────────────────────────── */
@@ -2203,4 +2835,105 @@ sc_group_response_t sc_conversation_classify_group(const char *msg, size_t msg_l
         return SC_GROUP_SKIP;
 
     return SC_GROUP_BRIEF;
+}
+
+/* ── Reaction classifier ───────────────────────────────────────────────── */
+
+static uint32_t reaction_prng_next(uint32_t *s) {
+    *s = *s * 1103515245u + 12345u;
+    return (*s >> 16u) & 0x7fffu;
+}
+
+sc_reaction_type_t sc_conversation_classify_reaction(const char *msg, size_t msg_len, bool from_me,
+                                                     const sc_channel_history_entry_t *entries,
+                                                     size_t entry_count, uint32_t seed) {
+    (void)entries;
+    (void)entry_count;
+
+    if (!msg || msg_len == 0)
+        return SC_REACTION_NONE;
+
+    /* Only react to messages from others, not our own */
+    if (from_me)
+        return SC_REACTION_NONE;
+
+    uint32_t s = seed;
+
+    /* Photos/media placeholders: 50% chance of heart */
+    if (str_contains_ci(msg, msg_len, "[image") ||
+        str_contains_ci(msg, msg_len, "[attachment")) {
+        uint32_t roll = reaction_prng_next(&s) % 100u;
+        if (roll < 50u)
+            return SC_REACTION_HEART;
+        return SC_REACTION_NONE;
+    }
+
+    /* Funny messages → HAHA */
+    if (str_contains_ci(msg, msg_len, "lol") || str_contains_ci(msg, msg_len, "lmao") ||
+        str_contains_ci(msg, msg_len, "haha") || str_contains_ci(msg, msg_len, "hahaha") ||
+        str_contains_ci(msg, msg_len, "😂") || str_contains_ci(msg, msg_len, "hilarious") ||
+        str_contains_ci(msg, msg_len, "that's funny") || str_contains_ci(msg, msg_len, "so funny")) {
+        uint32_t roll = reaction_prng_next(&s) % 100u;
+        if (roll < 30u)
+            return SC_REACTION_HAHA;
+        return SC_REACTION_NONE;
+    }
+
+    /* Short message with exclamations (e.g. "omg!!", "yes!!!") → HAHA or EMPHASIS */
+    if (msg_len <= 20) {
+        bool has_excl = false;
+        for (size_t i = 0; i < msg_len; i++) {
+            if (msg[i] == '!') {
+                has_excl = true;
+                break;
+            }
+        }
+        if (has_excl) {
+            uint32_t roll = reaction_prng_next(&s) % 100u;
+            if (roll < 30u)
+                return SC_REACTION_HAHA;
+        }
+    }
+
+    /* Loving/sweet messages → HEART */
+    if (str_contains_ci(msg, msg_len, "love you") || str_contains_ci(msg, msg_len, "miss you") ||
+        str_contains_ci(msg, msg_len, "❤") || str_contains_ci(msg, msg_len, "💕") ||
+        str_contains_ci(msg, msg_len, "you're amazing") ||
+        str_contains_ci(msg, msg_len, "you're the best") ||
+        str_contains_ci(msg, msg_len, "proud of you") || str_contains_ci(msg, msg_len, "so sweet")) {
+        uint32_t roll = reaction_prng_next(&s) % 100u;
+        if (roll < 30u)
+            return SC_REACTION_HEART;
+        return SC_REACTION_NONE;
+    }
+
+    /* Agreement/affirmation → THUMBS_UP */
+    if (str_contains_ci(msg, msg_len, "absolutely") || str_contains_ci(msg, msg_len, "exactly") ||
+        str_contains_ci(msg, msg_len, "yes!") || str_contains_ci(msg, msg_len, "👍") ||
+        str_contains_ci(msg, msg_len, "for sure") || str_contains_ci(msg, msg_len, "definitely")) {
+        uint32_t roll = reaction_prng_next(&s) % 100u;
+        if (roll < 30u)
+            return SC_REACTION_THUMBS_UP;
+        return SC_REACTION_NONE;
+    }
+
+    /* Impressive/exciting news → EMPHASIS */
+    if (str_contains_ci(msg, msg_len, "got the job") || str_contains_ci(msg, msg_len, "i did it") ||
+        str_contains_ci(msg, msg_len, "we won") || str_contains_ci(msg, msg_len, "we did it") ||
+        str_contains_ci(msg, msg_len, "got in") || str_contains_ci(msg, msg_len, "i passed") ||
+        str_contains_ci(msg, msg_len, "got engaged") || str_contains_ci(msg, msg_len, "got promoted")) {
+        uint32_t roll = reaction_prng_next(&s) % 100u;
+        if (roll < 30u)
+            return SC_REACTION_EMPHASIS;
+        return SC_REACTION_NONE;
+    }
+
+    /* Messages that need a real text response → NONE */
+    if (str_contains_ci(msg, msg_len, "what time") || str_contains_ci(msg, msg_len, "where") ||
+        str_contains_ci(msg, msg_len, "how do") || str_contains_ci(msg, msg_len, "can you") ||
+        str_contains_ci(msg, msg_len, "could you") || str_contains_ci(msg, msg_len, "why") ||
+        str_contains_ci(msg, msg_len, "when") || str_contains_ci(msg, msg_len, "?"))
+        return SC_REACTION_NONE;
+
+    return SC_REACTION_NONE;
 }

@@ -105,7 +105,8 @@ sc_error_t sc_prompt_build_system(sc_allocator_t *alloc, const sc_prompt_config_
         }
         {
             time_t now = time(NULL);
-            struct tm *lt = localtime(&now);
+            struct tm lt_buf;
+            struct tm *lt = localtime_r(&now, &lt_buf);
             if (lt) {
                 const char *period = "morning";
                 if (lt->tm_hour >= 12 && lt->tm_hour < 17)

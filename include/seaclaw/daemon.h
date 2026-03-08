@@ -33,6 +33,7 @@ typedef struct sc_service_channel {
     sc_channel_webhook_fn webhook_fn; /* optional — NULL for polling-only channels */
     uint32_t interval_ms;
     int64_t last_poll_ms;
+    uint64_t last_contact_ms;
 } sc_service_channel_t;
 
 /**

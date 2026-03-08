@@ -348,11 +348,11 @@ export class ScJsonViewer extends LitElement {
     }
 
     .row:hover {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
 
     .row:focus-within {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
 
     .row-primitive .key,
