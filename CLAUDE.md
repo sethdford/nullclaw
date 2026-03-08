@@ -12,7 +12,7 @@ Read `AGENTS.md` for the full engineering protocol. This file is the quick refer
 cmake -B build -DSC_ENABLE_ALL_CHANNELS=ON -DSC_ENABLE_SQLITE=ON -DSC_ENABLE_PERSONA=ON
 cmake --build build -j$(sysctl -n hw.ncpu 2>/dev/null || nproc)
 
-# Run tests (3217+ tests, must be 0 failures, 0 ASan errors)
+# Run tests (3219+ tests, must be 0 failures, 0 ASan errors)
 ./build/seaclaw_tests
 
 # Release build
@@ -90,7 +90,7 @@ Extend via: `src/persona/` (persona.c, creator.c, analyzer.c, sampler.c, example
 | ------------------ | ---------------------------------------------- |
 | `src/`             | All C source (~621 files, ~112K lines)         |
 | `include/seaclaw/` | Public headers                                 |
-| `tests/`           | 102 test files, 3217+ tests                    |
+| `tests/`           | 102 test files, 3219+ tests                    |
 | `fuzz/`            | libFuzzer harnesses                            |
 | `ui/`              | LitElement web dashboard                       |
 | `website/`         | Astro marketing site                           |
