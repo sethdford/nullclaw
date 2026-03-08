@@ -778,7 +778,7 @@ sc_error_t sc_persona_load_json(sc_allocator_t *alloc, const char *json, size_t 
         }
         s = sc_json_get_string(core, "biography");
         if (s)
-            out->biography = sc_strdup(alloc, s);
+            PERSONA_STRDUP_OPT(out->biography, s);
 
         sc_json_value_t *dn = sc_json_object_get(core, "directors_notes");
         if (dn)
