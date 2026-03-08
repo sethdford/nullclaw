@@ -213,9 +213,10 @@ describe("sc-pagination", () => {
     document.body.appendChild(el);
     await el.updateComplete;
 
-    const events: Array<{ page?: number }> = [];
-    el.addEventListener("sc-page-change", ((e: CustomEvent<{ page?: number }>) =>
-      events.push(e.detail)) as EventListener);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const events: any[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    el.addEventListener("sc-page-change", (e: any) => events.push(e.detail));
 
     const nextBtn = el.shadowRoot?.querySelector('[aria-label="Next page"]') as HTMLButtonElement;
     nextBtn?.click();
@@ -269,9 +270,10 @@ describe("sc-data-table-v2", () => {
     document.body.appendChild(el);
     await el.updateComplete;
 
-    const events: Array<{ row?: { name: string } }> = [];
-    el.addEventListener("sc-row-click", ((e: CustomEvent<{ row?: { name: string } }>) =>
-      events.push(e.detail)) as EventListener);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const events: any[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    el.addEventListener("sc-row-click", (e: any) => events.push(e.detail));
 
     const row = el.shadowRoot?.querySelector("tbody tr") as HTMLElement;
     row?.click();
