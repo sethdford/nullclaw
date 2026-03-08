@@ -114,6 +114,7 @@ void run_fast_capture_tests(void);
 void run_promotion_tests(void);
 void run_consolidation_tests(void);
 void run_deep_extract_tests(void);
+void run_commitment_tests(void);
 
 int main(void) {
     printf("SeaClaw Test Suite\n");
@@ -229,6 +230,7 @@ int main(void) {
     run_promotion_tests();
     run_consolidation_tests();
     run_deep_extract_tests();
+    run_commitment_tests();
 
     SC_TEST_REPORT();
     SC_TEST_EXIT();
