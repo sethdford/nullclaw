@@ -2,8 +2,10 @@
 #include "seaclaw/agent/dag_executor.h"
 #include "seaclaw/agent/llm_compiler.h"
 #include "seaclaw/core/allocator.h"
+#include "seaclaw/core/error.h"
 #include "seaclaw/core/string.h"
 #include "test_framework.h"
+#include <stdio.h>
 #include <string.h>
 
 static void dag_add_node_and_find(void) {
@@ -258,6 +260,91 @@ static void dag_resolve_vars_no_refs(void) {
     sc_dag_deinit(&dag);
 }
 
+static void dag_add_node_when_full(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_dag_t dag;
+    sc_dag_init(&dag, alloc);
+
+    for (size_t i = 0; i < SC_DAG_MAX_NODES; i++) {
+        char id[16];
+        (void)snprintf(id, sizeof(id), "t%zu", i);
+        sc_error_t err = sc_dag_add_node(&dag, id, "a", "{}", NULL, 0);
+        SC_ASSERT_EQ(err, SC_OK);
+    }
+
+    sc_error_t err = sc_dag_add_node(&dag, "extra", "b", "{}", NULL, 0);
+    SC_ASSERT_NEQ(err, SC_OK);
+
+    sc_dag_deinit(&dag);
+}
+
+static void dag_parse_json_empty_tasks(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_dag_t dag;
+    sc_dag_init(&dag, alloc);
+
+    const char *json = "{\"tasks\":[]}";
+    sc_error_t err = sc_dag_parse_json(&dag, &alloc, json, strlen(json));
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(dag.node_count, 0u);
+
+    sc_dag_deinit(&dag);
+}
+
+static void dag_parse_json_missing_id(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_dag_t dag;
+    sc_dag_init(&dag, alloc);
+
+    const char *json = "{\"tasks\":[{\"tool\":\"a\",\"args\":{},\"deps\":[]}]}";
+    sc_error_t err = sc_dag_parse_json(&dag, &alloc, json, strlen(json));
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(dag.node_count, 0u);
+
+    sc_dag_deinit(&dag);
+}
+
+static void dag_find_node_not_found(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_dag_t dag;
+    sc_dag_init(&dag, alloc);
+
+    sc_dag_add_node(&dag, "t0", "a", "{}", NULL, 0);
+    sc_dag_node_t *n = sc_dag_find_node(&dag, "nonexistent", 10);
+    SC_ASSERT_NULL(n);
+
+    sc_dag_deinit(&dag);
+}
+
+static void dag_next_batch_empty_dag(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_dag_t dag;
+    sc_dag_init(&dag, alloc);
+
+    sc_dag_batch_t batch;
+    sc_error_t err = sc_dag_next_batch(&dag, &batch);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(batch.count, 0u);
+
+    sc_dag_deinit(&dag);
+}
+
+static void dag_resolve_vars_null_args(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_dag_t dag;
+    sc_dag_init(&dag, alloc);
+
+    char *resolved = NULL;
+    size_t resolved_len = 0;
+    sc_error_t err = sc_dag_resolve_vars(&alloc, &dag, NULL, 0, &resolved, &resolved_len);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(resolved);
+    SC_ASSERT_EQ(resolved_len, 0u);
+    sc_str_free(&alloc, resolved);
+
+    sc_dag_deinit(&dag);
+}
+
 void run_dag_tests(void) {
     SC_TEST_SUITE("dag");
     SC_RUN_TEST(dag_add_node_and_find);
@@ -271,6 +358,12 @@ void run_dag_tests(void) {
     SC_RUN_TEST(dag_next_batch_returns_dependents_after_roots_done);
     SC_RUN_TEST(dag_resolve_vars_substitutes);
     SC_RUN_TEST(dag_resolve_vars_no_refs);
+    SC_RUN_TEST(dag_add_node_when_full);
+    SC_RUN_TEST(dag_parse_json_empty_tasks);
+    SC_RUN_TEST(dag_parse_json_missing_id);
+    SC_RUN_TEST(dag_find_node_not_found);
+    SC_RUN_TEST(dag_next_batch_empty_dag);
+    SC_RUN_TEST(dag_resolve_vars_null_args);
     SC_RUN_TEST(llm_compiler_build_prompt_includes_goal);
     SC_RUN_TEST(llm_compiler_build_prompt_includes_tools);
     SC_RUN_TEST(llm_compiler_parse_plan_valid);

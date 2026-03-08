@@ -1,5 +1,6 @@
 #include "seaclaw/agent/tool_router.h"
 #include "seaclaw/core/allocator.h"
+#include "seaclaw/core/error.h"
 #include "seaclaw/core/json.h"
 #include "seaclaw/tool.h"
 #include "test_framework.h"
@@ -139,9 +140,62 @@ static void router_selects_relevant_by_keyword(void) {
     SC_ASSERT_TRUE(has_web);
 }
 
+static void router_null_tools_returns_empty(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_selection_t sel;
+    memset(&sel, 0, sizeof(sel));
+
+    sc_error_t err = sc_tool_router_select(&alloc, "hello", 5, NULL, 0, &sel);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(sel.count, 0u);
+}
+
+static void router_null_message_still_includes_always_tools(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    static const sc_tool_vtable_t vtable_memory = {
+        .execute = mock_exec_noop,
+        .name = mock_name_memory_store,
+        .description = mock_desc_memory_store,
+        .parameters_json = NULL,
+        .deinit = NULL,
+    };
+    sc_tool_t tools[] = {
+        {.ctx = NULL, .vtable = &vtable_memory},
+    };
+    sc_tool_selection_t sel;
+    memset(&sel, 0, sizeof(sel));
+
+    sc_error_t err = sc_tool_router_select(&alloc, NULL, 0, tools, 1, &sel);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(sel.count >= 1u);
+}
+
+static void router_empty_message_still_includes_always_tools(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    static const sc_tool_vtable_t vtable_memory = {
+        .execute = mock_exec_noop,
+        .name = mock_name_memory_store,
+        .description = mock_desc_memory_store,
+        .parameters_json = NULL,
+        .deinit = NULL,
+    };
+    sc_tool_t tools[] = {
+        {.ctx = NULL, .vtable = &vtable_memory},
+    };
+    sc_tool_selection_t sel;
+    memset(&sel, 0, sizeof(sel));
+
+    sc_error_t err = sc_tool_router_select(&alloc, "", 0, tools, 1, &sel);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(sel.count >= 1u);
+}
+
 void run_tool_router_tests(void) {
     SC_TEST_SUITE("tool_router");
     SC_RUN_TEST(router_always_includes_core_tools);
     SC_RUN_TEST(router_limits_to_max_selected);
     SC_RUN_TEST(router_selects_relevant_by_keyword);
+    SC_RUN_TEST(router_null_tools_returns_empty);
+    SC_RUN_TEST(router_null_message_still_includes_always_tools);
+    SC_RUN_TEST(router_empty_message_still_includes_always_tools);
 }

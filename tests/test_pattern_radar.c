@@ -1,6 +1,8 @@
 #include "seaclaw/agent/pattern_radar.h"
 #include "seaclaw/core/allocator.h"
+#include "seaclaw/core/error.h"
 #include "test_framework.h"
+#include <stdio.h>
 #include <string.h>
 
 static void radar_tracks_topic_recurrence(void) {
@@ -87,10 +89,60 @@ static void radar_handles_empty(void) {
     sc_pattern_radar_deinit(&radar);
 }
 
+static void radar_at_max_observations(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_pattern_radar_t radar;
+    SC_ASSERT_EQ(sc_pattern_radar_init(&radar, alloc), SC_OK);
+
+    for (size_t i = 0; i < SC_PATTERN_MAX_OBSERVATIONS; i++) {
+        char topic[24];
+        int n = snprintf(topic, sizeof(topic), "topic_%zu", i);
+        sc_error_t err = sc_pattern_radar_observe(&radar, topic, (size_t)n,
+                                                  SC_PATTERN_TOPIC_RECURRENCE, NULL, 0, "ts", 2);
+        SC_ASSERT_EQ(err, SC_OK);
+    }
+
+    char extra[24];
+    int n = snprintf(extra, sizeof(extra), "topic_%u", SC_PATTERN_MAX_OBSERVATIONS);
+    sc_error_t err = sc_pattern_radar_observe(&radar, extra, (size_t)n,
+                                              SC_PATTERN_TOPIC_RECURRENCE, NULL, 0, "ts", 2);
+    SC_ASSERT_EQ(err, SC_OK);
+
+    sc_pattern_radar_deinit(&radar);
+}
+
+static void radar_observe_null_subject_fails(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_pattern_radar_t radar;
+    SC_ASSERT_EQ(sc_pattern_radar_init(&radar, alloc), SC_OK);
+
+    sc_error_t err = sc_pattern_radar_observe(&radar, NULL, 5, SC_PATTERN_TOPIC_RECURRENCE,
+                                              NULL, 0, "ts", 2);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+
+    sc_pattern_radar_deinit(&radar);
+}
+
+static void radar_deinit_clears_memory(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_pattern_radar_t radar;
+    SC_ASSERT_EQ(sc_pattern_radar_init(&radar, alloc), SC_OK);
+    SC_ASSERT_EQ(sc_pattern_radar_observe(&radar, "topic", 5, SC_PATTERN_TOPIC_RECURRENCE,
+                                          NULL, 0, "ts", 2),
+                 SC_OK);
+    SC_ASSERT_EQ(radar.observation_count, 1u);
+
+    sc_pattern_radar_deinit(&radar);
+    SC_ASSERT_EQ(radar.observation_count, 0u);
+}
+
 void run_pattern_radar_tests(void) {
     SC_TEST_SUITE("pattern_radar");
     SC_RUN_TEST(radar_tracks_topic_recurrence);
     SC_RUN_TEST(radar_separates_different_topics);
     SC_RUN_TEST(radar_build_context_only_shows_patterns);
     SC_RUN_TEST(radar_handles_empty);
+    SC_RUN_TEST(radar_at_max_observations);
+    SC_RUN_TEST(radar_observe_null_subject_fails);
+    SC_RUN_TEST(radar_deinit_clears_memory);
 }

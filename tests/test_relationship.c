@@ -1,4 +1,5 @@
 #include "seaclaw/core/allocator.h"
+#include "seaclaw/core/error.h"
 #include "seaclaw/persona/relationship.h"
 #include "test_framework.h"
 #include <string.h>
@@ -62,6 +63,19 @@ static void relationship_build_prompt_contains_stage(void) {
     alloc.free(alloc.ctx, out, out_len + 1);
 }
 
+static void relationship_new_session_null_safe(void) {
+    sc_relationship_new_session(NULL);
+}
+
+static void relationship_build_prompt_null_state_fails(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    char *out = NULL;
+    size_t out_len = 0;
+    sc_error_t err = sc_relationship_build_prompt(&alloc, NULL, &out, &out_len);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+    SC_ASSERT_NULL(out);
+}
+
 void run_relationship_tests(void) {
     SC_TEST_SUITE("relationship");
     SC_RUN_TEST(relationship_new_stage);
@@ -70,4 +84,6 @@ void run_relationship_tests(void) {
     SC_RUN_TEST(relationship_deep_after_50);
     SC_RUN_TEST(relationship_update_increments_turns_not_sessions);
     SC_RUN_TEST(relationship_build_prompt_contains_stage);
+    SC_RUN_TEST(relationship_new_session_null_safe);
+    SC_RUN_TEST(relationship_build_prompt_null_state_fails);
 }

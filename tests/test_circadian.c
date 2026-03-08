@@ -45,6 +45,15 @@ static void circadian_build_prompt_contains_phase(void) {
     alloc.free(alloc.ctx, out, out_len + 1);
 }
 
+static void circadian_boundary_hours(void) {
+    SC_ASSERT_EQ(sc_circadian_phase(0), SC_PHASE_LATE_NIGHT);
+    SC_ASSERT_EQ(sc_circadian_phase(5), SC_PHASE_EARLY_MORNING);
+    SC_ASSERT_EQ(sc_circadian_phase(8), SC_PHASE_MORNING);
+    SC_ASSERT_EQ(sc_circadian_phase(12), SC_PHASE_AFTERNOON);
+    SC_ASSERT_EQ(sc_circadian_phase(17), SC_PHASE_EVENING);
+    SC_ASSERT_EQ(sc_circadian_phase(21), SC_PHASE_NIGHT);
+}
+
 void run_circadian_tests(void) {
     SC_TEST_SUITE("circadian");
     SC_RUN_TEST(circadian_5am_is_early_morning);
@@ -54,4 +63,5 @@ void run_circadian_tests(void) {
     SC_RUN_TEST(circadian_22pm_is_night);
     SC_RUN_TEST(circadian_2am_is_late_night);
     SC_RUN_TEST(circadian_build_prompt_contains_phase);
+    SC_RUN_TEST(circadian_boundary_hours);
 }

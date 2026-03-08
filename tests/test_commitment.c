@@ -1,6 +1,7 @@
 #include "seaclaw/agent/commitment.h"
 #include "seaclaw/agent/commitment_store.h"
 #include "seaclaw/core/allocator.h"
+#include "seaclaw/core/error.h"
 #include "seaclaw/memory/engines.h"
 #include "test_framework.h"
 #include <string.h>
@@ -132,6 +133,49 @@ static void commitment_store_build_context_formats(void) {
     mem.vtable->deinit(mem.ctx);
 }
 
+static void commitment_detect_null_text_fails(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_commitment_detect_result_t result;
+    sc_error_t err = sc_commitment_detect(&alloc, NULL, 5, "user", 4, &result);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void commitment_detect_max_commitments(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_commitment_detect_result_t result;
+    const char *text =
+        "I will do A. I'll do B. I promise C. I'm going to D. I plan to E. I want to F.";
+    sc_error_t err = sc_commitment_detect(&alloc, text, strlen(text), "user", 4, &result);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(result.count <= SC_COMMITMENT_DETECT_MAX);
+    sc_commitment_detect_result_deinit(&result, &alloc);
+}
+
+static void commitment_deinit_null_safe(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_commitment_deinit(NULL, &alloc);
+}
+
+static void commitment_store_list_empty(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_memory_t mem = sc_memory_lru_create(&alloc, 100);
+    sc_commitment_store_t *store = NULL;
+    SC_ASSERT_EQ(sc_commitment_store_create(&alloc, &mem, &store), SC_OK);
+
+    sc_commitment_t *active = NULL;
+    size_t count = 0;
+    SC_ASSERT_EQ(sc_commitment_store_list_active(store, &alloc, NULL, 0, &active, &count), SC_OK);
+    SC_ASSERT_EQ(count, 0u);
+    SC_ASSERT_NULL(active);
+
+    sc_commitment_store_destroy(store);
+    mem.vtable->deinit(mem.ctx);
+}
+
+static void commitment_store_destroy_null_safe(void) {
+    sc_commitment_store_destroy(NULL);
+}
+
 void run_commitment_tests(void) {
     SC_TEST_SUITE("commitment");
     SC_RUN_TEST(commitment_detects_promise);
@@ -142,4 +186,9 @@ void run_commitment_tests(void) {
     SC_RUN_TEST(commitment_handles_empty_text);
     SC_RUN_TEST(commitment_store_save_and_list);
     SC_RUN_TEST(commitment_store_build_context_formats);
+    SC_RUN_TEST(commitment_detect_null_text_fails);
+    SC_RUN_TEST(commitment_detect_max_commitments);
+    SC_RUN_TEST(commitment_deinit_null_safe);
+    SC_RUN_TEST(commitment_store_list_empty);
+    SC_RUN_TEST(commitment_store_destroy_null_safe);
 }

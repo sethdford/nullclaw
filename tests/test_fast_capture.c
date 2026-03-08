@@ -1,4 +1,5 @@
 #include "seaclaw/core/allocator.h"
+#include "seaclaw/core/error.h"
 #include "seaclaw/memory/fast_capture.h"
 #include "seaclaw/memory/stm.h"
 #include "test_framework.h"
@@ -90,6 +91,40 @@ static void fc_detects_multiple_emotions(void) {
     sc_fc_result_deinit(&out, &alloc);
 }
 
+static void fc_null_alloc_fails(void) {
+    sc_fc_result_t result;
+    sc_error_t err = sc_fast_capture(NULL, "hello", 5, &result);
+    SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+}
+
+static void fc_very_long_text_no_crash(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_fc_result_t out;
+    char buf[10001];
+    for (size_t i = 0; i < sizeof(buf) - 1; i++)
+        buf[i] = 'x';
+    buf[sizeof(buf) - 1] = '\0';
+
+    sc_error_t err = sc_fast_capture(&alloc, buf, sizeof(buf) - 1, &out);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_fc_result_deinit(&out, &alloc);
+}
+
+static void fc_multiple_commitments(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_fc_result_t out;
+    const char *text = "I will do A and I'll do B";
+    sc_error_t err = sc_fast_capture(&alloc, text, strlen(text), &out);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(out.has_commitment);
+    sc_fc_result_deinit(&out, &alloc);
+}
+
+static void fc_result_deinit_null_safe(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_fc_result_deinit(NULL, &alloc);
+}
+
 void run_fast_capture_tests(void) {
     SC_TEST_SUITE("fast_capture");
     SC_RUN_TEST(fc_detects_relationship_person);
@@ -99,4 +134,8 @@ void run_fast_capture_tests(void) {
     SC_RUN_TEST(fc_detects_question);
     SC_RUN_TEST(fc_handles_empty_text);
     SC_RUN_TEST(fc_detects_multiple_emotions);
+    SC_RUN_TEST(fc_null_alloc_fails);
+    SC_RUN_TEST(fc_very_long_text_no_crash);
+    SC_RUN_TEST(fc_multiple_commitments);
+    SC_RUN_TEST(fc_result_deinit_null_safe);
 }

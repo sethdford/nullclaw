@@ -158,9 +158,11 @@ sc_error_t sc_commitment_detect(sc_allocator_t *alloc, const char *text, size_t 
                                sc_commitment_detect_result_t *result) {
     if (!alloc || !result)
         return SC_ERR_INVALID_ARGUMENT;
+    if (!text)
+        return SC_ERR_INVALID_ARGUMENT;
     result->count = 0;
     memset(result->commitments, 0, sizeof(result->commitments));
-    if (!text || text_len == 0)
+    if (text_len == 0)
         return SC_OK;
 
     sc_error_t err;
