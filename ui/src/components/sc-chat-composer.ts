@@ -225,6 +225,9 @@ export class ScChatComposer extends LitElement {
       color: var(--sc-text-muted);
       font-variant-numeric: tabular-nums;
     }
+    .composer-wrap {
+      position: relative;
+    }
     .slash-popover {
       position: absolute;
       bottom: 100%;
@@ -453,7 +456,7 @@ export class ScChatComposer extends LitElement {
   override render() {
     const canSend = this.value.trim().length > 0 && !this.waiting && !this.disabled;
     return html`
-      <div style="position:relative;">
+      <div class="composer-wrap">
         ${this._slashOpen
           ? html`
               <div class="slash-popover">

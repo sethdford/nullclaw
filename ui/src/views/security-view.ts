@@ -601,7 +601,7 @@ export class ScSecurityView extends GatewayAwareLitElement {
 
   override render() {
     const hero = html`
-      <sc-page-hero>
+      <sc-page-hero role="region" aria-label="Security">
         <sc-section-header
           heading="Security"
           description="Access control, pairing, and security policies"

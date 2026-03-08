@@ -353,7 +353,7 @@ export class ScSkillsView extends GatewayAwareLitElement {
   }
 
   private _renderHero(): TemplateResult {
-    return html` <sc-page-hero>
+    return html` <sc-page-hero role="region" aria-label="Skills">
       <sc-section-header
         heading="Skills"
         description="Extend your agent with installable skill packages"

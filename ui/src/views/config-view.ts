@@ -156,6 +156,9 @@ export class ScConfigView extends GatewayAwareLitElement {
       color: var(--sc-text-muted);
       margin-top: var(--sc-space-2xs);
     }
+    .field .description-error {
+      color: var(--sc-error);
+    }
     .raw-area {
       --sc-font: var(--sc-font-mono);
       --sc-text-base: var(--sc-text-sm);
@@ -448,7 +451,7 @@ export class ScConfigView extends GatewayAwareLitElement {
 
   private _renderSkeleton(): TemplateResult {
     return html`
-      <sc-page-hero>
+      <sc-page-hero role="region" aria-label="Configuration">
         <sc-section-header
           heading="Configuration"
           description="Manage your SeaClaw instance settings"
@@ -472,7 +475,7 @@ export class ScConfigView extends GatewayAwareLitElement {
 
   private _renderRaw(): TemplateResult {
     return html`
-      <sc-page-hero>
+      <sc-page-hero role="region" aria-label="Configuration">
         <sc-section-header
           heading="Configuration"
           description="Manage your SeaClaw instance settings"
@@ -547,7 +550,7 @@ export class ScConfigView extends GatewayAwareLitElement {
 
   private _renderForm(): TemplateResult {
     return html`
-      <sc-page-hero>
+      <sc-page-hero role="region" aria-label="Configuration">
         <sc-section-header
           heading="Configuration"
           description="Manage your SeaClaw instance settings"
@@ -635,9 +638,7 @@ export class ScConfigView extends GatewayAwareLitElement {
                 }}
               ></sc-input>
               ${this.temperatureError
-                ? html`<span class="description" style="color: var(--sc-error)"
-                    >${this.temperatureError}</span
-                  >`
+                ? html`<span class="description description-error">${this.temperatureError}</span>`
                 : nothing}
             </div>
           </sc-form-group>

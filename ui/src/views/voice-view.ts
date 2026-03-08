@@ -477,7 +477,7 @@ export class ScVoiceView extends GatewayAwareLitElement {
 
   private _renderHero() {
     return html`
-      <sc-page-hero>
+      <sc-page-hero role="region" aria-label="Voice">
         <sc-section-header
           heading="Voice"
           description="Voice assistant with speech recognition and real-time conversation"

@@ -154,6 +154,37 @@ export class ScLogsView extends GatewayAwareLitElement {
     .log-area::-webkit-scrollbar-thumb:hover {
       background: var(--sc-text-muted);
     }
+    .skeleton-control {
+      width: 12rem;
+    }
+    .skeleton-filter {
+      width: 13.75rem;
+    }
+    .skeleton-action {
+      width: 4rem;
+    }
+    .log-area-min {
+      min-height: 12rem;
+    }
+    .skeleton-line {
+      width: 100%;
+      margin-bottom: var(--sc-space-sm);
+    }
+    .skeleton-line-90 {
+      width: 90%;
+      margin-bottom: var(--sc-space-sm);
+    }
+    .skeleton-line-95 {
+      width: 95%;
+      margin-bottom: var(--sc-space-sm);
+    }
+    .skeleton-line-85 {
+      width: 85%;
+      margin-bottom: var(--sc-space-sm);
+    }
+    .skeleton-line-70 {
+      width: 70%;
+    }
     @media (max-width: 48rem) /* --sc-breakpoint-lg */ {
       .header {
         flex-wrap: wrap;
@@ -334,7 +365,7 @@ export class ScLogsView extends GatewayAwareLitElement {
 
   private _renderHeader(): ReturnType<typeof html> {
     return html`
-      <sc-page-hero>
+      <sc-page-hero role="region" aria-label="Logs">
         <sc-section-header
           heading="Logs"
           description="System event log and debugging output"
@@ -347,31 +378,19 @@ export class ScLogsView extends GatewayAwareLitElement {
     return html`
       <div class="controls-sticky">
         <div class="controls">
-          <sc-skeleton variant="card" height="2.5rem" style="width: 12rem"></sc-skeleton>
-          <sc-skeleton variant="card" height="2.5rem" style="width: 13.75rem"></sc-skeleton>
-          <sc-skeleton variant="card" height="2.5rem" style="width: 4rem"></sc-skeleton>
+          <sc-skeleton variant="card" height="2.5rem" class="skeleton-control"></sc-skeleton>
+          <sc-skeleton variant="card" height="2.5rem" class="skeleton-filter"></sc-skeleton>
+          <sc-skeleton variant="card" height="2.5rem" class="skeleton-action"></sc-skeleton>
         </div>
       </div>
       <sc-card class="log-card" glass>
-        <div class="log-area-wrapper" style="min-height: 12rem">
+        <div class="log-area-wrapper log-area-min">
           <div class="log-area">
-            <sc-skeleton
-              variant="line"
-              style="width: 100%; margin-bottom: var(--sc-space-sm)"
-            ></sc-skeleton>
-            <sc-skeleton
-              variant="line"
-              style="width: 90%; margin-bottom: var(--sc-space-sm)"
-            ></sc-skeleton>
-            <sc-skeleton
-              variant="line"
-              style="width: 95%; margin-bottom: var(--sc-space-sm)"
-            ></sc-skeleton>
-            <sc-skeleton
-              variant="line"
-              style="width: 85%; margin-bottom: var(--sc-space-sm)"
-            ></sc-skeleton>
-            <sc-skeleton variant="line" style="width: 70%"></sc-skeleton>
+            <sc-skeleton variant="line" class="skeleton-line"></sc-skeleton>
+            <sc-skeleton variant="line" class="skeleton-line-90"></sc-skeleton>
+            <sc-skeleton variant="line" class="skeleton-line-95"></sc-skeleton>
+            <sc-skeleton variant="line" class="skeleton-line-85"></sc-skeleton>
+            <sc-skeleton variant="line" class="skeleton-line-70"></sc-skeleton>
           </div>
         </div>
       </sc-card>

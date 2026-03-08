@@ -122,6 +122,15 @@ export class ScAutomationsView extends GatewayAwareLitElement {
       font-size: var(--sc-text-xs);
       color: var(--sc-text-faint);
     }
+    .run-chart-card {
+      margin-bottom: var(--sc-space-xl);
+    }
+    .run-chart-title {
+      margin: 0 0 var(--sc-space-md);
+      font-size: var(--sc-text-base);
+      font-weight: var(--sc-weight-semibold);
+      color: var(--sc-text);
+    }
   `;
 
   @state() private jobs: CronJob[] = [];
@@ -568,7 +577,7 @@ export class ScAutomationsView extends GatewayAwareLitElement {
 
   override render() {
     return html`
-      <sc-page-hero>
+      <sc-page-hero role="region" aria-label="Automations">
         <sc-section-header heading="Automations" description="Scheduled agent tasks and shell jobs">
           <sc-button
             variant="primary"
@@ -582,12 +591,8 @@ export class ScAutomationsView extends GatewayAwareLitElement {
       ${this._renderStats()}
       ${this.runChartData.labels.length > 0
         ? html`
-            <sc-card style="margin-bottom: var(--sc-space-xl);">
-              <h3
-                style="margin: 0 0 var(--sc-space-md); font-size: var(--sc-text-base); font-weight: var(--sc-weight-semibold); color: var(--sc-text);"
-              >
-                Run outcomes over time
-              </h3>
+            <sc-card class="run-chart-card">
+              <h3 class="run-chart-title">Run outcomes over time</h3>
               <sc-chart type="line" .data=${this.runChartData} height=${200}></sc-chart>
             </sc-card>
           `

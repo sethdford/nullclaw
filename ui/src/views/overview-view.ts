@@ -458,7 +458,7 @@ export class ScOverviewView extends GatewayAwareLitElement {
   private _renderHero() {
     if (!this._onboarded) {
       return html`
-        <sc-page-hero>
+        <sc-page-hero role="region" aria-label="Overview">
           <sc-welcome-card></sc-welcome-card>
           <sc-welcome></sc-welcome>
         </sc-page-hero>
@@ -469,7 +469,7 @@ export class ScOverviewView extends GatewayAwareLitElement {
     const cap = this.capabilities;
 
     return html`
-      <sc-page-hero>
+      <sc-page-hero role="region" aria-label="Overview">
         <sc-section-header heading="Overview" description="Your AI assistant at a glance">
           <div class="hero-actions">
             ${this.lastLoadedAt

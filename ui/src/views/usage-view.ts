@@ -142,6 +142,11 @@ export class ScUsageView extends GatewayAwareLitElement {
         width: 5rem;
       }
     }
+    .icon-inline {
+      display: inline-flex;
+      width: 1em;
+      height: 1em;
+    }
     @media (prefers-reduced-motion: reduce) {
       .provider-bar-fill {
         transition: none;
@@ -363,7 +368,7 @@ export class ScUsageView extends GatewayAwareLitElement {
     const isEmpty = dailyCost === 0 && totalTokens === 0 && requestCount === 0;
 
     return html`
-      <sc-page-hero>
+      <sc-page-hero role="region" aria-label="Usage">
         <sc-section-header
           heading="Usage"
           description="Token consumption, cost tracking, and forecasting"
@@ -374,9 +379,7 @@ export class ScUsageView extends GatewayAwareLitElement {
             @click=${this._exportUsage}
             aria-label="Export usage data as JSON"
           >
-            <span style="display:inline-flex;width:1em;height:1em" aria-hidden="true"
-              >${icons.export}</span
-            >
+            <span class="icon-inline" aria-hidden="true">${icons.export}</span>
             Export
           </sc-button>
         </sc-section-header>
