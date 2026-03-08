@@ -617,13 +617,16 @@ void sc_service_run_proactive_checkins(sc_allocator_t *alloc, sc_agent_t *agent,
 
             sc_channel_history_entry_t *entries = NULL;
             size_t entry_count = 0;
-            channels[c].channel->vtable->load_conversation_history(
+            sc_error_t hist_err = channels[c].channel->vtable->load_conversation_history(
                 channels[c].channel->ctx, alloc, cp->contact_id, strlen(cp->contact_id), 15,
                 &entries, &entry_count);
+            if (hist_err != SC_OK)
+                fprintf(stderr, "[daemon] proactive: history load failed for %s: %d\n",
+                        cp->contact_id, (int)hist_err);
 
             uint64_t last_contact_ms = 0;
             bool should_checkin = true;
-            if (entries && entry_count > 0) {
+            if (hist_err == SC_OK && entries && entry_count > 0) {
                 struct tm last_tm = {0};
                 if (strptime(entries[entry_count - 1].timestamp, "%Y-%m-%d %H:%M", &last_tm)) {
                     time_t last_time = mktime(&last_tm);
@@ -937,7 +940,11 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                 {
                     static bool consolidated_today = false;
                     struct tm tm_buf;
+#if defined(_WIN32) && !defined(__CYGWIN__)
+                    struct tm *lt = (localtime_s(&tm_buf, &t) == 0) ? &tm_buf : NULL;
+#else
                     struct tm *lt = localtime_r(&t, &tm_buf);
+#endif
                     if (lt && lt->tm_hour == 4) {
                         consolidated_today = false;
                     }
