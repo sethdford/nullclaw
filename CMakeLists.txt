@@ -397,6 +397,7 @@ set(SC_CORE_SOURCES
     src/memory/stm.c
     src/memory/fast_capture.c
     src/memory/promotion.c
+    src/memory/consolidation.c
     src/memory/deep_extract.c
     src/memory/lifecycle/cache.c
     src/memory/lifecycle/hygiene.c
@@ -1387,6 +1388,7 @@ set(SC_TEST_SOURCES
     tests/test_stm.c
     tests/test_fast_capture.c
     tests/test_promotion.c
+    tests/test_consolidation.c
     tests/test_deep_extract.c
 )
 if(SC_ENABLE_PERSONA)
