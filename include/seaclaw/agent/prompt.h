@@ -30,6 +30,8 @@ typedef struct sc_prompt_config {
     size_t pattern_context_len;
     const char *adaptive_persona_context;
     size_t adaptive_persona_context_len;
+    const char *proactive_context;
+    size_t proactive_context_len;
     uint8_t autonomy_level; /* 0=readonly, 1=supervised, 2=full */
     const char *custom_instructions;
     size_t custom_instructions_len;

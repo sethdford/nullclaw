@@ -322,6 +322,17 @@ sc_error_t sc_prompt_build_system(sc_allocator_t *alloc, const sc_prompt_config_
             goto fail;
     }
 
+    /* Proactive awareness */
+    if (config->proactive_context && config->proactive_context_len > 0) {
+        err = append(alloc, &buf, &len, &cap, "\n\n", 2);
+        if (err != SC_OK)
+            goto fail;
+        err = append(alloc, &buf, &len, &cap, config->proactive_context,
+                     config->proactive_context_len);
+        if (err != SC_OK)
+            goto fail;
+    }
+
     /* Autonomy */
     if (config->autonomy_level == 0) {
         err = append(

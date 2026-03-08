@@ -13,6 +13,7 @@
 #include "seaclaw/agent/planner.h"
 #include "seaclaw/agent/preferences.h"
 #include "seaclaw/agent/pattern_radar.h"
+#include "seaclaw/agent/proactive.h"
 #include "seaclaw/agent/prompt.h"
 #ifdef SC_HAS_PERSONA
 #include "seaclaw/persona/circadian.h"
@@ -262,6 +263,33 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
     (void)sc_pattern_radar_build_context(&agent->radar, agent->alloc, &pattern_ctx,
                                          &pattern_ctx_len);
 
+    /* Build proactive context (milestones, morning briefing, check-in) */
+    char *proactive_ctx = NULL;
+    size_t proactive_ctx_len = 0;
+    {
+        uint32_t session_count = 0;
+        uint8_t hour = 10;
+#ifdef SC_HAS_PERSONA
+        session_count = agent->relationship.session_count;
+#endif
+#ifndef SC_IS_TEST
+        {
+            time_t now = time(NULL);
+            struct tm *lt = localtime(&now);
+            if (lt)
+                hour = (uint8_t)(lt->tm_hour & 0xFF);
+        }
+#endif
+        sc_proactive_result_t proactive_result;
+        memset(&proactive_result, 0, sizeof(proactive_result));
+        if (sc_proactive_check(agent->alloc, session_count, hour, &proactive_result) == SC_OK &&
+            proactive_result.count > 0) {
+            (void)sc_proactive_build_context(&proactive_result, agent->alloc, 8, &proactive_ctx,
+                                             &proactive_ctx_len);
+            sc_proactive_result_deinit(&proactive_result, agent->alloc);
+        }
+    }
+
     /* Build adaptive persona context (circadian + relationship) */
     char *adaptive_ctx = NULL;
     size_t adaptive_ctx_len = 0;
@@ -346,7 +374,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
     char *system_prompt = NULL;
     size_t system_prompt_len = 0;
     if (agent->cached_static_prompt && !pref_ctx && !tone_hint && !persona_prompt &&
-        !awareness_ctx && !stm_ctx && !commitment_ctx && !pattern_ctx && !adaptive_ctx) {
+        !awareness_ctx && !stm_ctx && !commitment_ctx && !pattern_ctx && !adaptive_ctx &&
+        !proactive_ctx) {
         err = sc_prompt_build_with_cache(agent->alloc, agent->cached_static_prompt,
                                          agent->cached_static_prompt_len, memory_ctx,
                                          memory_ctx_len, &system_prompt, &system_prompt_len);
@@ -365,6 +394,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
                 agent->alloc->free(agent->alloc->ctx, pattern_ctx, pattern_ctx_len + 1);
             if (adaptive_ctx)
                 agent->alloc->free(agent->alloc->ctx, adaptive_ctx, adaptive_ctx_len + 1);
+            if (proactive_ctx)
+                agent->alloc->free(agent->alloc->ctx, proactive_ctx, proactive_ctx_len + 1);
             sc_agent_clear_current_for_tools();
             return err;
         }
@@ -388,6 +419,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
             .pattern_context_len = pattern_ctx_len,
             .adaptive_persona_context = adaptive_ctx,
             .adaptive_persona_context_len = adaptive_ctx_len,
+            .proactive_context = proactive_ctx,
+            .proactive_context_len = proactive_ctx_len,
             .autonomy_level = agent->autonomy_level,
             .custom_instructions = agent->custom_instructions,
             .custom_instructions_len = agent->custom_instructions_len,
@@ -432,6 +465,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
                 agent->alloc->free(agent->alloc->ctx, pattern_ctx, pattern_ctx_len + 1);
             if (adaptive_ctx)
                 agent->alloc->free(agent->alloc->ctx, adaptive_ctx, adaptive_ctx_len + 1);
+            if (proactive_ctx)
+                agent->alloc->free(agent->alloc->ctx, proactive_ctx, proactive_ctx_len + 1);
             sc_agent_clear_current_for_tools();
             return err;
         }
@@ -444,6 +479,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
         agent->alloc->free(agent->alloc->ctx, pattern_ctx, pattern_ctx_len + 1);
     if (adaptive_ctx)
         agent->alloc->free(agent->alloc->ctx, adaptive_ctx, adaptive_ctx_len + 1);
+    if (proactive_ctx)
+        agent->alloc->free(agent->alloc->ctx, proactive_ctx, proactive_ctx_len + 1);
     if (pref_ctx)
         agent->alloc->free(agent->alloc->ctx, pref_ctx, pref_ctx_len + 1);
 
