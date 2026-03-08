@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define SC_CONS_MAX_TOKENS 64
 
@@ -121,6 +122,22 @@ sc_error_t sc_memory_consolidate(sc_allocator_t *alloc, sc_memory_t *memory,
                     to_forget[i] = true;
                 else
                     to_forget[j] = true;
+            }
+        }
+    }
+
+    /* Time-based decay: mark old entries for removal */
+    if (config->decay_days > 0) {
+        time_t now = time(NULL);
+        time_t threshold = now - (time_t)(config->decay_days * 86400);
+        for (size_t i = 0; i < count; i++) {
+            if (to_forget[i])
+                continue;
+            if (entries[i].timestamp && entries[i].timestamp_len > 0) {
+                long ts = strtol(entries[i].timestamp, NULL, 10);
+                if (ts > 0 && ts < threshold) {
+                    to_forget[i] = true;
+                }
             }
         }
     }

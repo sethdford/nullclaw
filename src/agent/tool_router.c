@@ -8,6 +8,7 @@
 #include <string.h>
 
 #define SC_TOOL_ROUTER_MAX_WORDS 128
+#define SC_TOOL_ROUTER_MAX_SCORED 256
 #define SC_TOOL_ROUTER_ALWAYS_COUNT 8
 
 static const char *ALWAYS_TOOLS[] = {"memory_store", "memory_recall", "message", "shell",
@@ -157,9 +158,9 @@ sc_error_t sc_tool_router_select(sc_allocator_t *alloc, const char *message, siz
     }
 
     /* Score and select remaining tools */
-    scored_entry_t scored[256];
+    scored_entry_t scored[SC_TOOL_ROUTER_MAX_SCORED];
     size_t scored_count = 0;
-    for (size_t i = 0; i < all_tools_count && scored_count < 256; i++) {
+    for (size_t i = 0; i < all_tools_count && scored_count < SC_TOOL_ROUTER_MAX_SCORED; i++) {
         const sc_tool_t *t = &all_tools[i];
         if (!t->vtable || !t->vtable->name)
             continue;

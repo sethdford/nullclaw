@@ -7,7 +7,17 @@
 #include <string.h>
 #include <time.h>
 
-static size_t sc_commitment_id_counter;
+static void generate_commitment_id(sc_allocator_t *alloc, char **out) {
+    static size_t counter = 0;
+    char buf[64];
+    int n = snprintf(buf, sizeof(buf), "commit-%llu-%zu",
+                     (unsigned long long)time(NULL), counter++);
+    if (n > 0 && (size_t)n < sizeof(buf)) {
+        *out = sc_strndup(alloc, buf, (size_t)n);
+    } else {
+        *out = sc_strndup(alloc, "commit-0", 8);
+    }
+}
 
 static const char *PROMISE_PATTERNS[] = {"I will ", "I'll ", "I promise ", NULL};
 static const char *INTENTION_PATTERNS[] = {"I'm going to ", "I am going to ", "I plan to ", NULL};
@@ -68,14 +78,8 @@ static sc_error_t add_commitment(sc_allocator_t *alloc, sc_commitment_detect_res
     if (!summary)
         return SC_ERR_OUT_OF_MEMORY;
 
-    char id_buf[64];
-    size_t id_val = ++sc_commitment_id_counter;
-    int n = snprintf(id_buf, sizeof(id_buf), "commit-%zu", id_val);
-    if (n <= 0 || (size_t)n >= sizeof(id_buf)) {
-        alloc->free(alloc->ctx, summary, summary_len + 1);
-        return SC_ERR_INVALID_ARGUMENT;
-    }
-    char *id = sc_strndup(alloc, id_buf, (size_t)n);
+    char *id = NULL;
+    generate_commitment_id(alloc, &id);
     if (!id) {
         alloc->free(alloc->ctx, summary, summary_len + 1);
         return SC_ERR_OUT_OF_MEMORY;
@@ -85,7 +89,7 @@ static sc_error_t add_commitment(sc_allocator_t *alloc, sc_commitment_detect_res
     fill_timestamp(ts_buf, sizeof(ts_buf));
     char *created_at_dup = sc_strndup(alloc, ts_buf, strlen(ts_buf));
     if (!created_at_dup) {
-        alloc->free(alloc->ctx, id, (size_t)n + 1);
+        alloc->free(alloc->ctx, id, strlen(id) + 1);
         alloc->free(alloc->ctx, summary, summary_len + 1);
         return SC_ERR_OUT_OF_MEMORY;
     }
@@ -93,7 +97,7 @@ static sc_error_t add_commitment(sc_allocator_t *alloc, sc_commitment_detect_res
     char *owner = role && role_len > 0 ? sc_strndup(alloc, role, role_len) : sc_strndup(alloc, "user", 4);
     if (!owner) {
         alloc->free(alloc->ctx, created_at_dup, strlen(created_at_dup) + 1);
-        alloc->free(alloc->ctx, id, (size_t)n + 1);
+        alloc->free(alloc->ctx, id, strlen(id) + 1);
         alloc->free(alloc->ctx, summary, summary_len + 1);
         return SC_ERR_OUT_OF_MEMORY;
     }
@@ -102,7 +106,7 @@ static sc_error_t add_commitment(sc_allocator_t *alloc, sc_commitment_detect_res
     if (!statement) {
         alloc->free(alloc->ctx, owner, (role && role_len > 0 ? role_len : 4) + 1);
         alloc->free(alloc->ctx, created_at_dup, strlen(created_at_dup) + 1);
-        alloc->free(alloc->ctx, id, (size_t)n + 1);
+        alloc->free(alloc->ctx, id, strlen(id) + 1);
         alloc->free(alloc->ctx, summary, summary_len + 1);
         return SC_ERR_OUT_OF_MEMORY;
     }

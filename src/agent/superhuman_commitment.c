@@ -20,11 +20,13 @@ static sc_error_t commitment_build_context(void *ctx, sc_allocator_t *alloc, cha
     if (!cctx->store)
         return SC_OK;
 
+    const char *sess = cctx->session_id;
+    size_t sess_len = sess ? cctx->session_id_len : 0;
+
     sc_commitment_t *list = NULL;
     size_t count = 0;
     sc_error_t err = sc_commitment_store_list_active(
-        cctx->store, alloc, cctx->session_id ? cctx->session_id : NULL,
-        cctx->session_id_len, &list, &count);
+        cctx->store, alloc, sess, sess_len, &list, &count);
     if (err != SC_OK)
         return err;
 
