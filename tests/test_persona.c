@@ -2515,6 +2515,121 @@ static void test_persona_deinit_rich_persona(void) {
     sc_persona_deinit(&alloc, &p);
 }
 
+static void test_analyzer_parses_research_fields(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    const char *response = "{\"traits\":[\"empathic\"],"
+                           "\"relational\":{\"bid_response_style\":\"turn toward\","
+                           "\"attachment_style\":\"secure\",\"emotional_bids\":[\"sharing\"]},"
+                           "\"listening\":{\"default_response_type\":\"support\","
+                           "\"reflective_techniques\":[\"OARS\"],\"nvc_style\":\"observe\"},"
+                           "\"repair\":{\"rupture_detection\":\"tone shifts\","
+                           "\"repair_phrases\":[\"my bad\"]},"
+                           "\"mirroring\":{\"mirroring_level\":\"moderate\","
+                           "\"adapts_to\":[\"length\"]},"
+                           "\"social\":{\"default_ego_state\":\"adult\","
+                           "\"anti_patterns\":[\"shift responses\"]},"
+                           "\"intellectual\":{\"thinking_style\":\"analytical\"},"
+                           "\"sensory\":{\"dominant_sense\":\"visual\"}}";
+    sc_persona_t p = {0};
+    sc_error_t err =
+        sc_persona_analyzer_parse_response(&alloc, response, strlen(response), "imessage", 8, &p);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_STR_EQ(p.relational.bid_response_style, "turn toward");
+    SC_ASSERT_STR_EQ(p.relational.attachment_style, "secure");
+    SC_ASSERT_EQ(p.relational.emotional_bids_count, 1);
+    SC_ASSERT_STR_EQ(p.listening.default_response_type, "support");
+    SC_ASSERT_EQ(p.listening.reflective_techniques_count, 1);
+    SC_ASSERT_STR_EQ(p.repair.rupture_detection, "tone shifts");
+    SC_ASSERT_EQ(p.repair.repair_phrases_count, 1);
+    SC_ASSERT_STR_EQ(p.mirroring.mirroring_level, "moderate");
+    SC_ASSERT_EQ(p.mirroring.adapts_to_count, 1);
+    SC_ASSERT_STR_EQ(p.social.default_ego_state, "adult");
+    SC_ASSERT_EQ(p.social.anti_patterns_count, 1);
+    SC_ASSERT_STR_EQ(p.intellectual.thinking_style, "analytical");
+    SC_ASSERT_STR_EQ(p.sensory.dominant_sense, "visual");
+    sc_persona_deinit(&alloc, &p);
+}
+
+static void test_creator_synthesize_merges_research_fields(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_persona_t p1 = {0};
+    p1.relational.bid_response_style = "turn toward";
+    p1.relational.attachment_style = "secure";
+    p1.listening.default_response_type = "support";
+    p1.repair.rupture_detection = "tone shifts";
+    p1.mirroring.mirroring_level = "moderate";
+    p1.social.default_ego_state = "adult";
+
+    sc_persona_t p2 = {0};
+    p2.relational.dunbar_awareness = "invest deeply";
+    p2.listening.nvc_style = "observe then feel";
+    p2.repair.repair_approach = "name it";
+    p2.mirroring.convergence_speed = "gradual";
+    p2.social.phatic_style = "warm opener";
+
+    sc_persona_t partials[] = {p1, p2};
+    sc_persona_t merged = {0};
+    sc_error_t err = sc_persona_creator_synthesize(&alloc, partials, 2, "merged", 6, &merged);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_STR_EQ(merged.relational.bid_response_style, "turn toward");
+    SC_ASSERT_STR_EQ(merged.relational.attachment_style, "secure");
+    SC_ASSERT_STR_EQ(merged.relational.dunbar_awareness, "invest deeply");
+    SC_ASSERT_STR_EQ(merged.listening.default_response_type, "support");
+    SC_ASSERT_STR_EQ(merged.listening.nvc_style, "observe then feel");
+    SC_ASSERT_STR_EQ(merged.repair.rupture_detection, "tone shifts");
+    SC_ASSERT_STR_EQ(merged.repair.repair_approach, "name it");
+    SC_ASSERT_STR_EQ(merged.mirroring.mirroring_level, "moderate");
+    SC_ASSERT_STR_EQ(merged.mirroring.convergence_speed, "gradual");
+    SC_ASSERT_STR_EQ(merged.social.default_ego_state, "adult");
+    SC_ASSERT_STR_EQ(merged.social.phatic_style, "warm opener");
+    sc_persona_deinit(&alloc, &merged);
+}
+
+static void test_contact_profile_attachment_and_dunbar(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    const char *json = "{\"version\":1,\"name\":\"cptest\","
+                       "\"core\":{\"identity\":\"Test\",\"traits\":[\"a\"]},"
+                       "\"contacts\":{\"alice\":{\"name\":\"Alice\","
+                       "\"relationship\":\"close friend\","
+                       "\"attachment_style\":\"anxious\","
+                       "\"dunbar_layer\":\"inner_circle\"}}}";
+    sc_persona_t p = {0};
+    sc_error_t err = sc_persona_load_json(&alloc, json, strlen(json), &p);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(p.contacts_count, 1);
+    SC_ASSERT_STR_EQ(p.contacts[0].attachment_style, "anxious");
+    SC_ASSERT_STR_EQ(p.contacts[0].dunbar_layer, "inner_circle");
+
+    char *ctx = NULL;
+    size_t ctx_len = 0;
+    err = sc_contact_profile_build_context(&alloc, &p.contacts[0], &ctx, &ctx_len);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(strstr(ctx, "anxious"));
+    SC_ASSERT_NOT_NULL(strstr(ctx, "inner_circle"));
+    alloc.free(alloc.ctx, ctx, ctx_len + 1);
+    sc_persona_deinit(&alloc, &p);
+}
+
+static void test_analyzer_prompt_includes_research_fields(void) {
+    const char *messages[] = {"hey", "what's up"};
+    char buf[8192];
+    size_t out_len = 0;
+    sc_error_t err =
+        sc_persona_analyzer_build_prompt(messages, 2, "imessage", buf, sizeof(buf), &out_len);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(strstr(buf, "relational"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "listening"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "repair"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "mirroring"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "social"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "intellectual"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "sensory"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "attachment_style"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "bid_response_style"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "ego_state"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "nvc_style"));
+}
+
 void run_persona_tests(void) {
     SC_TEST_SUITE("Persona");
 
@@ -2673,4 +2788,8 @@ void run_persona_tests(void) {
     SC_RUN_TEST(test_persona_validate_rejects_bad_social_type);
     SC_RUN_TEST(test_persona_validate_accepts_research_persona);
     SC_RUN_TEST(test_persona_deinit_research_fields);
+    SC_RUN_TEST(test_analyzer_parses_research_fields);
+    SC_RUN_TEST(test_creator_synthesize_merges_research_fields);
+    SC_RUN_TEST(test_contact_profile_attachment_and_dunbar);
+    SC_RUN_TEST(test_analyzer_prompt_includes_research_fields);
 }

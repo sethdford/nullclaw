@@ -468,6 +468,16 @@ sc_error_t sc_contact_profile_build_context(sc_allocator_t *alloc, const sc_cont
         if (w > 0)
             pos += (size_t)w;
     }
+    if (cp->attachment_style) {
+        w = snprintf(buf + pos, cap - pos, "Their attachment style: %s\n", cp->attachment_style);
+        if (w > 0)
+            pos += (size_t)w;
+    }
+    if (cp->dunbar_layer) {
+        w = snprintf(buf + pos, cap - pos, "Dunbar layer: %s\n", cp->dunbar_layer);
+        if (w > 0)
+            pos += (size_t)w;
+    }
 
     /* Relationship stage behavior gating (VoiceAI relationship-triggers) */
     if (cp->relationship_stage) {
@@ -678,11 +688,11 @@ sc_error_t sc_persona_load_json(sc_allocator_t *alloc, const char *json, size_t 
 
     /* Safe strdup for optional fields: sets target and flags OOM on failure.
      * OOM on optional fields is non-fatal — we continue with NULL. */
-#define PERSONA_STRDUP_OPT(target, src) \
-    do {                                \
+#define PERSONA_STRDUP_OPT(target, src)     \
+    do {                                    \
         (target) = sc_strdup(alloc, (src)); \
-        if (!(target))                  \
-            oom_on_optional = true;     \
+        if (!(target))                      \
+            oom_on_optional = true;         \
     } while (0)
 
     sc_json_value_t *root = NULL;
@@ -1242,6 +1252,14 @@ sc_error_t sc_persona_load_json(sc_allocator_t *alloc, const char *json, size_t 
                 if (s)
                     PERSONA_STRDUP_OPT(cp->proactive_schedule, s);
             }
+
+            s = sc_json_get_string(cval, "attachment_style");
+            if (s)
+                PERSONA_STRDUP_OPT(cp->attachment_style, s);
+            s = sc_json_get_string(cval, "dunbar_layer");
+            if (s)
+                PERSONA_STRDUP_OPT(cp->dunbar_layer, s);
+
             count++;
         }
         out->contacts = contacts;

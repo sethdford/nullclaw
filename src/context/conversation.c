@@ -377,7 +377,7 @@ static void compute_convo_metrics(const sc_channel_history_entry_t *entries, siz
                         break;
                     }
                 }
-                if (!found) {
+                if (!found && fn < 16) {
                     memcpy(freq[fn].word, word, wlen + 1);
                     freq[fn].hits = 1;
                     fn++;
