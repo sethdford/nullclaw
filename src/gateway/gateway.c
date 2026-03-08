@@ -100,6 +100,7 @@ typedef struct sc_gateway_state {
     sc_pairing_guard_t *pairing_guard;
     sc_oauth_pending_entry_t oauth_pending[SC_OAUTH_PENDING_MAX];
     size_t oauth_pending_count;
+    pthread_mutex_t oauth_mutex;
     sc_thread_pool_t *http_pool;
 } sc_gateway_state_t;
 
@@ -107,8 +108,13 @@ typedef struct sc_gateway_state {
 
 static void oauth_pending_store(void *ctx, const char *state, const char *verifier) {
     sc_gateway_state_t *gw = (sc_gateway_state_t *)ctx;
-    if (!gw || gw->oauth_pending_count >= SC_OAUTH_PENDING_MAX)
+    if (!gw)
         return;
+    pthread_mutex_lock(&gw->oauth_mutex);
+    if (gw->oauth_pending_count >= SC_OAUTH_PENDING_MAX) {
+        pthread_mutex_unlock(&gw->oauth_mutex);
+        return;
+    }
     sc_oauth_pending_entry_t *e = &gw->oauth_pending[gw->oauth_pending_count++];
     size_t sl = strlen(state);
     size_t vl = strlen(verifier);
@@ -121,28 +127,33 @@ static void oauth_pending_store(void *ctx, const char *state, const char *verifi
     memcpy(e->verifier, verifier, vl);
     e->verifier[vl] = '\0';
     e->created_at = time(NULL);
+    pthread_mutex_unlock(&gw->oauth_mutex);
 }
 
 static const char *oauth_pending_lookup(void *ctx, const char *state) {
     sc_gateway_state_t *gw = (sc_gateway_state_t *)ctx;
     if (!gw || !state)
         return NULL;
+    pthread_mutex_lock(&gw->oauth_mutex);
     time_t now = time(NULL);
+    const char *result = NULL;
     for (size_t i = 0; i < gw->oauth_pending_count; i++) {
         sc_oauth_pending_entry_t *e = &gw->oauth_pending[i];
         if (strcmp(e->state, state) == 0) {
-            if (now - e->created_at > 600)
-                return NULL;
-            return e->verifier;
+            if (now - e->created_at <= 600)
+                result = e->verifier;
+            break;
         }
     }
-    return NULL;
+    pthread_mutex_unlock(&gw->oauth_mutex);
+    return result;
 }
 
 static void oauth_pending_remove(void *ctx, const char *state) {
     sc_gateway_state_t *gw = (sc_gateway_state_t *)ctx;
     if (!gw || !state)
         return;
+    pthread_mutex_lock(&gw->oauth_mutex);
     for (size_t i = 0; i < gw->oauth_pending_count; i++) {
         if (strcmp(gw->oauth_pending[i].state, state) == 0) {
             memmove(&gw->oauth_pending[i], &gw->oauth_pending[i + 1],
@@ -150,9 +161,11 @@ static void oauth_pending_remove(void *ctx, const char *state) {
             gw->oauth_pending_count--;
             memset(&gw->oauth_pending[gw->oauth_pending_count], 0,
                    sizeof(sc_oauth_pending_entry_t));
+            pthread_mutex_unlock(&gw->oauth_mutex);
             return;
         }
     }
+    pthread_mutex_unlock(&gw->oauth_mutex);
 }
 
 /* Extract cookie value from Cookie header. cookie_header is "name1=val1; name2=val2".
@@ -1075,6 +1088,7 @@ sc_error_t sc_gateway_run(sc_allocator_t *alloc, const char *host, uint16_t port
     memset(gw, 0, sizeof(*gw));
     gw->alloc = alloc;
     gw->config = cfg;
+    pthread_mutex_init(&gw->oauth_mutex, NULL);
 
     ctrl = cfg.control ? cfg.control : &proto_local;
     sc_control_protocol_init(ctrl, alloc, &gw->ws);

@@ -71,6 +71,28 @@ sc_error_t sc_persona_feedback_record(sc_allocator_t *alloc, const char *persona
     sc_json_append_key_value(&buf, "context", 7, feedback->context ? feedback->context : "",
                              feedback->context_len);
     sc_json_buf_append_raw(&buf, ",", 1);
+
+    const char *cat = "general";
+    size_t cat_len = 7;
+    if (feedback->corrected_response && feedback->corrected_response_len > 0) {
+        const char *c = feedback->corrected_response;
+        size_t cl = feedback->corrected_response_len;
+        if (strstr(c, "listen") || strstr(c, "heard") || strstr(c, "validat"))
+            { cat = "listening"; cat_len = 9; }
+        else if (strstr(c, "sorry") || strstr(c, "repair") || strstr(c, "misunderst"))
+            { cat = "repair"; cat_len = 6; }
+        else if (strstr(c, "tone") || strstr(c, "formal") || strstr(c, "casual") ||
+                 strstr(c, "mirror"))
+            { cat = "mirroring"; cat_len = 9; }
+        else if (strstr(c, "conflict") || strstr(c, "pushback") || strstr(c, "boundar"))
+            { cat = "conflict"; cat_len = 8; }
+        else if (strstr(c, "emoji") || strstr(c, "short") || strstr(c, "long"))
+            { cat = "voice"; cat_len = 5; }
+        (void)cl;
+    }
+    sc_json_append_key_value(&buf, "category", 8, cat, cat_len);
+
+    sc_json_buf_append_raw(&buf, ",", 1);
     sc_json_append_key_int(&buf, "ts", 2, (long long)time(NULL));
     sc_json_buf_append_raw(&buf, "}\n", 2);
 

@@ -1282,10 +1282,9 @@ sc_error_t sc_persona_load_json(sc_allocator_t *alloc, const char *json, size_t 
     if (oom_on_optional)
         fprintf(stderr, "[persona] warning: some optional fields dropped due to OOM\n");
 
-#undef PERSONA_STRDUP_OPT
-
     sc_json_free(alloc, root);
     return SC_OK;
+#undef PERSONA_STRDUP_OPT
 }
 
 /* --- Validation --- */

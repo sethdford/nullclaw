@@ -63,6 +63,24 @@ sc_error_t sc_persona_analyzer_build_prompt(const char **messages, size_t msg_co
         "- voice_rhythm {sentence_pattern, paragraph_cadence, response_tempo, "
         "emphasis_style, pause_behavior} (all strings)\n"
         "- motivation {primary_drive, protecting, avoiding, wanting} (all strings)\n"
+        "- intellectual {thinking_style (string), expertise (array), curiosity_areas (array), "
+        "metaphor_sources (string)}\n"
+        "- sensory {dominant_sense (string), metaphor_vocabulary (array), "
+        "grounding_patterns (string)}\n"
+        "- relational {bid_response_style (string), emotional_bids (array), "
+        "attachment_style (string: secure/anxious/avoidant/mixed), "
+        "attachment_awareness (string), dunbar_awareness (string)}\n"
+        "- listening {default_response_type (string: support or shift), "
+        "reflective_techniques (array: e.g. open_questions, affirmations, "
+        "reflective_listening, summary_reflections), "
+        "nvc_style (string), validation_style (string)}\n"
+        "- repair {rupture_detection (string), repair_approach (string), "
+        "face_saving_style (string), repair_phrases (array)}\n"
+        "- mirroring {mirroring_level (string: none/subtle/moderate/strong), "
+        "adapts_to (array: e.g. message_length, formality, emoji, pacing), "
+        "convergence_speed (string), power_dynamic (string)}\n"
+        "- social {default_ego_state (string: adult/nurturing_parent/free_child), "
+        "phatic_style (string), bonding_behaviors (array), anti_patterns (array)}\n"
         "\nMessages:\n",
         msg_count, channel ? channel : "unknown");
     if ((size_t)n >= cap)
@@ -329,6 +347,139 @@ sc_error_t sc_persona_analyzer_parse_response(sc_allocator_t *alloc, const char 
         s = sc_json_get_string(mot, "wanting");
         if (s)
             out->motivation.wanting = sc_strdup(alloc, s);
+    }
+
+    /* Intellectual profile */
+    sc_json_value_t *intel = sc_json_object_get(root, "intellectual");
+    if (intel && intel->type == SC_JSON_OBJECT) {
+        const char *s = sc_json_get_string(intel, "thinking_style");
+        if (s)
+            out->intellectual.thinking_style = sc_strdup(alloc, s);
+        sc_json_value_t *a = sc_json_object_get(intel, "expertise");
+        if (a)
+            (void)parse_string_array_from_json(alloc, a, &out->intellectual.expertise,
+                                               &out->intellectual.expertise_count);
+        a = sc_json_object_get(intel, "curiosity_areas");
+        if (a)
+            (void)parse_string_array_from_json(alloc, a, &out->intellectual.curiosity_areas,
+                                               &out->intellectual.curiosity_areas_count);
+        s = sc_json_get_string(intel, "metaphor_sources");
+        if (s)
+            out->intellectual.metaphor_sources = sc_strdup(alloc, s);
+    }
+
+    /* Sensory preferences */
+    sc_json_value_t *sens = sc_json_object_get(root, "sensory");
+    if (sens && sens->type == SC_JSON_OBJECT) {
+        const char *s = sc_json_get_string(sens, "dominant_sense");
+        if (s)
+            out->sensory.dominant_sense = sc_strdup(alloc, s);
+        sc_json_value_t *a = sc_json_object_get(sens, "metaphor_vocabulary");
+        if (a)
+            (void)parse_string_array_from_json(alloc, a, &out->sensory.metaphor_vocabulary,
+                                               &out->sensory.metaphor_vocabulary_count);
+        s = sc_json_get_string(sens, "grounding_patterns");
+        if (s)
+            out->sensory.grounding_patterns = sc_strdup(alloc, s);
+    }
+
+    /* Relational intelligence */
+    sc_json_value_t *rel = sc_json_object_get(root, "relational");
+    if (rel && rel->type == SC_JSON_OBJECT) {
+        const char *s;
+        s = sc_json_get_string(rel, "bid_response_style");
+        if (s)
+            out->relational.bid_response_style = sc_strdup(alloc, s);
+        s = sc_json_get_string(rel, "attachment_style");
+        if (s)
+            out->relational.attachment_style = sc_strdup(alloc, s);
+        s = sc_json_get_string(rel, "attachment_awareness");
+        if (s)
+            out->relational.attachment_awareness = sc_strdup(alloc, s);
+        s = sc_json_get_string(rel, "dunbar_awareness");
+        if (s)
+            out->relational.dunbar_awareness = sc_strdup(alloc, s);
+        sc_json_value_t *a = sc_json_object_get(rel, "emotional_bids");
+        if (a)
+            (void)parse_string_array_from_json(alloc, a, &out->relational.emotional_bids,
+                                               &out->relational.emotional_bids_count);
+    }
+
+    /* Listening protocol */
+    sc_json_value_t *lis = sc_json_object_get(root, "listening");
+    if (lis && lis->type == SC_JSON_OBJECT) {
+        const char *s;
+        s = sc_json_get_string(lis, "default_response_type");
+        if (s)
+            out->listening.default_response_type = sc_strdup(alloc, s);
+        s = sc_json_get_string(lis, "nvc_style");
+        if (s)
+            out->listening.nvc_style = sc_strdup(alloc, s);
+        s = sc_json_get_string(lis, "validation_style");
+        if (s)
+            out->listening.validation_style = sc_strdup(alloc, s);
+        sc_json_value_t *a = sc_json_object_get(lis, "reflective_techniques");
+        if (a)
+            (void)parse_string_array_from_json(alloc, a, &out->listening.reflective_techniques,
+                                               &out->listening.reflective_techniques_count);
+    }
+
+    /* Repair protocol */
+    sc_json_value_t *rep = sc_json_object_get(root, "repair");
+    if (rep && rep->type == SC_JSON_OBJECT) {
+        const char *s;
+        s = sc_json_get_string(rep, "rupture_detection");
+        if (s)
+            out->repair.rupture_detection = sc_strdup(alloc, s);
+        s = sc_json_get_string(rep, "repair_approach");
+        if (s)
+            out->repair.repair_approach = sc_strdup(alloc, s);
+        s = sc_json_get_string(rep, "face_saving_style");
+        if (s)
+            out->repair.face_saving_style = sc_strdup(alloc, s);
+        sc_json_value_t *a = sc_json_object_get(rep, "repair_phrases");
+        if (a)
+            (void)parse_string_array_from_json(alloc, a, &out->repair.repair_phrases,
+                                               &out->repair.repair_phrases_count);
+    }
+
+    /* Linguistic mirroring */
+    sc_json_value_t *mir = sc_json_object_get(root, "mirroring");
+    if (mir && mir->type == SC_JSON_OBJECT) {
+        const char *s;
+        s = sc_json_get_string(mir, "mirroring_level");
+        if (s)
+            out->mirroring.mirroring_level = sc_strdup(alloc, s);
+        s = sc_json_get_string(mir, "convergence_speed");
+        if (s)
+            out->mirroring.convergence_speed = sc_strdup(alloc, s);
+        s = sc_json_get_string(mir, "power_dynamic");
+        if (s)
+            out->mirroring.power_dynamic = sc_strdup(alloc, s);
+        sc_json_value_t *a = sc_json_object_get(mir, "adapts_to");
+        if (a)
+            (void)parse_string_array_from_json(alloc, a, &out->mirroring.adapts_to,
+                                               &out->mirroring.adapts_to_count);
+    }
+
+    /* Social dynamics */
+    sc_json_value_t *soc = sc_json_object_get(root, "social");
+    if (soc && soc->type == SC_JSON_OBJECT) {
+        const char *s;
+        s = sc_json_get_string(soc, "default_ego_state");
+        if (s)
+            out->social.default_ego_state = sc_strdup(alloc, s);
+        s = sc_json_get_string(soc, "phatic_style");
+        if (s)
+            out->social.phatic_style = sc_strdup(alloc, s);
+        sc_json_value_t *a = sc_json_object_get(soc, "bonding_behaviors");
+        if (a)
+            (void)parse_string_array_from_json(alloc, a, &out->social.bonding_behaviors,
+                                               &out->social.bonding_behaviors_count);
+        a = sc_json_object_get(soc, "anti_patterns");
+        if (a)
+            (void)parse_string_array_from_json(alloc, a, &out->social.anti_patterns,
+                                               &out->social.anti_patterns_count);
     }
 
     sc_json_free(alloc, root);

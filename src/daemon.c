@@ -182,8 +182,11 @@ static void store_conversation_summary(sc_allocator_t *alloc, sc_memory_t *memor
                                            &src_id) == SC_OK &&
                     sc_graph_upsert_entity(graph, f->object, obj_len, SC_ENTITY_UNKNOWN, NULL,
                                            &tgt_id) == SC_OK) {
-                    (void)sc_graph_upsert_relation(graph, src_id, tgt_id, rel_type, 1.0f, f->object,
-                                                   obj_len);
+                    sc_error_t rel_err = sc_graph_upsert_relation(
+                        graph, src_id, tgt_id, rel_type, 1.0f, f->object, obj_len);
+                    if (rel_err != SC_OK)
+                        fprintf(stderr, "[daemon] graph: relation upsert failed: %d\n",
+                                (int)rel_err);
                 }
             }
 #endif
@@ -205,8 +208,11 @@ static void store_conversation_summary(sc_allocator_t *alloc, sc_memory_t *memor
                                        &src_id) == SC_OK &&
                 sc_graph_upsert_entity(graph, r->entity_b, b_len, SC_ENTITY_UNKNOWN, NULL,
                                        &tgt_id) == SC_OK) {
-                (void)sc_graph_upsert_relation(graph, src_id, tgt_id, rel_type, 1.0f, r->entity_b,
-                                               b_len);
+                sc_error_t rel_err = sc_graph_upsert_relation(
+                    graph, src_id, tgt_id, rel_type, 1.0f, r->entity_b, b_len);
+                if (rel_err != SC_OK)
+                    fprintf(stderr, "[daemon] graph: relation upsert failed: %d\n",
+                            (int)rel_err);
             }
         }
     }

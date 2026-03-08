@@ -386,6 +386,132 @@ sc_error_t sc_persona_cli_run(sc_allocator_t *alloc, const sc_persona_cli_args_t
                  b.communication_rules, b.communication_rules_count);
         diff_arr("values", a.values, a.values_count, b.values, b.values_count);
         diff_scalar("decision_style", a.decision_style, b.decision_style);
+        diff_scalar("biography", a.biography, b.biography);
+        diff_scalar("core_anchor", a.core_anchor, b.core_anchor);
+        diff_arr("character_invariants", a.character_invariants, a.character_invariants_count,
+                 b.character_invariants, b.character_invariants_count);
+        diff_arr("directors_notes", a.directors_notes, a.directors_notes_count,
+                 b.directors_notes, b.directors_notes_count);
+
+        diff_scalar("motivation.primary_drive", a.motivation.primary_drive,
+                     b.motivation.primary_drive);
+        diff_scalar("motivation.protecting", a.motivation.protecting, b.motivation.protecting);
+        diff_scalar("motivation.avoiding", a.motivation.avoiding, b.motivation.avoiding);
+        diff_scalar("motivation.wanting", a.motivation.wanting, b.motivation.wanting);
+
+        diff_scalar("humor.type", a.humor.type, b.humor.type);
+        diff_scalar("humor.frequency", a.humor.frequency, b.humor.frequency);
+        diff_scalar("humor.timing", a.humor.timing, b.humor.timing);
+        diff_arr("humor.targets", a.humor.targets, a.humor.targets_count,
+                 b.humor.targets, b.humor.targets_count);
+        diff_arr("humor.boundaries", a.humor.boundaries, a.humor.boundaries_count,
+                 b.humor.boundaries, b.humor.boundaries_count);
+
+        diff_scalar("conflict_style.pushback_response", a.conflict_style.pushback_response,
+                     b.conflict_style.pushback_response);
+        diff_scalar("conflict_style.apology_style", a.conflict_style.apology_style,
+                     b.conflict_style.apology_style);
+        diff_scalar("conflict_style.confrontation_comfort",
+                     a.conflict_style.confrontation_comfort,
+                     b.conflict_style.confrontation_comfort);
+        diff_scalar("conflict_style.boundary_assertion", a.conflict_style.boundary_assertion,
+                     b.conflict_style.boundary_assertion);
+        diff_scalar("conflict_style.repair_behavior", a.conflict_style.repair_behavior,
+                     b.conflict_style.repair_behavior);
+
+        diff_scalar("emotional_range.ceiling", a.emotional_range.ceiling,
+                     b.emotional_range.ceiling);
+        diff_scalar("emotional_range.floor", a.emotional_range.floor, b.emotional_range.floor);
+        diff_scalar("emotional_range.withdrawal_conditions",
+                     a.emotional_range.withdrawal_conditions,
+                     b.emotional_range.withdrawal_conditions);
+        diff_scalar("emotional_range.recovery_style", a.emotional_range.recovery_style,
+                     b.emotional_range.recovery_style);
+        diff_arr("emotional_range.escalation_triggers",
+                 a.emotional_range.escalation_triggers,
+                 a.emotional_range.escalation_triggers_count,
+                 b.emotional_range.escalation_triggers,
+                 b.emotional_range.escalation_triggers_count);
+        diff_arr("emotional_range.de_escalation", a.emotional_range.de_escalation,
+                 a.emotional_range.de_escalation_count, b.emotional_range.de_escalation,
+                 b.emotional_range.de_escalation_count);
+
+        diff_scalar("voice_rhythm.sentence_pattern", a.voice_rhythm.sentence_pattern,
+                     b.voice_rhythm.sentence_pattern);
+        diff_scalar("voice_rhythm.paragraph_cadence", a.voice_rhythm.paragraph_cadence,
+                     b.voice_rhythm.paragraph_cadence);
+        diff_scalar("voice_rhythm.response_tempo", a.voice_rhythm.response_tempo,
+                     b.voice_rhythm.response_tempo);
+        diff_scalar("voice_rhythm.emphasis_style", a.voice_rhythm.emphasis_style,
+                     b.voice_rhythm.emphasis_style);
+        diff_scalar("voice_rhythm.pause_behavior", a.voice_rhythm.pause_behavior,
+                     b.voice_rhythm.pause_behavior);
+
+        diff_scalar("sensory.dominant_sense", a.sensory.dominant_sense,
+                     b.sensory.dominant_sense);
+        diff_scalar("sensory.grounding_patterns", a.sensory.grounding_patterns,
+                     b.sensory.grounding_patterns);
+        diff_arr("sensory.metaphor_vocabulary", a.sensory.metaphor_vocabulary,
+                 a.sensory.metaphor_vocabulary_count, b.sensory.metaphor_vocabulary,
+                 b.sensory.metaphor_vocabulary_count);
+
+        diff_scalar("intellectual.thinking_style", a.intellectual.thinking_style,
+                     b.intellectual.thinking_style);
+        diff_arr("intellectual.expertise", a.intellectual.expertise,
+                 a.intellectual.expertise_count, b.intellectual.expertise,
+                 b.intellectual.expertise_count);
+        diff_arr("intellectual.curiosity_areas", a.intellectual.curiosity_areas,
+                 a.intellectual.curiosity_areas_count, b.intellectual.curiosity_areas,
+                 b.intellectual.curiosity_areas_count);
+
+        diff_scalar("relational.bid_response_style", a.relational.bid_response_style,
+                     b.relational.bid_response_style);
+        diff_scalar("relational.attachment_style", a.relational.attachment_style,
+                     b.relational.attachment_style);
+        diff_scalar("relational.attachment_awareness", a.relational.attachment_awareness,
+                     b.relational.attachment_awareness);
+        diff_scalar("relational.dunbar_awareness", a.relational.dunbar_awareness,
+                     b.relational.dunbar_awareness);
+        diff_arr("relational.emotional_bids", a.relational.emotional_bids,
+                 a.relational.emotional_bids_count, b.relational.emotional_bids,
+                 b.relational.emotional_bids_count);
+
+        diff_scalar("listening.default_response_type", a.listening.default_response_type,
+                     b.listening.default_response_type);
+        diff_scalar("listening.nvc_style", a.listening.nvc_style, b.listening.nvc_style);
+        diff_scalar("listening.validation_style", a.listening.validation_style,
+                     b.listening.validation_style);
+        diff_arr("listening.reflective_techniques", a.listening.reflective_techniques,
+                 a.listening.reflective_techniques_count, b.listening.reflective_techniques,
+                 b.listening.reflective_techniques_count);
+
+        diff_scalar("repair.rupture_detection", a.repair.rupture_detection,
+                     b.repair.rupture_detection);
+        diff_scalar("repair.repair_approach", a.repair.repair_approach,
+                     b.repair.repair_approach);
+        diff_scalar("repair.face_saving_style", a.repair.face_saving_style,
+                     b.repair.face_saving_style);
+        diff_arr("repair.repair_phrases", a.repair.repair_phrases,
+                 a.repair.repair_phrases_count, b.repair.repair_phrases,
+                 b.repair.repair_phrases_count);
+
+        diff_scalar("mirroring.mirroring_level", a.mirroring.mirroring_level,
+                     b.mirroring.mirroring_level);
+        diff_scalar("mirroring.convergence_speed", a.mirroring.convergence_speed,
+                     b.mirroring.convergence_speed);
+        diff_scalar("mirroring.power_dynamic", a.mirroring.power_dynamic,
+                     b.mirroring.power_dynamic);
+        diff_arr("mirroring.adapts_to", a.mirroring.adapts_to, a.mirroring.adapts_to_count,
+                 b.mirroring.adapts_to, b.mirroring.adapts_to_count);
+
+        diff_scalar("social.default_ego_state", a.social.default_ego_state,
+                     b.social.default_ego_state);
+        diff_scalar("social.phatic_style", a.social.phatic_style, b.social.phatic_style);
+        diff_arr("social.bonding_behaviors", a.social.bonding_behaviors,
+                 a.social.bonding_behaviors_count, b.social.bonding_behaviors,
+                 b.social.bonding_behaviors_count);
+        diff_arr("social.anti_patterns", a.social.anti_patterns, a.social.anti_patterns_count,
+                 b.social.anti_patterns, b.social.anti_patterns_count);
 
         /* Overlays: compare by channel */
         bool overlay_any = false;

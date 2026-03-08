@@ -400,6 +400,58 @@ sc_error_t sc_persona_creator_synthesize(sc_allocator_t *alloc, const sc_persona
         if (partials[i].voice_rhythm.pause_behavior && !out->voice_rhythm.pause_behavior)
             out->voice_rhythm.pause_behavior =
                 sc_strdup(alloc, partials[i].voice_rhythm.pause_behavior);
+
+        /* Relational intelligence */
+        if (partials[i].relational.bid_response_style && !out->relational.bid_response_style)
+            out->relational.bid_response_style =
+                sc_strdup(alloc, partials[i].relational.bid_response_style);
+        if (partials[i].relational.attachment_style && !out->relational.attachment_style)
+            out->relational.attachment_style =
+                sc_strdup(alloc, partials[i].relational.attachment_style);
+        if (partials[i].relational.attachment_awareness && !out->relational.attachment_awareness)
+            out->relational.attachment_awareness =
+                sc_strdup(alloc, partials[i].relational.attachment_awareness);
+        if (partials[i].relational.dunbar_awareness && !out->relational.dunbar_awareness)
+            out->relational.dunbar_awareness =
+                sc_strdup(alloc, partials[i].relational.dunbar_awareness);
+
+        /* Listening protocol */
+        if (partials[i].listening.default_response_type && !out->listening.default_response_type)
+            out->listening.default_response_type =
+                sc_strdup(alloc, partials[i].listening.default_response_type);
+        if (partials[i].listening.nvc_style && !out->listening.nvc_style)
+            out->listening.nvc_style = sc_strdup(alloc, partials[i].listening.nvc_style);
+        if (partials[i].listening.validation_style && !out->listening.validation_style)
+            out->listening.validation_style =
+                sc_strdup(alloc, partials[i].listening.validation_style);
+
+        /* Repair protocol */
+        if (partials[i].repair.rupture_detection && !out->repair.rupture_detection)
+            out->repair.rupture_detection =
+                sc_strdup(alloc, partials[i].repair.rupture_detection);
+        if (partials[i].repair.repair_approach && !out->repair.repair_approach)
+            out->repair.repair_approach = sc_strdup(alloc, partials[i].repair.repair_approach);
+        if (partials[i].repair.face_saving_style && !out->repair.face_saving_style)
+            out->repair.face_saving_style =
+                sc_strdup(alloc, partials[i].repair.face_saving_style);
+
+        /* Linguistic mirroring */
+        if (partials[i].mirroring.mirroring_level && !out->mirroring.mirroring_level)
+            out->mirroring.mirroring_level =
+                sc_strdup(alloc, partials[i].mirroring.mirroring_level);
+        if (partials[i].mirroring.convergence_speed && !out->mirroring.convergence_speed)
+            out->mirroring.convergence_speed =
+                sc_strdup(alloc, partials[i].mirroring.convergence_speed);
+        if (partials[i].mirroring.power_dynamic && !out->mirroring.power_dynamic)
+            out->mirroring.power_dynamic =
+                sc_strdup(alloc, partials[i].mirroring.power_dynamic);
+
+        /* Social dynamics */
+        if (partials[i].social.default_ego_state && !out->social.default_ego_state)
+            out->social.default_ego_state =
+                sc_strdup(alloc, partials[i].social.default_ego_state);
+        if (partials[i].social.phatic_style && !out->social.phatic_style)
+            out->social.phatic_style = sc_strdup(alloc, partials[i].social.phatic_style);
     }
 
     return SC_OK;
@@ -757,6 +809,270 @@ sc_error_t sc_persona_creator_write(sc_allocator_t *alloc, const sc_persona_t *p
         write_json_string(f, persona->core_anchor);
     }
 
+    /* Intellectual profile */
+    if (persona->intellectual.thinking_style || persona->intellectual.expertise_count > 0) {
+        fputs(",\n  \"intellectual\": {", f);
+        bool first = true;
+        if (persona->intellectual.thinking_style) {
+            fputs("\n    \"thinking_style\": ", f);
+            write_json_string(f, persona->intellectual.thinking_style);
+            first = false;
+        }
+        if (persona->intellectual.expertise_count > 0) {
+            if (!first) fputc(',', f);
+            fputs("\n    \"expertise\": [", f);
+            write_json_string_array(f, persona->intellectual.expertise,
+                                    persona->intellectual.expertise_count);
+            fputc(']', f);
+            first = false;
+        }
+        if (persona->intellectual.curiosity_areas_count > 0) {
+            if (!first) fputc(',', f);
+            fputs("\n    \"curiosity_areas\": [", f);
+            write_json_string_array(f, persona->intellectual.curiosity_areas,
+                                    persona->intellectual.curiosity_areas_count);
+            fputc(']', f);
+            first = false;
+        }
+        if (persona->intellectual.metaphor_sources) {
+            if (!first) fputc(',', f);
+            fputs("\n    \"metaphor_sources\": ", f);
+            write_json_string(f, persona->intellectual.metaphor_sources);
+        }
+        fputs("\n  }", f);
+    }
+
+    /* Sensory preferences */
+    if (persona->sensory.dominant_sense || persona->sensory.metaphor_vocabulary_count > 0) {
+        fputs(",\n  \"sensory\": {", f);
+        bool first = true;
+        if (persona->sensory.dominant_sense) {
+            fputs("\n    \"dominant_sense\": ", f);
+            write_json_string(f, persona->sensory.dominant_sense);
+            first = false;
+        }
+        if (persona->sensory.metaphor_vocabulary_count > 0) {
+            if (!first) fputc(',', f);
+            fputs("\n    \"metaphor_vocabulary\": [", f);
+            write_json_string_array(f, persona->sensory.metaphor_vocabulary,
+                                    persona->sensory.metaphor_vocabulary_count);
+            fputc(']', f);
+            first = false;
+        }
+        if (persona->sensory.grounding_patterns) {
+            if (!first) fputc(',', f);
+            fputs("\n    \"grounding_patterns\": ", f);
+            write_json_string(f, persona->sensory.grounding_patterns);
+        }
+        fputs("\n  }", f);
+    }
+
+    /* Backstory behaviors */
+    if (persona->backstory_behaviors_count > 0) {
+        fputs(",\n  \"backstory_behaviors\": [", f);
+        for (size_t i = 0; i < persona->backstory_behaviors_count; i++) {
+            if (i > 0) fputc(',', f);
+            fputs("\n    {\"backstory_beat\": ", f);
+            write_json_string(f, persona->backstory_behaviors[i].backstory_beat);
+            fputs(", \"behavioral_rule\": ", f);
+            write_json_string(f, persona->backstory_behaviors[i].behavioral_rule);
+            fputc('}', f);
+        }
+        fputs("\n  ]", f);
+    }
+
+    /* Situational directions */
+    if (persona->situational_directions_count > 0) {
+        fputs(",\n  \"situational_directions\": [", f);
+        for (size_t i = 0; i < persona->situational_directions_count; i++) {
+            if (i > 0) fputc(',', f);
+            fputs("\n    {\"trigger\": ", f);
+            write_json_string(f, persona->situational_directions[i].trigger);
+            fputs(", \"instruction\": ", f);
+            write_json_string(f, persona->situational_directions[i].instruction);
+            fputc('}', f);
+        }
+        fputs("\n  ]", f);
+    }
+
+    /* Relational intelligence */
+    {
+        const sc_relational_intelligence_t *ri = &persona->relational;
+        if (ri->bid_response_style || ri->attachment_style || ri->attachment_awareness ||
+            ri->dunbar_awareness || ri->emotional_bids_count > 0) {
+            fputs(",\n  \"relational\": {", f);
+            bool first = true;
+            if (ri->bid_response_style) {
+                fputs("\n    \"bid_response_style\": ", f);
+                write_json_string(f, ri->bid_response_style);
+                first = false;
+            }
+            if (ri->emotional_bids_count > 0) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"emotional_bids\": [", f);
+                write_json_string_array(f, ri->emotional_bids, ri->emotional_bids_count);
+                fputc(']', f);
+                first = false;
+            }
+            if (ri->attachment_style) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"attachment_style\": ", f);
+                write_json_string(f, ri->attachment_style);
+                first = false;
+            }
+            if (ri->attachment_awareness) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"attachment_awareness\": ", f);
+                write_json_string(f, ri->attachment_awareness);
+                first = false;
+            }
+            if (ri->dunbar_awareness) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"dunbar_awareness\": ", f);
+                write_json_string(f, ri->dunbar_awareness);
+            }
+            fputs("\n  }", f);
+        }
+    }
+
+    /* Listening protocol */
+    {
+        const sc_listening_protocol_t *lp = &persona->listening;
+        if (lp->default_response_type || lp->reflective_techniques_count > 0 ||
+            lp->nvc_style || lp->validation_style) {
+            fputs(",\n  \"listening\": {", f);
+            bool first = true;
+            if (lp->default_response_type) {
+                fputs("\n    \"default_response_type\": ", f);
+                write_json_string(f, lp->default_response_type);
+                first = false;
+            }
+            if (lp->reflective_techniques_count > 0) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"reflective_techniques\": [", f);
+                write_json_string_array(f, lp->reflective_techniques,
+                                        lp->reflective_techniques_count);
+                fputc(']', f);
+                first = false;
+            }
+            if (lp->nvc_style) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"nvc_style\": ", f);
+                write_json_string(f, lp->nvc_style);
+                first = false;
+            }
+            if (lp->validation_style) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"validation_style\": ", f);
+                write_json_string(f, lp->validation_style);
+            }
+            fputs("\n  }", f);
+        }
+    }
+
+    /* Repair protocol */
+    {
+        const sc_repair_protocol_t *rp = &persona->repair;
+        if (rp->rupture_detection || rp->repair_approach || rp->face_saving_style ||
+            rp->repair_phrases_count > 0) {
+            fputs(",\n  \"repair\": {", f);
+            bool first = true;
+            if (rp->rupture_detection) {
+                fputs("\n    \"rupture_detection\": ", f);
+                write_json_string(f, rp->rupture_detection);
+                first = false;
+            }
+            if (rp->repair_approach) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"repair_approach\": ", f);
+                write_json_string(f, rp->repair_approach);
+                first = false;
+            }
+            if (rp->face_saving_style) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"face_saving_style\": ", f);
+                write_json_string(f, rp->face_saving_style);
+                first = false;
+            }
+            if (rp->repair_phrases_count > 0) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"repair_phrases\": [", f);
+                write_json_string_array(f, rp->repair_phrases, rp->repair_phrases_count);
+                fputc(']', f);
+            }
+            fputs("\n  }", f);
+        }
+    }
+
+    /* Linguistic mirroring */
+    {
+        const sc_linguistic_mirroring_t *lm = &persona->mirroring;
+        if (lm->mirroring_level || lm->adapts_to_count > 0 || lm->convergence_speed ||
+            lm->power_dynamic) {
+            fputs(",\n  \"mirroring\": {", f);
+            bool first = true;
+            if (lm->mirroring_level) {
+                fputs("\n    \"mirroring_level\": ", f);
+                write_json_string(f, lm->mirroring_level);
+                first = false;
+            }
+            if (lm->adapts_to_count > 0) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"adapts_to\": [", f);
+                write_json_string_array(f, lm->adapts_to, lm->adapts_to_count);
+                fputc(']', f);
+                first = false;
+            }
+            if (lm->convergence_speed) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"convergence_speed\": ", f);
+                write_json_string(f, lm->convergence_speed);
+                first = false;
+            }
+            if (lm->power_dynamic) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"power_dynamic\": ", f);
+                write_json_string(f, lm->power_dynamic);
+            }
+            fputs("\n  }", f);
+        }
+    }
+
+    /* Social dynamics */
+    {
+        const sc_social_dynamics_t *sd = &persona->social;
+        if (sd->default_ego_state || sd->phatic_style || sd->bonding_behaviors_count > 0 ||
+            sd->anti_patterns_count > 0) {
+            fputs(",\n  \"social\": {", f);
+            bool first = true;
+            if (sd->default_ego_state) {
+                fputs("\n    \"default_ego_state\": ", f);
+                write_json_string(f, sd->default_ego_state);
+                first = false;
+            }
+            if (sd->phatic_style) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"phatic_style\": ", f);
+                write_json_string(f, sd->phatic_style);
+                first = false;
+            }
+            if (sd->bonding_behaviors_count > 0) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"bonding_behaviors\": [", f);
+                write_json_string_array(f, sd->bonding_behaviors, sd->bonding_behaviors_count);
+                fputc(']', f);
+                first = false;
+            }
+            if (sd->anti_patterns_count > 0) {
+                if (!first) fputc(',', f);
+                fputs("\n    \"anti_patterns\": [", f);
+                write_json_string_array(f, sd->anti_patterns, sd->anti_patterns_count);
+                fputc(']', f);
+            }
+            fputs("\n  }", f);
+        }
+    }
+
     /* Example banks */
     if (persona->example_banks_count > 0) {
         fputs(",\n  \"example_banks\": {\n", f);
@@ -837,6 +1153,14 @@ sc_error_t sc_persona_creator_write(sc_allocator_t *alloc, const sc_persona_t *p
                     fputs(",\n      \"proactive_channel\": ", f);
                     write_json_string(f, c->proactive_channel);
                 }
+            }
+            if (c->attachment_style) {
+                fputs(",\n      \"attachment_style\": ", f);
+                write_json_string(f, c->attachment_style);
+            }
+            if (c->dunbar_layer) {
+                fputs(",\n      \"dunbar_layer\": ", f);
+                write_json_string(f, c->dunbar_layer);
             }
             fputs("\n    }", f);
         }

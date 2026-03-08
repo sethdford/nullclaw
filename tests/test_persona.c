@@ -245,7 +245,7 @@ static void test_persona_prompt_overrides_default(void) {
 
 static void test_analyzer_builds_prompt(void) {
     const char *messages[] = {"hey whats up", "down. where at", "thursday works"};
-    char prompt[2048];
+    char prompt[4096];
     size_t prompt_len = 0;
     sc_error_t err = sc_persona_analyzer_build_prompt(messages, 3, "imessage", prompt,
                                                       sizeof(prompt), &prompt_len);
