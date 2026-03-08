@@ -645,6 +645,7 @@ static sc_error_t parse_overlay(sc_allocator_t *a, const char *channel_name,
     ov->channel = sc_strdup(a, channel_name);
     if (!ov->channel)
         return SC_ERR_OUT_OF_MEMORY;
+    /* Optional overlay fields: PERSONA_STRDUP_OPT doesn't apply here (different allocator param) */
     const char *s = sc_json_get_string(obj, "formality");
     if (s)
         ov->formality = sc_strdup(a, s);
@@ -1117,17 +1118,17 @@ sc_error_t sc_persona_load_json(sc_allocator_t *alloc, const char *json, size_t 
         if (mir && mir->type == SC_JSON_OBJECT) {
             const char *s = sc_json_get_string(mir, "mirroring_level");
             if (s)
-                out->mirroring.mirroring_level = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(out->mirroring.mirroring_level, s);
             sc_json_value_t *a = sc_json_object_get(mir, "adapts_to");
             if (a)
                 parse_string_array(alloc, a, &out->mirroring.adapts_to,
                                    &out->mirroring.adapts_to_count);
             s = sc_json_get_string(mir, "convergence_speed");
             if (s)
-                out->mirroring.convergence_speed = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(out->mirroring.convergence_speed, s);
             s = sc_json_get_string(mir, "power_dynamic");
             if (s)
-                out->mirroring.power_dynamic = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(out->mirroring.power_dynamic, s);
         }
     }
 
@@ -1137,10 +1138,10 @@ sc_error_t sc_persona_load_json(sc_allocator_t *alloc, const char *json, size_t 
         if (soc && soc->type == SC_JSON_OBJECT) {
             const char *s = sc_json_get_string(soc, "default_ego_state");
             if (s)
-                out->social.default_ego_state = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(out->social.default_ego_state, s);
             s = sc_json_get_string(soc, "phatic_style");
             if (s)
-                out->social.phatic_style = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(out->social.phatic_style, s);
             sc_json_value_t *a = sc_json_object_get(soc, "bonding_behaviors");
             if (a)
                 parse_string_array(alloc, a, &out->social.bonding_behaviors,
@@ -1177,37 +1178,37 @@ sc_error_t sc_persona_load_json(sc_allocator_t *alloc, const char *json, size_t 
             const char *s;
             s = sc_json_get_string(cval, "name");
             if (s)
-                cp->name = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(cp->name, s);
             s = sc_json_get_string(cval, "email");
             if (s)
-                cp->email = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(cp->email, s);
             s = sc_json_get_string(cval, "relationship");
             if (s)
-                cp->relationship = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(cp->relationship, s);
             s = sc_json_get_string(cval, "relationship_stage");
             if (s)
-                cp->relationship_stage = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(cp->relationship_stage, s);
             s = sc_json_get_string(cval, "warmth_level");
             if (s)
-                cp->warmth_level = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(cp->warmth_level, s);
             s = sc_json_get_string(cval, "vulnerability_level");
             if (s)
-                cp->vulnerability_level = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(cp->vulnerability_level, s);
             s = sc_json_get_string(cval, "identity");
             if (s)
-                cp->identity = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(cp->identity, s);
             s = sc_json_get_string(cval, "context");
             if (s)
-                cp->context = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(cp->context, s);
             s = sc_json_get_string(cval, "dynamic");
             if (s)
-                cp->dynamic = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(cp->dynamic, s);
             s = sc_json_get_string(cval, "greeting_style");
             if (s)
-                cp->greeting_style = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(cp->greeting_style, s);
             s = sc_json_get_string(cval, "closing_style");
             if (s)
-                cp->closing_style = sc_strdup(alloc, s);
+                PERSONA_STRDUP_OPT(cp->closing_style, s);
             sc_json_value_t *arr;
             arr = sc_json_object_get(cval, "interests");
             if (arr)
@@ -1236,10 +1237,10 @@ sc_error_t sc_persona_load_json(sc_allocator_t *alloc, const char *json, size_t 
                 cp->proactive_checkin = sc_json_get_bool(proactive, "enabled", false);
                 s = sc_json_get_string(proactive, "channel");
                 if (s)
-                    cp->proactive_channel = sc_strdup(alloc, s);
+                    PERSONA_STRDUP_OPT(cp->proactive_channel, s);
                 s = sc_json_get_string(proactive, "schedule");
                 if (s)
-                    cp->proactive_schedule = sc_strdup(alloc, s);
+                    PERSONA_STRDUP_OPT(cp->proactive_schedule, s);
             }
             count++;
         }
@@ -1277,6 +1278,11 @@ sc_error_t sc_persona_load_json(sc_allocator_t *alloc, const char *json, size_t 
         out->overlays = ovs;
         out->overlays_count = count;
     }
+
+    if (oom_on_optional)
+        fprintf(stderr, "[persona] warning: some optional fields dropped due to OOM\n");
+
+#undef PERSONA_STRDUP_OPT
 
     sc_json_free(alloc, root);
     return SC_OK;
