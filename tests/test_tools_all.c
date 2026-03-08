@@ -2140,8 +2140,8 @@ static void test_tool_diff_execute(void) {
     if (t) {
         sc_json_value_t *args = sc_json_object_new(&alloc);
         sc_json_object_set(&alloc, args, "action", sc_json_string_new(&alloc, "diff", 4));
-        sc_json_object_set(&alloc, args, "file_a", sc_json_string_new(&alloc, "/tmp/a.txt", 10));
-        sc_json_object_set(&alloc, args, "file_b", sc_json_string_new(&alloc, "/tmp/b.txt", 10));
+        sc_json_object_set(&alloc, args, "file_a", sc_json_string_new(&alloc, "a.txt", 5));
+        sc_json_object_set(&alloc, args, "file_b", sc_json_string_new(&alloc, "b.txt", 5));
         sc_tool_result_t result = {0};
         err = t->vtable->execute(t->ctx, &alloc, args, &result);
         sc_json_free(&alloc, args);

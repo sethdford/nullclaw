@@ -3,6 +3,7 @@
 #include "seaclaw/channels/dispatch.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
+#include "seaclaw/core/json.h"
 #include "seaclaw/daemon.h"
 #include "seaclaw/mcp.h"
 #include "seaclaw/memory.h"
@@ -160,7 +161,7 @@ static void test_cron_schedule_matches_null_returns_false(void) {
 static void test_diff_tool_create(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_tool_t tool = {0};
-    sc_error_t err = sc_diff_tool_create(&alloc, &tool);
+    sc_error_t err = sc_diff_tool_create(&alloc, NULL, 0, NULL, &tool);
     SC_ASSERT_EQ(err, SC_OK);
     SC_ASSERT_NOT_NULL(tool.vtable);
     SC_ASSERT_STR_EQ(tool.vtable->name(tool.ctx), "diff");
@@ -170,17 +171,59 @@ static void test_diff_tool_create(void) {
 
 static void test_diff_tool_create_null_out_fails(void) {
     sc_allocator_t alloc = sc_system_allocator();
-    sc_error_t err = sc_diff_tool_create(&alloc, NULL);
+    sc_error_t err = sc_diff_tool_create(&alloc, NULL, 0, NULL, NULL);
     SC_ASSERT_NEQ(err, SC_OK);
 }
 
 static void test_diff_tool_execute_null_args_fails(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_tool_t tool = {0};
-    sc_diff_tool_create(&alloc, &tool);
+    sc_diff_tool_create(&alloc, NULL, 0, NULL, &tool);
     sc_tool_result_t res = {0};
     sc_error_t err = tool.vtable->execute(tool.ctx, &alloc, NULL, &res);
     SC_ASSERT_EQ(err, SC_ERR_INVALID_ARGUMENT);
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
+}
+
+static void test_diff_rejects_path_traversal(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_t tool = {0};
+    sc_error_t err = sc_diff_tool_create(&alloc, "/tmp", 4, NULL, &tool);
+    SC_ASSERT_EQ(err, SC_OK);
+    sc_json_value_t *args = sc_json_object_new(&alloc);
+    sc_json_object_set(&alloc, args, "action", sc_json_string_new(&alloc, "diff", 4));
+    sc_json_object_set(&alloc, args, "file_a", sc_json_string_new(&alloc, "../etc/passwd", 13));
+    sc_json_object_set(&alloc, args, "file_b", sc_json_string_new(&alloc, "b.txt", 5));
+    sc_tool_result_t result = {0};
+    err = tool.vtable->execute(tool.ctx, &alloc, args, &result);
+    sc_json_free(&alloc, args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(!result.success);
+    SC_ASSERT_NOT_NULL(result.error_msg);
+    SC_ASSERT_TRUE(strstr(result.error_msg, "path not allowed") != NULL);
+    sc_tool_result_free(&alloc, &result);
+    if (tool.vtable->deinit)
+        tool.vtable->deinit(tool.ctx, &alloc);
+}
+
+static void test_diff_rejects_absolute_path(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_tool_t tool = {0};
+    sc_error_t cr = sc_diff_tool_create(&alloc, "/tmp", 4, NULL, &tool);
+    SC_ASSERT_EQ(cr, SC_OK);
+    sc_json_value_t *args = sc_json_object_new(&alloc);
+    sc_json_object_set(&alloc, args, "action", sc_json_string_new(&alloc, "diff", 4));
+    sc_json_object_set(&alloc, args, "file_a", sc_json_string_new(&alloc, "/etc/passwd", 11));
+    sc_json_object_set(&alloc, args, "file_b", sc_json_string_new(&alloc, "b.txt", 5));
+    sc_tool_result_t result = {0};
+    sc_error_t err = tool.vtable->execute(tool.ctx, &alloc, args, &result);
+    sc_json_free(&alloc, args);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_TRUE(!result.success);
+    SC_ASSERT_NOT_NULL(result.error_msg);
+    SC_ASSERT_TRUE(strstr(result.error_msg, "path not allowed") != NULL);
+    sc_tool_result_free(&alloc, &result);
     if (tool.vtable->deinit)
         tool.vtable->deinit(tool.ctx, &alloc);
 }
@@ -428,6 +471,8 @@ void run_modules_coverage_tests(void) {
     SC_RUN_TEST(test_diff_tool_create);
     SC_RUN_TEST(test_diff_tool_create_null_out_fails);
     SC_RUN_TEST(test_diff_tool_execute_null_args_fails);
+    SC_RUN_TEST(test_diff_rejects_path_traversal);
+    SC_RUN_TEST(test_diff_rejects_absolute_path);
     SC_RUN_TEST(test_apply_patch_create);
     SC_RUN_TEST(test_apply_patch_create_null_out_fails);
     SC_RUN_TEST(test_send_message_create);

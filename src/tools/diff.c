@@ -1,6 +1,8 @@
 #include "seaclaw/tools/diff.h"
+#include "seaclaw/core/allocator.h"
 #include "seaclaw/core/json.h"
 #include "seaclaw/core/string.h"
+#include "seaclaw/tools/validation.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,9 +19,14 @@
     "\"theirs\":{\"type\":\"string\"}"                                \
     "},\"required\":[\"action\"]}"
 
+typedef struct {
+    const char *workspace_dir;
+    size_t workspace_dir_len;
+} sc_diff_ctx_t;
+
 static sc_error_t diff_execute(void *ctx, sc_allocator_t *alloc, const sc_json_value_t *args,
                                sc_tool_result_t *out) {
-    (void)ctx;
+    sc_diff_ctx_t *c = (sc_diff_ctx_t *)ctx;
     if (!out)
         return SC_ERR_INVALID_ARGUMENT;
     if (!args) {
@@ -38,6 +45,18 @@ static sc_error_t diff_execute(void *ctx, sc_allocator_t *alloc, const sc_json_v
         const char *fb = sc_json_get_string(args, "file_b");
         if (!fa || !fb) {
             *out = sc_tool_result_fail("missing file_a or file_b", 23);
+            return SC_OK;
+        }
+        sc_error_t err_a =
+            sc_tool_validate_path(fa, c ? c->workspace_dir : NULL, c ? c->workspace_dir_len : 0);
+        if (err_a != SC_OK) {
+            *out = sc_tool_result_fail("file_a path not allowed", 22);
+            return SC_OK;
+        }
+        sc_error_t err_b =
+            sc_tool_validate_path(fb, c ? c->workspace_dir : NULL, c ? c->workspace_dir_len : 0);
+        if (err_b != SC_OK) {
+            *out = sc_tool_result_fail("file_b path not allowed", 22);
             return SC_OK;
         }
 #if SC_IS_TEST
@@ -133,11 +152,25 @@ static const sc_tool_vtable_t diff_vtable = {
     .deinit = NULL,
 };
 
-sc_error_t sc_diff_tool_create(sc_allocator_t *alloc, sc_tool_t *out) {
-    (void)alloc;
-    if (!out)
+sc_error_t sc_diff_tool_create(sc_allocator_t *alloc, const char *workspace_dir,
+                               size_t workspace_dir_len, sc_security_policy_t *policy,
+                               sc_tool_t *out) {
+    (void)policy;
+    if (!alloc || !out)
         return SC_ERR_INVALID_ARGUMENT;
-    out->ctx = NULL;
+    sc_diff_ctx_t *c = (sc_diff_ctx_t *)alloc->alloc(alloc->ctx, sizeof(*c));
+    if (!c)
+        return SC_ERR_OUT_OF_MEMORY;
+    memset(c, 0, sizeof(*c));
+    if (workspace_dir && workspace_dir_len > 0) {
+        c->workspace_dir = sc_strndup(alloc, workspace_dir, workspace_dir_len);
+        if (!c->workspace_dir) {
+            alloc->free(alloc->ctx, c, sizeof(*c));
+            return SC_ERR_OUT_OF_MEMORY;
+        }
+        c->workspace_dir_len = workspace_dir_len;
+    }
+    out->ctx = c;
     out->vtable = &diff_vtable;
     return SC_OK;
 }

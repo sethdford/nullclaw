@@ -280,7 +280,7 @@ static void test_database_tool(void) {
 static void test_diff_tool(void) {
     sc_allocator_t a = sc_system_allocator();
     sc_tool_t tool = {0};
-    SC_ASSERT_EQ(sc_diff_tool_create(&a, &tool), SC_OK);
+    SC_ASSERT_EQ(sc_diff_tool_create(&a, NULL, 0, NULL, &tool), SC_OK);
     SC_ASSERT_STR_EQ(tool.vtable->name(tool.ctx), "diff");
 }
 
@@ -568,7 +568,7 @@ static void test_notebook_description(void) {
 static void test_diff_description(void) {
     sc_allocator_t a = sc_system_allocator();
     sc_tool_t tool = {0};
-    SC_ASSERT_EQ(sc_diff_tool_create(&a, &tool), SC_OK);
+    SC_ASSERT_EQ(sc_diff_tool_create(&a, NULL, 0, NULL, &tool), SC_OK);
     SC_ASSERT_NOT_NULL(tool.vtable->description(tool.ctx));
     SC_ASSERT_NOT_NULL(tool.vtable->parameters_json(tool.ctx));
 }

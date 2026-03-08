@@ -355,10 +355,10 @@ sc_error_t sc_tools_create_default(sc_allocator_t *alloc, const char *workspace_
     idx++;
 #endif
 
-    err = sc_diff_tool_create(alloc, &tools[idx]);
+    err = add_tool_ws(alloc, tools, &idx, workspace_dir, workspace_dir_len, policy,
+                      sc_diff_tool_create);
     if (err != SC_OK)
         goto fail;
-    idx++;
 
     err = sc_apply_patch_create(alloc, policy, &tools[idx]);
     if (err != SC_OK)
