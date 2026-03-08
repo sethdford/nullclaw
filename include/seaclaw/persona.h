@@ -3,7 +3,7 @@
 
 #include "seaclaw/core/allocator.h"
 
-#define SC_PERSONA_PROMPT_MAX_BYTES (16 * 1024) /* 16 KB cap for rich personas */
+#define SC_PERSONA_PROMPT_MAX_BYTES (24 * 1024) /* 24 KB cap for research-rich personas */
 
 #include "seaclaw/core/error.h"
 
@@ -243,6 +243,11 @@ typedef struct sc_persona {
     sc_backstory_behavior_t *backstory_behaviors;
     size_t backstory_behaviors_count;
     sc_sensory_preferences_t sensory;
+    sc_relational_intelligence_t relational;
+    sc_listening_protocol_t listening;
+    sc_repair_protocol_t repair;
+    sc_linguistic_mirroring_t mirroring;
+    sc_social_dynamics_t social;
     sc_persona_overlay_t *overlays;
     size_t overlays_count;
     sc_persona_example_bank_t *example_banks;

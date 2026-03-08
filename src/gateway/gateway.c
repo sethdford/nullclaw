@@ -1440,7 +1440,8 @@ cleanup:
         sc_thread_pool_destroy(gw->http_pool);
         gw->http_pool = NULL;
     }
-    sc_ws_server_deinit(&gw->ws);
+    if (gw)
+        sc_ws_server_deinit(&gw->ws);
     if (ctrl == &proto_local)
         sc_control_protocol_deinit(ctrl);
     if (body_buf)

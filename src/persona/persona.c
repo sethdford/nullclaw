@@ -2009,6 +2009,8 @@ sc_error_t sc_persona_build_prompt(sc_allocator_t *alloc, const sc_persona_t *pe
         if (err != SC_OK)
             goto fail;
         for (size_t i = 0; i < persona->mood_states_count; i++) {
+            if (!persona->mood_states[i])
+                continue;
             err = append_prompt(alloc, &buf, &len, &cap, "- ", 2);
             if (err == SC_OK)
                 err = append_prompt(alloc, &buf, &len, &cap, persona->mood_states[i],
