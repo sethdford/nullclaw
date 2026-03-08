@@ -1,9 +1,9 @@
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/error.h"
-#include "seaclaw/core/http.h"
 #include "seaclaw/core/json.h"
 #include "seaclaw/core/string.h"
 #include "seaclaw/provider.h"
+#include "seaclaw/providers/provider_http.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -290,24 +290,9 @@ static sc_error_t compatible_chat(void *ctx, sc_allocator_t *alloc,
             auth = auth_buf;
     }
 
-    sc_http_response_t hresp = {0};
-    err = sc_http_post_json(alloc, url_buf, auth, body, body_len, &hresp);
-    alloc->free(alloc->ctx, body, body_len);
-    if (err != SC_OK)
-        return err;
-
-    if (hresp.status_code < 200 || hresp.status_code >= 300) {
-        sc_http_response_free(alloc, &hresp);
-        if (hresp.status_code == 401)
-            return SC_ERR_PROVIDER_AUTH;
-        if (hresp.status_code == 429)
-            return SC_ERR_PROVIDER_RATE_LIMITED;
-        return SC_ERR_PROVIDER_RESPONSE;
-    }
-
     sc_json_value_t *parsed = NULL;
-    err = sc_json_parse(alloc, hresp.body, hresp.body_len, &parsed);
-    sc_http_response_free(alloc, &hresp);
+    err = sc_provider_http_post_json(alloc, url_buf, auth, NULL, body, body_len, &parsed);
+    alloc->free(alloc->ctx, body, body_len);
     if (err != SC_OK)
         return err;
 

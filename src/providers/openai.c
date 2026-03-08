@@ -5,6 +5,7 @@
 #include "seaclaw/core/json.h"
 #include "seaclaw/core/string.h"
 #include "seaclaw/provider.h"
+#include "seaclaw/providers/provider_http.h"
 #include "seaclaw/providers/sse.h"
 #include "seaclaw/websocket/websocket.h"
 #include <stdint.h>
@@ -23,7 +24,9 @@ typedef struct sc_openai_ctx {
     bool ws_streaming; /* prefer WebSocket over SSE for streaming */
 } sc_openai_ctx_t;
 
-/* Perform HTTP POST. In test mode returns mock response. */
+#if SC_IS_TEST
+/* Mock HTTP POST for tests. When body contains "tools" but NOT "tool_call_id", return tool_calls.
+   When "tool_call_id" is present, return text. */
 static sc_error_t sc_openai_http_post(sc_allocator_t *alloc, const char *url, size_t url_len,
                                       const char *auth_header, size_t auth_len, const char *body,
                                       size_t body_len, char **response_out,
@@ -35,9 +38,6 @@ static sc_error_t sc_openai_http_post(sc_allocator_t *alloc, const char *url, si
     *response_out = NULL;
     *response_len_out = 0;
 
-#if SC_IS_TEST
-    /* When request body contains "tools" but NOT "tool_call_id", return tool_calls (first round).
-       When "tool_call_id" is present, we're in follow-up after tool execution — return text. */
     const char *mock;
     if (body && body_len > 0) {
         bool has_tools = false;
@@ -73,46 +73,8 @@ static sc_error_t sc_openai_http_post(sc_allocator_t *alloc, const char *url, si
     *response_out = buf;
     *response_len_out = mock_len;
     return SC_OK;
-#else
-    {
-        char url_buf[512];
-        if (url_len >= sizeof(url_buf))
-            return SC_ERR_INVALID_ARGUMENT;
-        memcpy(url_buf, url, url_len);
-        url_buf[url_len] = '\0';
-
-        const char *auth = NULL;
-        char auth_buf[512];
-        if (auth_len > 0 && auth_len < sizeof(auth_buf)) {
-            memcpy(auth_buf, auth_header, auth_len);
-            auth_buf[auth_len] = '\0';
-            auth = auth_buf;
-        }
-
-        sc_http_response_t hresp = {0};
-        sc_error_t err = sc_http_post_json(alloc, url_buf, auth, body, body_len, &hresp);
-        if (err != SC_OK)
-            return err;
-
-        if (hresp.status_code < 200 || hresp.status_code >= 300) {
-            fprintf(stderr, "[openai] HTTP %ld: %.*s\n", hresp.status_code,
-                    (int)(hresp.body_len < 500 ? hresp.body_len : 500),
-                    hresp.body ? hresp.body : "(null)");
-            sc_http_response_free(alloc, &hresp);
-            if (hresp.status_code == 401)
-                return SC_ERR_PROVIDER_AUTH;
-            if (hresp.status_code == 429)
-                return SC_ERR_PROVIDER_RATE_LIMITED;
-            return SC_ERR_PROVIDER_RESPONSE;
-        }
-
-        *response_out = hresp.body;
-        *response_len_out = hresp.body_len;
-        hresp.owned = false;
-        return SC_OK;
-    }
-#endif
 }
+#endif
 
 static sc_error_t openai_chat(void *ctx, sc_allocator_t *alloc, const sc_chat_request_t *request,
                               const char *model, size_t model_len, double temperature,
@@ -430,17 +392,32 @@ static sc_error_t openai_chat(void *ctx, sc_allocator_t *alloc, const sc_chat_re
             auth_len = (size_t)n;
     }
 
-    char *resp_body = NULL;
-    size_t resp_len = 0;
-    err = sc_openai_http_post(alloc, url, url_len, auth_buf, auth_len, body, body_len, &resp_body,
-                              &resp_len);
-    alloc->free(alloc->ctx, body, body_len);
-    if (err != SC_OK)
-        return err;
-
     sc_json_value_t *parsed = NULL;
-    err = sc_json_parse(alloc, resp_body, resp_len, &parsed);
-    alloc->free(alloc->ctx, resp_body, resp_len);
+#if SC_IS_TEST
+    {
+        char *resp_body = NULL;
+        size_t resp_len = 0;
+        err = sc_openai_http_post(alloc, url, url_len, auth_buf, auth_len, body, body_len,
+                                  &resp_body, &resp_len);
+        if (err == SC_OK && resp_body)
+            err = sc_json_parse(alloc, resp_body, resp_len, &parsed);
+        if (resp_body)
+            alloc->free(alloc->ctx, resp_body, resp_len);
+    }
+#else
+    {
+        char url_buf[512];
+        if (url_len >= sizeof(url_buf)) {
+            alloc->free(alloc->ctx, body, body_len);
+            return SC_ERR_INVALID_ARGUMENT;
+        }
+        memcpy(url_buf, url, url_len);
+        url_buf[url_len] = '\0';
+        err = sc_provider_http_post_json(alloc, url_buf, auth_len ? auth_buf : NULL, NULL, body,
+                                         body_len, &parsed);
+    }
+#endif
+    alloc->free(alloc->ctx, body, body_len);
     if (err != SC_OK)
         return err;
 

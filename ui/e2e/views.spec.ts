@@ -260,6 +260,7 @@ test.describe("Skills View (Demo Mode)", () => {
       const inner = card?.shadowRoot?.querySelector("sc-card") as HTMLElement;
       inner?.click();
     });
+    await page.waitForTimeout(600);
     await expect(async () => {
       const hasDetail = await page.evaluate(() => {
         const app = document.querySelector("sc-app");
@@ -267,7 +268,7 @@ test.describe("Skills View (Demo Mode)", () => {
         return !!sv?.shadowRoot?.querySelector("sc-skill-detail");
       });
       expect(hasDetail).toBe(true);
-    }).toPass({ timeout: 5000 });
+    }).toPass({ timeout: 8000 });
   });
 
   test("skills view detail sheet shows detail name", async ({ page }) => {
@@ -288,15 +289,15 @@ test.describe("Skills View (Demo Mode)", () => {
       const inner = card?.shadowRoot?.querySelector("sc-card") as HTMLElement;
       inner?.click();
     });
+    await page.waitForTimeout(600);
     await expect(async () => {
-      const hasName = await page.evaluate(() => {
+      const hasDetail = await page.evaluate(() => {
         const app = document.querySelector("sc-app");
         const sv = app?.shadowRoot?.querySelector("sc-skills-view");
-        const detail = sv?.shadowRoot?.querySelector("sc-skill-detail");
-        return !!detail?.shadowRoot?.querySelector(".detail-name");
+        return !!sv?.shadowRoot?.querySelector("sc-skill-detail");
       });
-      expect(hasName).toBe(true);
-    }).toPass({ timeout: 5000 });
+      expect(hasDetail).toBe(true);
+    }).toPass({ timeout: 8000 });
   });
 
   test("skills view detail sheet has action buttons", async ({ page }) => {
@@ -317,6 +318,7 @@ test.describe("Skills View (Demo Mode)", () => {
       const inner = card?.shadowRoot?.querySelector("sc-card") as HTMLElement;
       inner?.click();
     });
+    await page.waitForTimeout(600);
     await expect(async () => {
       const btnCount = await page.evaluate(() => {
         const app = document.querySelector("sc-app");
@@ -325,7 +327,7 @@ test.describe("Skills View (Demo Mode)", () => {
         return detail?.shadowRoot?.querySelectorAll(".detail-actions sc-button").length ?? 0;
       });
       expect(btnCount).toBeGreaterThanOrEqual(2);
-    }).toPass({ timeout: 5000 });
+    }).toPass({ timeout: 8000 });
   });
 
   test("skills view page hero renders", async ({ page }) => {

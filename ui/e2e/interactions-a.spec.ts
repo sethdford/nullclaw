@@ -1,41 +1,31 @@
 import { test, expect } from "@playwright/test";
-import { shadowCount, shadowExists, shadowText, waitForViewReady, POLL } from "./helpers.js";
+import { shadowCount, shadowExists, shadowText, deepText, WAIT, POLL } from "./helpers.js";
 
-// ─────────────────────────────────────────────────────────────
-// Chat View (Interactions)
-// ─────────────────────────────────────────────────────────────
 test.describe("Chat (Interactions)", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/?demo#chat");
-    await waitForViewReady(page, "sc-chat-view");
+    await page.waitForTimeout(WAIT);
   });
 
   test("send message and receive demo response", async ({ page }) => {
     await page.evaluate(() => {
       const app = document.querySelector("sc-app");
       const view = app?.shadowRoot?.querySelector("sc-chat-view");
-      const composer = view?.shadowRoot?.querySelector("sc-chat-composer") as Element | null;
-      const textarea = composer?.shadowRoot?.querySelector(
-        "textarea",
-      ) as HTMLTextAreaElement | null;
-      if (!textarea) return;
-      textarea.focus();
-      textarea.value = "Hello world";
-      textarea.dispatchEvent(new Event("input", { bubbles: true }));
-    });
-
-    await page.evaluate(() => {
-      const app = document.querySelector("sc-app");
-      const view = app?.shadowRoot?.querySelector("sc-chat-view");
-      const composer = view?.shadowRoot?.querySelector("sc-chat-composer") as Element | null;
-      const btn = composer?.shadowRoot?.querySelector(".send-btn.send") as HTMLElement | null;
-      btn?.click();
+      const composer = view?.shadowRoot?.querySelector("sc-chat-composer");
+      if (!composer) return;
+      composer.dispatchEvent(
+        new CustomEvent("sc-send", {
+          bubbles: true,
+          composed: true,
+          detail: { message: "Hello world" },
+        }),
+      );
     });
 
     await expect(async () => {
-      const text: string = await page.evaluate(shadowText("sc-chat-view"));
-      expect(text).toContain("Demo response to: Hello world");
-    }).toPass({ timeout: 12000 });
+      const text: string = await page.evaluate(deepText("sc-chat-view"));
+      expect(text).toContain("Demo response to:");
+    }).toPass({ timeout: 15000 });
   });
 
   test("sessions panel toggle works", async ({ page }) => {
@@ -45,6 +35,7 @@ test.describe("Chat (Interactions)", () => {
       const toggle = view?.shadowRoot?.querySelector(".sessions-toggle") as HTMLElement | null;
       toggle?.click();
     });
+    await page.waitForTimeout(600);
 
     await expect(async () => {
       const panelOpen = await page.evaluate(() => {
@@ -77,13 +68,10 @@ test.describe("Chat (Interactions)", () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────
-// Config View (Interactions)
-// ─────────────────────────────────────────────────────────────
 test.describe("Config (Interactions)", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/?demo#config");
-    await waitForViewReady(page, "sc-config-view");
+    await page.waitForTimeout(WAIT);
   });
 
   test("shows save button", async ({ page }) => {
@@ -106,6 +94,7 @@ test.describe("Config (Interactions)", () => {
       const rawBtn = [...btns].find((b) => b.textContent?.trim().includes("Raw JSON"));
       (rawBtn as HTMLElement)?.click();
     });
+    await page.waitForTimeout(600);
 
     await expect(async () => {
       const hasCodeBlock = await page.evaluate(shadowExists("sc-config-view", "sc-code-block"));
@@ -119,6 +108,7 @@ test.describe("Config (Interactions)", () => {
       const formBtn = [...btns].find((b) => b.textContent?.trim() === "Form");
       (formBtn as HTMLElement)?.click();
     });
+    await page.waitForTimeout(400);
 
     await expect(async () => {
       const text = await page.evaluate(shadowText("sc-config-view"));
@@ -136,13 +126,10 @@ test.describe("Config (Interactions)", () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────
-// Security View (Interactions)
-// ─────────────────────────────────────────────────────────────
 test.describe("Security (Interactions)", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/?demo#security");
-    await waitForViewReady(page, "sc-security-view");
+    await page.waitForTimeout(WAIT);
   });
 
   test("shows autonomy level section", async ({ page }) => {

@@ -372,6 +372,7 @@ set(SC_CORE_SOURCES
     src/providers/error_classify.c
     src/providers/api_key.c
     src/providers/helpers.c
+    src/providers/provider_http.c
     src/providers/sse.c
     src/providers/scrub.c
     src/providers/reliable.c
