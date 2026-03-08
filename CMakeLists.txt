@@ -358,6 +358,7 @@ set(SC_CORE_SOURCES
     src/agent/planner.c
     src/agent/dag.c
     src/agent/dag_executor.c
+    src/agent/llm_compiler.c
     src/agent/undo.c
     src/agent/cli.c
     src/agent/tui.c

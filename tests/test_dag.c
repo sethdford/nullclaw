@@ -1,5 +1,6 @@
 #include "seaclaw/agent/dag.h"
 #include "seaclaw/agent/dag_executor.h"
+#include "seaclaw/agent/llm_compiler.h"
 #include "seaclaw/core/allocator.h"
 #include "seaclaw/core/string.h"
 #include "test_framework.h"
@@ -193,6 +194,51 @@ static void dag_resolve_vars_substitutes(void) {
     sc_dag_deinit(&dag);
 }
 
+static void llm_compiler_build_prompt_includes_goal(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    char *out = NULL;
+    size_t out_len = 0;
+    const char *goal = "Fetch the weather";
+    const char *tools[] = {"web_search"};
+    sc_error_t err =
+        sc_llm_compiler_build_prompt(&alloc, goal, strlen(goal), tools, 1, &out, &out_len);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(out);
+    SC_ASSERT_TRUE(strstr(out, "Fetch the weather") != NULL);
+    sc_str_free(&alloc, out);
+}
+
+static void llm_compiler_build_prompt_includes_tools(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    char *out = NULL;
+    size_t out_len = 0;
+    const char *goal = "Do something";
+    const char *tools[] = {"web_search", "file_read"};
+    sc_error_t err =
+        sc_llm_compiler_build_prompt(&alloc, goal, strlen(goal), tools, 2, &out, &out_len);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(out);
+    SC_ASSERT_TRUE(strstr(out, "web_search") != NULL);
+    SC_ASSERT_TRUE(strstr(out, "file_read") != NULL);
+    sc_str_free(&alloc, out);
+}
+
+static void llm_compiler_parse_plan_valid(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    sc_dag_t dag;
+    sc_dag_init(&dag, alloc);
+
+    const char *response =
+        "```json\n{\"tasks\":[{\"id\":\"t1\",\"tool\":\"shell\",\"args\":{},\"deps\":[]}]}\n```";
+    sc_error_t err = sc_llm_compiler_parse_plan(&alloc, response, strlen(response), &dag);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(dag.node_count, 1);
+    SC_ASSERT_STR_EQ(dag.nodes[0].id, "t1");
+    SC_ASSERT_STR_EQ(dag.nodes[0].tool_name, "shell");
+
+    sc_dag_deinit(&dag);
+}
+
 static void dag_resolve_vars_no_refs(void) {
     sc_allocator_t alloc = sc_system_allocator();
     sc_dag_t dag;
@@ -225,4 +271,7 @@ void run_dag_tests(void) {
     SC_RUN_TEST(dag_next_batch_returns_dependents_after_roots_done);
     SC_RUN_TEST(dag_resolve_vars_substitutes);
     SC_RUN_TEST(dag_resolve_vars_no_refs);
+    SC_RUN_TEST(llm_compiler_build_prompt_includes_goal);
+    SC_RUN_TEST(llm_compiler_build_prompt_includes_tools);
+    SC_RUN_TEST(llm_compiler_parse_plan_valid);
 }
