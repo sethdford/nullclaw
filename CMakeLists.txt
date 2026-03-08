@@ -381,6 +381,7 @@ set(SC_CORE_SOURCES
     src/agent/superhuman_predictive.c
     src/agent/superhuman_emotional.c
     src/agent/superhuman_silence.c
+    src/agent/tool_router.c
     src/providers/error_classify.c
     src/providers/api_key.c
     src/providers/helpers.c
@@ -1408,6 +1409,7 @@ set(SC_TEST_SOURCES
     tests/test_pattern_radar.c
     tests/test_proactive.c
     tests/test_superhuman.c
+    tests/test_tool_router.c
     tests/test_dag.c
 )
 if(SC_ENABLE_PERSONA)
