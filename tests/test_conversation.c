@@ -246,6 +246,50 @@ static void classify_normal_statement_is_full(void) {
     SC_ASSERT_EQ(a, SC_RESPONSE_FULL);
 }
 
+static void classify_farewell_goodnight_is_brief(void) {
+    uint32_t delay = 0;
+    sc_response_action_t a =
+        sc_conversation_classify_response("goodnight!", 10, NULL, 0, &delay);
+    SC_ASSERT_EQ(a, SC_RESPONSE_BRIEF);
+    SC_ASSERT_TRUE(delay > 0);
+}
+
+static void classify_farewell_short_bye(void) {
+    uint32_t delay = 0;
+    sc_response_action_t a = sc_conversation_classify_response("bye", 3, NULL, 0, &delay);
+    SC_ASSERT_EQ(a, SC_RESPONSE_BRIEF);
+}
+
+static void classify_farewell_ttyl(void) {
+    uint32_t delay = 0;
+    sc_response_action_t a = sc_conversation_classify_response("ttyl!", 5, NULL, 0, &delay);
+    SC_ASSERT_EQ(a, SC_RESPONSE_BRIEF);
+}
+
+static void classify_bad_news_is_delayed(void) {
+    uint32_t delay = 0;
+    sc_response_action_t a = sc_conversation_classify_response("my grandma passed away last night",
+                                                               33, NULL, 0, &delay);
+    SC_ASSERT_EQ(a, SC_RESPONSE_DELAY);
+    SC_ASSERT_TRUE(delay >= 10000);
+}
+
+static void classify_good_news_is_delayed(void) {
+    uint32_t delay = 0;
+    sc_response_action_t a =
+        sc_conversation_classify_response("I got the job!!", 15, NULL, 0, &delay);
+    SC_ASSERT_EQ(a, SC_RESPONSE_DELAY);
+    SC_ASSERT_TRUE(delay >= 2000);
+}
+
+static void classify_vulnerable_is_delayed(void) {
+    uint32_t delay = 0;
+    sc_response_action_t a = sc_conversation_classify_response(
+        "can i be honest with you about something", 41, NULL, 0, &delay);
+    SC_ASSERT_EQ(a, SC_RESPONSE_DELAY);
+    SC_ASSERT_TRUE(delay >= 5000);
+}
+
 /* ── Quality evaluator enhanced tests ────────────────────────────────── */
 
 static void quality_penalizes_semicolons(void) {
@@ -531,6 +575,53 @@ static void calibrate_tone_present_in_emotional(void) {
     SC_ASSERT_NOT_NULL(strstr(buf, "TONE:"));
 }
 
+static void calibrate_farewell_goodnight(void) {
+    char buf[1024];
+    const char *msg = "goodnight!";
+    size_t len =
+        sc_conversation_calibrate_length(msg, strlen(msg), NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "Farewell"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "TONE:"));
+    SC_ASSERT_NOT_NULL(strstr(buf, "EMOJI:"));
+}
+
+static void calibrate_farewell_short_bye(void) {
+    char buf[1024];
+    const char *msg = "bye";
+    size_t len =
+        sc_conversation_calibrate_length(msg, strlen(msg), NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "Farewell"));
+}
+
+static void calibrate_emoji_present_in_greeting(void) {
+    char buf[1024];
+    const char *msg = "hey";
+    size_t len =
+        sc_conversation_calibrate_length(msg, strlen(msg), NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "EMOJI:"));
+}
+
+static void calibrate_emoji_present_in_logistics(void) {
+    char buf[1024];
+    const char *msg = "what time should we meet at the restaurant?";
+    size_t len =
+        sc_conversation_calibrate_length(msg, strlen(msg), NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "EMOJI:"));
+}
+
+static void calibrate_emoji_present_in_general(void) {
+    char buf[1024];
+    const char *msg = "i just finished cooking dinner";
+    size_t len =
+        sc_conversation_calibrate_length(msg, strlen(msg), NULL, 0, buf, sizeof(buf));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_NOT_NULL(strstr(buf, "EMOJI:"));
+}
+
 static void calibrate_null_returns_zero(void) {
     char buf[64];
     SC_ASSERT_EQ(sc_conversation_calibrate_length(NULL, 0, NULL, 0, buf, sizeof(buf)), 0u);
@@ -650,6 +741,12 @@ void run_conversation_tests(void) {
     SC_RUN_TEST(classify_ok_after_question_skips);
     SC_RUN_TEST(classify_ok_after_distant_question_skips);
     SC_RUN_TEST(classify_normal_statement_is_full);
+    SC_RUN_TEST(classify_farewell_goodnight_is_brief);
+    SC_RUN_TEST(classify_farewell_short_bye);
+    SC_RUN_TEST(classify_farewell_ttyl);
+    SC_RUN_TEST(classify_bad_news_is_delayed);
+    SC_RUN_TEST(classify_good_news_is_delayed);
+    SC_RUN_TEST(classify_vulnerable_is_delayed);
 
     /* Quality evaluator */
     SC_RUN_TEST(quality_penalizes_semicolons);
@@ -695,6 +792,11 @@ void run_conversation_tests(void) {
     SC_RUN_TEST(calibrate_vulnerable);
     SC_RUN_TEST(calibrate_tone_present_in_greeting);
     SC_RUN_TEST(calibrate_tone_present_in_emotional);
+    SC_RUN_TEST(calibrate_farewell_goodnight);
+    SC_RUN_TEST(calibrate_farewell_short_bye);
+    SC_RUN_TEST(calibrate_emoji_present_in_greeting);
+    SC_RUN_TEST(calibrate_emoji_present_in_logistics);
+    SC_RUN_TEST(calibrate_emoji_present_in_general);
     SC_RUN_TEST(calibrate_null_returns_zero);
     SC_RUN_TEST(calibrate_rapid_fire_momentum);
 

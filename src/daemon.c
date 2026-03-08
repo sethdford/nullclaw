@@ -39,6 +39,70 @@
         }                        \
     } while (0)
 
+/* Build conversation callback context from memory.
+ * Queries memory for past topics relevant to the current message.
+ * Returns an allocated string (caller frees) or NULL. */
+static char *build_callback_context(sc_allocator_t *alloc, sc_memory_t *memory,
+                                    const char *session_id, size_t session_id_len,
+                                    const char *msg, size_t msg_len, size_t *out_len) {
+    *out_len = 0;
+    if (!memory || !memory->vtable || !memory->vtable->recall || !msg || msg_len == 0)
+        return NULL;
+
+    sc_memory_entry_t *entries = NULL;
+    size_t count = 0;
+    sc_error_t err = memory->vtable->recall(memory->ctx, alloc, msg, msg_len, 3, session_id,
+                                            session_id_len, &entries, &count);
+    if (err != SC_OK || !entries || count == 0)
+        return NULL;
+
+    char buf[2048];
+    size_t pos = 0;
+    int w = snprintf(buf, sizeof(buf),
+                     "\n--- Conversation memory ---\n"
+                     "Past topics from your conversations with this person:\n");
+    if (w > 0)
+        pos = (size_t)w;
+
+    size_t usable = 0;
+    for (size_t i = 0; i < count && i < 3; i++) {
+        if (!entries[i].content || entries[i].content_len == 0)
+            continue;
+        size_t show = entries[i].content_len;
+        if (show > 200)
+            show = 200;
+        w = snprintf(buf + pos, sizeof(buf) - pos, "- %.*s\n", (int)show, entries[i].content);
+        if (w > 0 && pos + (size_t)w < sizeof(buf)) {
+            pos += (size_t)w;
+            usable++;
+        }
+    }
+
+    for (size_t i = 0; i < count; i++)
+        sc_memory_entry_free_fields(alloc, &entries[i]);
+    alloc->free(alloc->ctx, entries, count * sizeof(sc_memory_entry_t));
+
+    if (usable == 0)
+        return NULL;
+
+    w = snprintf(buf + pos, sizeof(buf) - pos,
+                 "If naturally relevant, bring up a past topic — but NEVER say "
+                 "'I remember you mentioned'. Instead: 'oh wait how did that thing "
+                 "with X go?' or 'did you ever end up doing Y?'\n"
+                 "Only reference if it fits naturally. Don't force it.\n"
+                 "--- End memory ---\n");
+    if (w > 0 && pos + (size_t)w < sizeof(buf))
+        pos += (size_t)w;
+
+    char *result = (char *)alloc->alloc(alloc->ctx, pos + 1);
+    if (!result)
+        return NULL;
+    memcpy(result, buf, pos);
+    result[pos] = '\0';
+    *out_len = pos;
+    return result;
+}
+
 static sc_error_t validate_home(const char *home) {
     if (!home || !home[0]) {
         fprintf(stderr, "HOME not set\n");
@@ -481,7 +545,9 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                 /* For BRIEF actions, override max_response_chars to force ultra-short */
                 bool brief_mode = (action == SC_RESPONSE_BRIEF);
 
-                /* Adaptive timing based on message type */
+                /* Adaptive timing based on message type.
+                 * This sleep also serves as the burst accumulation window —
+                 * messages arriving while we "read" get picked up below. */
                 {
                     size_t msg_count = batch_end - batch_start + 1;
                     unsigned int read_ms = 2500 + (unsigned int)(msg_count * 1500);
@@ -491,6 +557,34 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                     if (read_ms > 15000)
                         read_ms = 15000;
                     usleep(read_ms * 1000);
+                }
+
+                /* Burst accumulation: re-poll for messages that arrived during
+                 * the read delay. Humans finish their thought in 2-3 messages,
+                 * so we pick up any follow-ups before responding. */
+                {
+                    sc_channel_loop_msg_t burst[16];
+                    size_t burst_count = 0;
+                    ch->poll_fn(ch->channel_ctx, alloc, burst, 16, &burst_count);
+                    for (size_t bi = 0; bi < burst_count; bi++) {
+                        if (strcmp(burst[bi].session_key, batch_key) != 0)
+                            continue;
+                        size_t mlen = strlen(burst[bi].content);
+                        if (mlen == 0)
+                            continue;
+                        if (combined_len + mlen + 2 >= sizeof(combined))
+                            break;
+                        combined[combined_len++] = '\n';
+                        memcpy(combined + combined_len, burst[bi].content, mlen);
+                        combined_len += mlen;
+                        if (agent->session_store && agent->session_store->vtable &&
+                            agent->session_store->vtable->save_message) {
+                            agent->session_store->vtable->save_message(
+                                agent->session_store->ctx, batch_key, key_len, "user", 4,
+                                burst[bi].content, mlen);
+                        }
+                    }
+                    combined[combined_len] = '\0';
                 }
 #else
                 bool brief_mode = false;
@@ -728,6 +822,31 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                 }
                 if (style_ctx)
                     alloc->free(alloc->ctx, style_ctx, style_ctx_len + 1);
+
+                /* 3b. Conversation callbacks: surface past topics from memory */
+                if (agent->memory && agent->memory->vtable && agent->memory->vtable->recall) {
+                    char *cb_ctx = NULL;
+                    size_t cb_len = 0;
+                    cb_ctx = build_callback_context(alloc, agent->memory, batch_key, key_len,
+                                                    combined, combined_len, &cb_len);
+                    if (cb_ctx && convo_ctx) {
+                        size_t merged_len = convo_ctx_len + cb_len + 1;
+                        char *merged = (char *)alloc->alloc(alloc->ctx, merged_len + 1);
+                        if (merged) {
+                            memcpy(merged, convo_ctx, convo_ctx_len);
+                            merged[convo_ctx_len] = '\n';
+                            memcpy(merged + convo_ctx_len + 1, cb_ctx, cb_len);
+                            merged[merged_len] = '\0';
+                            alloc->free(alloc->ctx, convo_ctx, convo_ctx_len + 1);
+                            convo_ctx = merged;
+                            convo_ctx_len = merged_len;
+                        }
+                        alloc->free(alloc->ctx, cb_ctx, cb_len + 1);
+                    } else if (cb_ctx && !convo_ctx) {
+                        convo_ctx = cb_ctx;
+                        convo_ctx_len = cb_len;
+                    }
+                }
 
                 /* 4. Response constraints via channel vtable */
                 uint32_t max_chars = 0;

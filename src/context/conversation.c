@@ -1287,6 +1287,28 @@ size_t sc_conversation_calibrate_length(const char *last_msg, size_t last_msg_le
         str_contains_ci(last_msg, last_msg_len, "so cool"))
         is_compliment = true;
 
+    bool is_farewell = false;
+    if (str_contains_ci(last_msg, last_msg_len, "goodnight") ||
+        str_contains_ci(last_msg, last_msg_len, "good night") ||
+        str_contains_ci(last_msg, last_msg_len, "gotta go") ||
+        str_contains_ci(last_msg, last_msg_len, "ttyl") ||
+        str_contains_ci(last_msg, last_msg_len, "talk later") ||
+        str_contains_ci(last_msg, last_msg_len, "heading out") ||
+        str_contains_ci(last_msg, last_msg_len, "peace out") ||
+        str_contains_ci(last_msg, last_msg_len, "see ya") ||
+        str_contains_ci(last_msg, last_msg_len, "nighty") ||
+        str_contains_ci(last_msg, last_msg_len, "catch you later") ||
+        str_contains_ci(last_msg, last_msg_len, "i'm out"))
+        is_farewell = true;
+    if (!is_farewell && last_msg_len <= 10) {
+        if (str_contains_ci(last_msg, last_msg_len, "bye") ||
+            str_contains_ci(last_msg, last_msg_len, "night") ||
+            str_contains_ci(last_msg, last_msg_len, "later") ||
+            str_contains_ci(last_msg, last_msg_len, "gn") ||
+            str_contains_ci(last_msg, last_msg_len, "cya"))
+            is_farewell = true;
+    }
+
     bool is_good_news = false;
     if (str_contains_ci(last_msg, last_msg_len, "got the job") ||
         str_contains_ci(last_msg, last_msg_len, "got in") ||
@@ -1336,121 +1358,115 @@ size_t sc_conversation_calibrate_length(const char *last_msg, size_t last_msg_le
     w = snprintf(buf + pos, cap - pos, "\n--- Response calibration ---\n");
     POS_ADVANCE(w, pos, cap);
 
-    if (is_greeting) {
+    if (is_farewell) {
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Farewell / signing off.\n"
+                     "LENGTH: 1-3 words. Match their closing energy.\n"
+                     "TONE: Warm but final. 'night!' or 'later!' or 'sleep well'. "
+                     "Do NOT ask a follow-up question. Do NOT start a new topic. "
+                     "Do NOT say 'take care' (too formal). Keep it casual.\n"
+                     "EMOJI: One max if natural. Or none.\n");
+    } else if (is_greeting) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Greeting.\n"
-                     "LENGTH: Match their energy. 1-4 words. "
-                     "'hey what's up' or 'heyy' — don't over-respond to a greeting.\n"
-                     "TONE: Light, easy, warm. Mirror their vibe exactly. "
-                     "If they're chill, be chill. If they're excited, match it.\n");
+                     "LENGTH: Match their energy. 1-4 words.\n"
+                     "TONE: Light, easy, warm. Mirror their vibe exactly.\n"
+                     "EMOJI: Mirror theirs. If they didn't use one, don't add one.\n");
     } else if (is_teasing) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Teasing / banter.\n"
                      "LENGTH: One punchy line back. This is a volley, not a speech.\n"
-                     "TONE: Playful, quick. Escalate the bit slightly or flip it back on them. "
-                     "NEVER get defensive or explain yourself. "
-                     "If they say 'yeah right', you say 'watch me'. "
-                     "Match their sarcasm energy but keep it warm underneath.\n");
+                     "TONE: Playful, quick. Escalate the bit or flip it back. "
+                     "NEVER get defensive or explain yourself.\n"
+                     "EMOJI: Skull or laughing face if it fits. One max.\n");
     } else if (is_short_react) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Short reaction (lol, nice, etc).\n"
-                     "LENGTH: One word back, an emoji, or nothing. "
-                     "Don't turn 'lol' into a conversation.\n"
-                     "TONE: Effortless. Match their low investment. "
-                     "This is background noise in a conversation, not a prompt for depth.\n");
+                     "LENGTH: One word back, an emoji, or nothing.\n"
+                     "TONE: Effortless. Match their low investment.\n"
+                     "EMOJI: Optional. One is fine if natural.\n");
     } else if (is_good_news) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Good news / celebration.\n"
                      "LENGTH: 1-2 short excited messages.\n"
-                     "TONE: Match or EXCEED their excitement. This is their moment — hype them up. "
-                     "'LETS GO' or 'wait are you serious?? that's amazing'. "
-                     "Exclamation marks are appropriate here. "
-                     "Ask them to tell you more. Don't immediately relate it back to yourself.\n");
+                     "TONE: Match or EXCEED their excitement. Hype them up. "
+                     "'LETS GO' or 'wait are you serious?? that's amazing'.\n"
+                     "EMOJI: Celebration emoji appropriate — one or two max.\n");
     } else if (is_bad_news) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Bad news.\n"
                      "LENGTH: 1 short sentence of acknowledgment. Maybe a follow-up.\n"
                      "TONE: Quiet, steady, present. Drop ALL energy and humor. "
-                     "No platitudes ('everything happens for a reason'). "
-                     "No problem-solving unless asked. No 'well at least...'. "
-                     "'damn i'm really sorry' — then wait. Let them lead.\n");
+                     "No platitudes. No problem-solving. No 'well at least...'. "
+                     "'damn i'm really sorry' — then wait. Let them lead.\n"
+                     "EMOJI: None. Zero. This is not an emoji moment.\n");
     } else if (is_vulnerable) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Vulnerable / confession.\n"
                      "LENGTH: 1-2 short sentences. Don't overwhelm them.\n"
-                     "TONE: Safe, zero judgment, steady. They're taking a risk by sharing this. "
-                     "Honor that with stillness, not a performance. "
+                     "TONE: Safe, zero judgment, steady. They're taking a risk. "
                      "Don't rush to reassure — just receive it. "
-                     "'i hear you' or 'thanks for telling me that'. "
-                     "Let them set the pace for what comes next.\n");
+                     "'i hear you' or 'thanks for telling me that'.\n"
+                     "EMOJI: None. Keep it text-only.\n");
     } else if (is_emotional) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Emotional share.\n"
                      "LENGTH: Validate in one short sentence. "
                      "Then ask ONE follow-up question. Two short messages total.\n"
-                     "TONE: Warm, present, grounded. Slow down your energy. "
-                     "No fixing, no silver linings, no 'at least...'. "
-                     "Just be there. 'that really sucks' is better than a paragraph of advice. "
-                     "Let them feel heard before you say anything else.\n");
+                     "TONE: Warm, present, grounded. No fixing, no silver linings. "
+                     "'that really sucks' is better than a paragraph of advice.\n"
+                     "EMOJI: One heart MAX if appropriate. No crying faces.\n");
     } else if (is_apology) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Apology.\n"
                      "LENGTH: Accept it warmly and move forward. 1 short sentence.\n"
                      "TONE: Gracious, zero guilt-tripping. Make it easy for them. "
-                     "'all good honestly' — don't say 'it's fine' (passive-aggressive). "
-                     "Don't revisit what they're apologizing for.\n");
+                     "'all good honestly' — don't revisit what they're apologizing for.\n"
+                     "EMOJI: None or one casual one. Don't make it weird.\n");
     } else if (is_compliment) {
-        w = snprintf(
-            buf + pos, cap - pos,
-            "MESSAGE TYPE: Compliment or affirmation.\n"
-            "LENGTH: 1 short sentence.\n"
-            "TONE: Receive it naturally. Slight deflection or humor is fine. "
-            "Don't over-thank, don't be self-deprecating, don't bounce it back immediately. "
-            "'haha thanks that means a lot' — not 'omg no YOU'RE amazing'.\n");
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Compliment or affirmation.\n"
+                     "LENGTH: 1 short sentence.\n"
+                     "TONE: Receive it naturally. Slight deflection or humor is fine. "
+                     "Don't over-thank or bounce it back immediately.\n"
+                     "EMOJI: Optional smile. Don't overdo it.\n");
     } else if (is_yes_no_question) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Yes/no question.\n"
-                     "LENGTH: Answer first (yes/no/probably). "
-                     "Add ONE relevant detail. 5-15 words total.\n"
-                     "TONE: Direct, no hedging. They asked a simple question — respect that. "
-                     "'yeah I'll be there around 8' not 'I think I should be able to make it'.\n");
+                     "LENGTH: Answer first (yes/no/probably). One detail. 5-15 words.\n"
+                     "TONE: Direct, no hedging. Respect the simple question.\n"
+                     "EMOJI: None needed. Keep it informational.\n");
     } else if (is_logistics) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Logistics/plans.\n"
-                     "LENGTH: 1-2 short sentences. Be specific — time, place, or next action.\n"
-                     "TONE: Efficient, action-oriented. No filler. "
-                     "This is not the moment for warmth or banter — just be useful. "
-                     "'cool let's do 7pm at that place on main' — direct and useful.\n");
+                     "LENGTH: 1-2 short sentences. Be specific — time, place, next action.\n"
+                     "TONE: Efficient, action-oriented. No filler. Just be useful.\n"
+                     "EMOJI: None. This is not an emoji conversation.\n");
     } else if (is_link_share) {
-        w = snprintf(
-            buf + pos, cap - pos,
-            "MESSAGE TYPE: Link or media share.\n"
-            "LENGTH: 1 short reaction + maybe a question.\n"
-            "TONE: Genuine curiosity or reaction. They shared something — engage with IT, "
-            "not around it. 'wait that's hilarious' or 'oh I've been wanting to try that'. "
-            "Don't ignore what they shared to talk about yourself.\n");
+        w = snprintf(buf + pos, cap - pos,
+                     "MESSAGE TYPE: Link or media share.\n"
+                     "LENGTH: 1 short reaction + maybe a question.\n"
+                     "TONE: Genuine curiosity. Engage with what they shared, not around it.\n"
+                     "EMOJI: Match the content mood. Funny = laughing, food = fire. One max.\n");
     } else if (is_question && !is_yes_no_question) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Open question.\n"
                      "LENGTH: 1-2 sentences. Give a real answer, not a hedge.\n"
-                     "TONE: Thoughtful but not performatively deep. "
-                     "They want your actual take, not a diplomatic non-answer. "
-                     "Have an opinion. If you don't know, say so briefly.\n");
+                     "TONE: Thoughtful but not performatively deep. Have an opinion.\n"
+                     "EMOJI: None. Let the words carry the weight.\n");
     } else if (is_long_story) {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: Long message / story.\n"
                      "LENGTH: 2-3 sentences max. Don't match their length.\n"
-                     "TONE: Engaged, attentive. They put effort in — honor that. "
-                     "Reference something SPECIFIC they said (not just 'that sounds great'). "
-                     "React to the most emotionally charged part first. "
-                     "Ask about the part that matters most to them.\n");
+                     "TONE: Engaged, attentive. Reference something SPECIFIC they said. "
+                     "React to the most emotionally charged part first.\n"
+                     "EMOJI: One reaction emoji if natural. Don't decorate.\n");
     } else {
         w = snprintf(buf + pos, cap - pos,
                      "MESSAGE TYPE: General statement.\n"
                      "LENGTH: 1-2 sentences. Not everything needs a big response.\n"
-                     "TONE: Natural, conversational. Build on what they said "
-                     "or ask a genuine follow-up. Don't force enthusiasm. "
-                     "It's ok to just acknowledge sometimes.\n");
+                     "TONE: Natural, conversational. Build on what they said.\n"
+                     "EMOJI: Only if the vibe calls for it. When in doubt, skip.\n");
     }
     POS_ADVANCE(w, pos, cap);
 
@@ -1773,6 +1789,57 @@ sc_response_action_t sc_conversation_classify_response(const char *msg, size_t m
             }
         }
         return SC_RESPONSE_SKIP;
+    }
+
+    /* Farewells: short response, quick delay */
+    if (str_contains_ci(msg, msg_len, "goodnight") ||
+        str_contains_ci(msg, msg_len, "good night") || str_contains_ci(msg, msg_len, "gotta go") ||
+        str_contains_ci(msg, msg_len, "ttyl") || str_contains_ci(msg, msg_len, "heading out") ||
+        str_contains_ci(msg, msg_len, "peace out") || str_contains_ci(msg, msg_len, "see ya") ||
+        str_contains_ci(msg, msg_len, "catch you later") ||
+        str_contains_ci(msg, msg_len, "i'm out")) {
+        *delay_extra_ms = 1500;
+        return SC_RESPONSE_BRIEF;
+    }
+    if (msg_len <= 10 && (str_contains_ci(msg, msg_len, "bye") ||
+                          str_contains_ci(msg, msg_len, "night") ||
+                          str_contains_ci(msg, msg_len, "later") ||
+                          str_contains_ci(msg, msg_len, "gn") ||
+                          str_contains_ci(msg, msg_len, "cya"))) {
+        *delay_extra_ms = 1500;
+        return SC_RESPONSE_BRIEF;
+    }
+
+    /* Bad news: extended pause — show you're absorbing it */
+    if (str_contains_ci(msg, msg_len, "passed away") ||
+        str_contains_ci(msg, msg_len, "got fired") ||
+        str_contains_ci(msg, msg_len, "broke up") || str_contains_ci(msg, msg_len, "bad news") ||
+        str_contains_ci(msg, msg_len, "didn't make it") ||
+        str_contains_ci(msg, msg_len, "got rejected") ||
+        str_contains_ci(msg, msg_len, "lost my")) {
+        *delay_extra_ms = 12000;
+        return SC_RESPONSE_DELAY;
+    }
+
+    /* Good news: short pause then celebrate */
+    if (str_contains_ci(msg, msg_len, "got the job") ||
+        str_contains_ci(msg, msg_len, "got in") || str_contains_ci(msg, msg_len, "i passed") ||
+        str_contains_ci(msg, msg_len, "got engaged") ||
+        str_contains_ci(msg, msg_len, "got promoted") ||
+        str_contains_ci(msg, msg_len, "good news") || str_contains_ci(msg, msg_len, "i did it") ||
+        str_contains_ci(msg, msg_len, "we did it")) {
+        *delay_extra_ms = 3000;
+        return SC_RESPONSE_DELAY;
+    }
+
+    /* Vulnerability: deliberate pause */
+    if (str_contains_ci(msg, msg_len, "i need to tell you") ||
+        str_contains_ci(msg, msg_len, "can i be honest") ||
+        str_contains_ci(msg, msg_len, "don't judge me") ||
+        str_contains_ci(msg, msg_len, "this is hard to say") ||
+        str_contains_ci(msg, msg_len, "i never told")) {
+        *delay_extra_ms = 8000;
+        return SC_RESPONSE_DELAY;
     }
 
     /* Emotional/heavy messages: full response but delayed (showing you're thinking) */

@@ -560,3 +560,4 @@ export class ScSkillsView extends GatewayAwareLitElement {
   }
 }
 
+
