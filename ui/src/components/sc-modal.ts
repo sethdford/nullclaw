@@ -27,7 +27,12 @@ export class ScModal extends LitElement {
     .panel {
       max-width: 30rem;
       width: 100%;
-      background: var(--sc-bg-overlay);
+      background: color-mix(in srgb, var(--sc-surface-container-highest) 85%, transparent);
+      backdrop-filter: blur(var(--sc-glass-prominent-blur))
+        saturate(var(--sc-glass-prominent-saturate));
+      -webkit-backdrop-filter: blur(var(--sc-glass-prominent-blur))
+        saturate(var(--sc-glass-prominent-saturate));
+      border: 1px solid var(--sc-glass-border-color);
       border-radius: var(--sc-radius-xl);
       box-shadow: var(--sc-shadow-lg);
       animation: sc-modal-enter var(--sc-duration-normal) var(--sc-ease-out) both;
@@ -84,6 +89,14 @@ export class ScModal extends LitElement {
       .panel,
       .panel.closing {
         animation: none !important;
+      }
+    }
+
+    @media (prefers-reduced-transparency: reduce) {
+      .panel {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: var(--sc-surface-container-highest);
       }
     }
   `;

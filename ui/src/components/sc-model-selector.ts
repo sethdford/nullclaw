@@ -93,7 +93,7 @@ export class ScModelSelector extends LitElement {
 
     .option:hover,
     .option.focused {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
 
     .option.selected {

@@ -73,7 +73,7 @@ export class ScTapbackMenu extends LitElement {
       transition: background var(--sc-duration-fast);
     }
     .reaction-btn:hover {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
     .reaction-btn:focus-visible {
       outline: 2px solid var(--sc-accent);

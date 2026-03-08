@@ -253,7 +253,7 @@ export class ScDataTableV2 extends LitElement {
     }
 
     tr.hoverable:hover td {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
 
     tr:last-child td {

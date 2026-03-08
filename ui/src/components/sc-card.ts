@@ -17,7 +17,7 @@ export class ScCard extends LitElement {
 
     .card {
       position: relative;
-      background: var(--sc-bg-surface);
+      background: var(--sc-surface-container);
       background-image: var(--sc-surface-gradient);
       border: 1px solid var(--sc-border-subtle);
       border-radius: var(--sc-radius-xl);
@@ -113,7 +113,7 @@ export class ScCard extends LitElement {
 
     /* Glass variant — Apple Liquid Glass with specular highlight */
     .card.glass {
-      background: color-mix(in srgb, var(--sc-bg-surface) 65%, transparent);
+      background: color-mix(in srgb, var(--sc-surface-container) 65%, transparent);
       backdrop-filter: blur(var(--sc-blur-lg)) saturate(var(--sc-glass-standard-saturate));
       -webkit-backdrop-filter: blur(var(--sc-blur-lg)) saturate(var(--sc-glass-standard-saturate));
       border: 1px solid color-mix(in srgb, var(--sc-border-subtle) 40%, transparent);

@@ -46,7 +46,7 @@ export class ScChatSessionsPanel extends LitElement {
       height: 100%;
       display: flex;
       flex-direction: column;
-      background: var(--sc-bg-surface);
+      background: var(--sc-surface-container);
       border-right: 1px solid var(--sc-border-subtle);
     }
 
@@ -150,7 +150,7 @@ export class ScChatSessionsPanel extends LitElement {
       letter-spacing: 0.05em;
       padding: var(--sc-space-sm) var(--sc-space-md);
       margin-top: var(--sc-space-xs);
-      background: var(--sc-bg-surface);
+      background: var(--sc-surface-container);
       z-index: 1;
     }
 
@@ -181,16 +181,16 @@ export class ScChatSessionsPanel extends LitElement {
     }
 
     .session-item:hover {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
 
     .session-item.active {
       border-left-color: var(--sc-accent-subtle);
-      background: color-mix(in srgb, var(--sc-accent) 8%, var(--sc-bg-surface));
+      background: var(--sc-surface-container-high);
     }
 
     .session-item.focused {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-surface-container-high);
     }
 
     .session-item:focus-visible {

@@ -89,7 +89,7 @@ export class ScSidebar extends LitElement {
       :host {
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
-        background: var(--sc-bg-surface);
+        background: var(--sc-surface-container);
         border-right: 1px solid var(--sc-border);
       }
     }

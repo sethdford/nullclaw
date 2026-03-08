@@ -93,7 +93,7 @@ export class ScChatBubble extends LitElement {
     .bubble.role-assistant {
       margin-right: auto;
       max-width: 85%;
-      background: color-mix(in srgb, var(--sc-bg-surface) 65%, transparent);
+      background: color-mix(in srgb, var(--sc-surface-container) 65%, transparent);
       backdrop-filter: blur(var(--sc-blur-md));
       -webkit-backdrop-filter: blur(var(--sc-blur-md));
       color: var(--sc-text);
@@ -111,7 +111,7 @@ export class ScChatBubble extends LitElement {
       left: calc(-1 * var(--sc-space-sm));
       width: var(--sc-space-sm);
       height: calc(var(--sc-space-sm) + var(--sc-space-2xs));
-      background: color-mix(in srgb, var(--sc-bg-surface) 65%, transparent);
+      background: color-mix(in srgb, var(--sc-surface-container) 65%, transparent);
       clip-path: polygon(100% 0, 100% 100%, 0 100%);
     }
 
@@ -123,11 +123,11 @@ export class ScChatBubble extends LitElement {
       .bubble.role-assistant {
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
-        background: var(--sc-bg-surface);
+        background: var(--sc-surface-container);
         border: 1px solid var(--sc-border-subtle);
       }
       .bubble.role-assistant::after {
-        background: var(--sc-bg-surface);
+        background: var(--sc-surface-container);
       }
     }
 

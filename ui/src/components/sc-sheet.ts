@@ -44,7 +44,12 @@ export class ScSheet extends LitElement {
       left: 0;
       right: 0;
       max-height: 95vh;
-      background: var(--sc-bg-overlay);
+      background: color-mix(in srgb, var(--sc-surface-container-high) 85%, transparent);
+      backdrop-filter: blur(var(--sc-glass-standard-blur))
+        saturate(var(--sc-glass-standard-saturate));
+      -webkit-backdrop-filter: blur(var(--sc-glass-standard-blur))
+        saturate(var(--sc-glass-standard-saturate));
+      border-top: 1px solid var(--sc-glass-border-color);
       border-radius: var(--sc-radius-xl) var(--sc-radius-xl) 0 0;
       box-shadow: var(--sc-shadow-lg);
       display: flex;
@@ -64,6 +69,14 @@ export class ScSheet extends LitElement {
       .panel {
         transition: none !important;
         animation: none !important;
+      }
+    }
+
+    @media (prefers-reduced-transparency: reduce) {
+      .panel {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: var(--sc-surface-container-high);
       }
     }
 

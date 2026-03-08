@@ -96,6 +96,7 @@ export class ScButton extends LitElement {
         inset 0 -1px 0 color-mix(in srgb, var(--sc-text) 4%, transparent);
     }
     button.variant-secondary:active:not(:disabled) {
+      background: var(--sc-pressed-overlay);
       transform: translateY(0) scale(0.96);
       box-shadow:
         inset 0 1px 2px color-mix(in srgb, var(--sc-text) 6%, transparent),

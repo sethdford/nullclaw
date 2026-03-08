@@ -25,7 +25,7 @@ export class ScPopover extends LitElement {
     .popover {
       position: absolute;
       z-index: var(--sc-z-popover);
-      background: color-mix(in srgb, var(--sc-bg-overlay) 88%, transparent);
+      background: color-mix(in srgb, var(--sc-surface-container-high) 88%, transparent);
       backdrop-filter: blur(var(--sc-glass-standard-blur))
         saturate(var(--sc-glass-standard-saturate));
       -webkit-backdrop-filter: blur(var(--sc-glass-standard-blur))
@@ -110,7 +110,7 @@ export class ScPopover extends LitElement {
       top: calc(-1 * var(--sc-space-sm));
       left: 50%;
       transform: translateX(-50%);
-      border-bottom-color: var(--sc-bg-overlay);
+      border-bottom-color: var(--sc-surface-container-high);
       border-top: none;
     }
 
@@ -118,7 +118,7 @@ export class ScPopover extends LitElement {
       bottom: calc(-1 * var(--sc-space-sm));
       left: 50%;
       transform: translateX(-50%);
-      border-top-color: var(--sc-bg-overlay);
+      border-top-color: var(--sc-surface-container-high);
       border-bottom: none;
     }
 
@@ -126,7 +126,7 @@ export class ScPopover extends LitElement {
       right: calc(-1 * var(--sc-space-sm));
       top: 50%;
       transform: translateY(-50%);
-      border-left-color: var(--sc-bg-overlay);
+      border-left-color: var(--sc-surface-container-high);
       border-right: none;
     }
 
@@ -134,7 +134,7 @@ export class ScPopover extends LitElement {
       left: calc(-1 * var(--sc-space-sm));
       top: 50%;
       transform: translateY(-50%);
-      border-right-color: var(--sc-bg-overlay);
+      border-right-color: var(--sc-surface-container-high);
       border-left: none;
     }
   `;

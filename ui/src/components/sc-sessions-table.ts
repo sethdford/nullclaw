@@ -56,7 +56,7 @@ export class ScSessionsTable extends LitElement {
     }
 
     .session-row:hover {
-      background-color: var(--sc-bg-elevated);
+      background-color: var(--sc-hover-overlay);
     }
 
     .session-row:focus-visible {

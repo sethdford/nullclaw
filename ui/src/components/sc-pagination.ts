@@ -98,7 +98,7 @@ export class ScPagination extends LitElement {
     }
 
     button:hover:not(:disabled) {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
       border-color: var(--sc-border);
     }
 

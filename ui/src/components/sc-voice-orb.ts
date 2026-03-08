@@ -84,7 +84,7 @@ export class ScVoiceOrb extends LitElement {
     }
 
     .mic-btn:hover:not(:disabled) {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
       border-color: var(--sc-accent);
       color: var(--sc-accent-text, var(--sc-accent));
       box-shadow: var(--sc-shadow-md);

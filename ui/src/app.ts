@@ -373,7 +373,7 @@ export class ScApp extends LitElement {
       transition: background var(--sc-duration-fast);
     }
     .more-item:hover {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
     .more-item .more-icon {
       width: var(--sc-icon-lg);

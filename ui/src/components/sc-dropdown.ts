@@ -38,7 +38,7 @@ export class ScDropdown extends LitElement {
       top: 100%;
       margin-top: var(--sc-space-xs);
       min-width: var(--sc-dropdown-min-width);
-      background: color-mix(in srgb, var(--sc-bg-overlay) 88%, transparent);
+      background: color-mix(in srgb, var(--sc-surface-container-high) 88%, transparent);
       backdrop-filter: blur(var(--sc-glass-standard-blur))
         saturate(var(--sc-glass-standard-saturate));
       -webkit-backdrop-filter: blur(var(--sc-glass-standard-blur))
@@ -101,7 +101,7 @@ export class ScDropdown extends LitElement {
     }
 
     .item:hover:not(:disabled) {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
 
     .item:focus {

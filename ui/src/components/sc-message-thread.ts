@@ -125,7 +125,7 @@ export class ScMessageThread extends LitElement {
       z-index: 5;
     }
     .scroll-bottom-pill:hover {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
     .pill-icon svg {
       width: 0.875rem;

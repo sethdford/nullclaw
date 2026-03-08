@@ -159,7 +159,7 @@ export class ScChatComposer extends LitElement {
         background var(--sc-duration-fast);
     }
     .icon-btn:hover:not(:disabled) {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
       color: var(--sc-accent);
     }
     .icon-btn:focus-visible {
@@ -256,7 +256,7 @@ export class ScChatComposer extends LitElement {
     }
     .slash-item:hover,
     .slash-item.focused {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
     .slash-cmd {
       font-size: var(--sc-text-sm);

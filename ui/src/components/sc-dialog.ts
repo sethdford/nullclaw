@@ -135,7 +135,7 @@ export class ScDialog extends LitElement {
     }
 
     .btn-cancel:hover {
-      background: var(--sc-bg-overlay);
+      background: var(--sc-hover-overlay);
     }
 
     .btn-confirm-default {

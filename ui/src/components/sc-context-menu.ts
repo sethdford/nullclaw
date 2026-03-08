@@ -29,7 +29,7 @@ export class ScContextMenu extends LitElement {
       position: fixed;
       z-index: 10000;
       min-width: 11.25rem;
-      background: color-mix(in srgb, var(--sc-bg-overlay) 92%, transparent);
+      background: color-mix(in srgb, var(--sc-surface-container-highest) 92%, transparent);
       backdrop-filter: blur(var(--sc-glass-standard-blur))
         saturate(var(--sc-glass-standard-saturate));
       -webkit-backdrop-filter: blur(var(--sc-glass-standard-blur))
@@ -66,7 +66,7 @@ export class ScContextMenu extends LitElement {
     .item:hover:not(:disabled),
     .item:focus-visible:not(:disabled),
     .item.focused:not(:disabled) {
-      background: var(--sc-bg-elevated);
+      background: var(--sc-hover-overlay);
     }
 
     .item:disabled {
