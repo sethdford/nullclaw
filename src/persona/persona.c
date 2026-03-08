@@ -81,6 +81,7 @@ static void free_overlay(sc_allocator_t *alloc, sc_persona_overlay_t *ov) {
         alloc->free(alloc->ctx, ov->emoji_usage, len + 1);
     }
     free_string_array(alloc, ov->style_notes, ov->style_notes_count);
+    free_string_array(alloc, ov->typing_quirks, ov->typing_quirks_count);
 }
 
 static void free_example(sc_allocator_t *alloc, sc_persona_example_t *ex) {
@@ -545,6 +546,13 @@ static sc_error_t parse_overlay(sc_allocator_t *a, const char *channel_name,
     sc_json_value_t *notes = sc_json_object_get(obj, "style_notes");
     if (notes)
         parse_string_array(a, notes, &ov->style_notes, &ov->style_notes_count);
+    ov->message_splitting = sc_json_get_bool(obj, "message_splitting", false);
+    sc_json_value_t *seg = sc_json_object_get(obj, "max_segment_chars");
+    if (seg && seg->type == SC_JSON_NUMBER)
+        ov->max_segment_chars = (uint32_t)seg->data.number;
+    sc_json_value_t *quirks = sc_json_object_get(obj, "typing_quirks");
+    if (quirks)
+        parse_string_array(a, quirks, &ov->typing_quirks, &ov->typing_quirks_count);
     return SC_OK;
 }
 
@@ -1402,6 +1410,36 @@ sc_error_t sc_persona_build_prompt(sc_allocator_t *alloc, const sc_persona_t *pe
                     const char *sn = ov->style_notes[i];
                     if (sn)
                         err = append_prompt(alloc, &buf, &len, &cap, sn, strlen(sn));
+                    if (err != SC_OK)
+                        goto fail;
+                }
+                err = append_prompt(alloc, &buf, &len, &cap, "\n", 1);
+                if (err != SC_OK)
+                    goto fail;
+            }
+            if (ov->message_splitting) {
+                n = snprintf(header, sizeof(header), "- Message splitting: ON (%u chars)\n",
+                             ov->max_segment_chars ? ov->max_segment_chars : 120);
+                if (n > 0) {
+                    err = append_prompt(alloc, &buf, &len, &cap, header, (size_t)n);
+                    if (err != SC_OK)
+                        goto fail;
+                }
+            }
+            if (ov->typing_quirks && ov->typing_quirks_count > 0) {
+                err = append_prompt(alloc, &buf, &len, &cap, "- Typing quirks: ", 17);
+                if (err != SC_OK)
+                    goto fail;
+                for (size_t i = 0; i < ov->typing_quirks_count; i++) {
+                    if (i > 0)
+                        err = append_prompt(alloc, &buf, &len, &cap, ", ", 2);
+                    else
+                        err = SC_OK;
+                    if (err != SC_OK)
+                        goto fail;
+                    const char *q = ov->typing_quirks[i];
+                    if (q)
+                        err = append_prompt(alloc, &buf, &len, &cap, q, strlen(q));
                     if (err != SC_OK)
                         goto fail;
                 }

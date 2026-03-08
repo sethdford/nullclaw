@@ -1273,6 +1273,65 @@ char *sc_conversation_analyze_style(sc_allocator_t *alloc,
     return buf;
 }
 
+/* ── Typing quirk post-processing ─────────────────────────────────────── */
+
+static bool quirk_enabled(const char *const *quirks, size_t count, const char *name) {
+    for (size_t i = 0; i < count; i++) {
+        if (quirks[i] && strcmp(quirks[i], name) == 0)
+            return true;
+    }
+    return false;
+}
+
+size_t sc_conversation_apply_typing_quirks(char *buf, size_t len, const char *const *quirks,
+                                           size_t quirks_count) {
+    if (!buf || len == 0 || !quirks || quirks_count == 0)
+        return len;
+
+    bool do_lowercase = quirk_enabled(quirks, quirks_count, "lowercase");
+    bool do_no_periods = quirk_enabled(quirks, quirks_count, "no_periods");
+    bool do_no_commas = quirk_enabled(quirks, quirks_count, "no_commas");
+    bool do_no_apostrophes = quirk_enabled(quirks, quirks_count, "no_apostrophes");
+
+    if (do_lowercase) {
+        for (size_t i = 0; i < len; i++) {
+            if (buf[i] >= 'A' && buf[i] <= 'Z')
+                buf[i] += 32;
+        }
+    }
+
+    if (do_no_periods || do_no_commas || do_no_apostrophes) {
+        size_t out = 0;
+        for (size_t i = 0; i < len; i++) {
+            bool strip = false;
+            if (do_no_periods && buf[i] == '.') {
+                bool is_end = (i + 1 == len) || (buf[i + 1] == ' ' && i + 2 < len &&
+                                                  buf[i + 2] >= 'A' && buf[i + 2] <= 'z');
+                bool in_ellipsis = (i + 2 < len && buf[i + 1] == '.' && buf[i + 2] == '.') ||
+                                   (i > 0 && buf[i - 1] == '.');
+                if (is_end && !in_ellipsis)
+                    strip = true;
+            }
+            if (do_no_commas && buf[i] == ',')
+                strip = true;
+            if (do_no_apostrophes && buf[i] == '\'')
+                strip = true;
+            if (!strip)
+                buf[out++] = buf[i];
+        }
+        buf[out] = '\0';
+        len = out;
+    }
+
+    /* Strip trailing whitespace that may result from punctuation removal */
+    while (len > 0 && (buf[len - 1] == ' ' || buf[len - 1] == '\n')) {
+        len--;
+        buf[len] = '\0';
+    }
+
+    return len;
+}
+
 /* ── Enhanced response action classification ──────────────────────────── */
 
 sc_response_action_t sc_conversation_classify_response(const char *msg, size_t msg_len,

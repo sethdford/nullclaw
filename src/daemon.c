@@ -745,6 +745,25 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
                 sc_error_t err =
                     sc_agent_turn(agent, combined, combined_len, &response, &response_len);
 
+#ifndef SC_IS_TEST
+                /* Quality gate: check response for unnatural patterns.
+                 * Run before freeing history so the evaluator has full context.
+                 * If needs_revision, log it — the reflection system inside
+                 * agent_turn handles retries, this catches what slips through. */
+                if (err == SC_OK && response && response_len > 0 && history_entries) {
+                    sc_quality_score_t qscore = sc_conversation_evaluate_quality(
+                        response, response_len, history_entries, history_count, max_chars);
+                    if (qscore.needs_revision) {
+                        fprintf(stderr,
+                                "[seaclaw] quality warning: score=%d (b=%d v=%d w=%d n=%d) "
+                                "for %.40s...\n",
+                                qscore.total, qscore.brevity, qscore.validation, qscore.warmth,
+                                qscore.naturalness,
+                                response_len > 40 ? response : response);
+                    }
+                }
+#endif
+
                 /* Clear per-turn context and free */
 #ifndef SC_IS_TEST
                 agent->contact_context = NULL;
@@ -790,6 +809,18 @@ sc_error_t sc_service_run(sc_allocator_t *alloc, uint32_t tick_interval_ms,
 
                 if (err == SC_OK && response && response_len > 0) {
 #ifndef SC_IS_TEST
+#ifdef SC_HAS_PERSONA
+                    /* Apply typing quirks from persona overlay as post-processing */
+                    if (agent->persona && agent->active_channel) {
+                        const sc_persona_overlay_t *ov = sc_persona_find_overlay(
+                            agent->persona, agent->active_channel, agent->active_channel_len);
+                        if (ov && ov->typing_quirks && ov->typing_quirks_count > 0) {
+                            response_len = sc_conversation_apply_typing_quirks(
+                                response, response_len,
+                                (const char *const *)ov->typing_quirks, ov->typing_quirks_count);
+                        }
+                    }
+#endif
                     /* Split response into natural multi-message fragments */
                     sc_message_fragment_t fragments[4];
                     size_t frag_count =

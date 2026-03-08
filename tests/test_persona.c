@@ -1677,6 +1677,79 @@ static void test_creator_write_null_alloc(void) {
     SC_ASSERT_NEQ(err, SC_OK);
 }
 
+static void test_overlay_typing_quirks_parsed(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    const char *json = "{\"version\":1,\"name\":\"quirk_test\","
+                       "\"core\":{\"identity\":\"Test\",\"traits\":[\"direct\"]},"
+                       "\"channel_overlays\":{\"imessage\":{"
+                       "\"formality\":\"casual\","
+                       "\"typing_quirks\":[\"lowercase\",\"no_periods\"],"
+                       "\"message_splitting\":true,"
+                       "\"max_segment_chars\":80}}}";
+    sc_persona_t p = {0};
+    sc_error_t err = sc_persona_load_json(&alloc, json, strlen(json), &p);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(p.overlays_count, 1);
+    SC_ASSERT_TRUE(p.overlays[0].message_splitting);
+    SC_ASSERT_EQ(p.overlays[0].max_segment_chars, 80u);
+    SC_ASSERT_EQ(p.overlays[0].typing_quirks_count, 2);
+    SC_ASSERT_STR_EQ(p.overlays[0].typing_quirks[0], "lowercase");
+    SC_ASSERT_STR_EQ(p.overlays[0].typing_quirks[1], "no_periods");
+    sc_persona_deinit(&alloc, &p);
+}
+
+static void test_overlay_typing_quirks_default_when_absent(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    const char *json = "{\"version\":1,\"name\":\"no_quirks\","
+                       "\"core\":{\"identity\":\"Test\",\"traits\":[\"direct\"]},"
+                       "\"channel_overlays\":{\"imessage\":{"
+                       "\"formality\":\"formal\"}}}";
+    sc_persona_t p = {0};
+    sc_error_t err = sc_persona_load_json(&alloc, json, strlen(json), &p);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_EQ(p.overlays_count, 1);
+    SC_ASSERT_FALSE(p.overlays[0].message_splitting);
+    SC_ASSERT_EQ(p.overlays[0].max_segment_chars, 0u);
+    SC_ASSERT_EQ(p.overlays[0].typing_quirks_count, 0);
+    SC_ASSERT_NULL(p.overlays[0].typing_quirks);
+    sc_persona_deinit(&alloc, &p);
+}
+
+static void test_overlay_typing_quirks_in_prompt(void) {
+    sc_allocator_t alloc = sc_system_allocator();
+    char *quirks[] = {"lowercase", "no_periods"};
+    sc_persona_overlay_t overlays[] = {
+        {.channel = "imessage",
+         .formality = "casual",
+         .avg_length = NULL,
+         .emoji_usage = NULL,
+         .style_notes = NULL,
+         .style_notes_count = 0,
+         .message_splitting = true,
+         .max_segment_chars = 80,
+         .typing_quirks = quirks,
+         .typing_quirks_count = 2},
+    };
+    sc_persona_t p = {
+        .name = "quirk_user",
+        .name_len = 10,
+        .identity = "A test persona",
+        .overlays = overlays,
+        .overlays_count = 1,
+    };
+
+    char *out = NULL;
+    size_t out_len = 0;
+    sc_error_t err = sc_persona_build_prompt(&alloc, &p, "imessage", 8, &out, &out_len);
+    SC_ASSERT_EQ(err, SC_OK);
+    SC_ASSERT_NOT_NULL(strstr(out, "Typing quirks"));
+    SC_ASSERT_NOT_NULL(strstr(out, "lowercase"));
+    SC_ASSERT_NOT_NULL(strstr(out, "no_periods"));
+    SC_ASSERT_NOT_NULL(strstr(out, "Message splitting: ON"));
+    SC_ASSERT_NOT_NULL(strstr(out, "80 chars"));
+    alloc.free(alloc.ctx, out, out_len + 1);
+}
+
 void run_persona_tests(void) {
     SC_TEST_SUITE("Persona");
 
@@ -1799,4 +1872,9 @@ void run_persona_tests(void) {
     SC_RUN_TEST(test_creator_synthesize_null_partials);
     SC_RUN_TEST(test_creator_synthesize_zero_count);
     SC_RUN_TEST(test_creator_write_null_alloc);
+
+    /* Overlay typing quirks */
+    SC_RUN_TEST(test_overlay_typing_quirks_parsed);
+    SC_RUN_TEST(test_overlay_typing_quirks_default_when_absent);
+    SC_RUN_TEST(test_overlay_typing_quirks_in_prompt);
 }

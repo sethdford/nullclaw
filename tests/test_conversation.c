@@ -410,6 +410,71 @@ static void honesty_null_for_normal_message(void) {
     SC_ASSERT_NULL(result);
 }
 
+/* ── Typing quirk post-processing tests ────────────────────────────── */
+
+static void quirks_lowercase_applies(void) {
+    char buf[] = "Hey What's Up";
+    const char *quirks[] = {"lowercase"};
+    size_t len = sc_conversation_apply_typing_quirks(buf, strlen(buf), quirks, 1);
+    SC_ASSERT_STR_EQ(buf, "hey what's up");
+    SC_ASSERT_EQ(len, 13u);
+}
+
+static void quirks_no_periods_strips_sentence_end(void) {
+    char buf[] = "sounds good. let me know";
+    const char *quirks[] = {"no_periods"};
+    size_t len = sc_conversation_apply_typing_quirks(buf, strlen(buf), quirks, 1);
+    SC_ASSERT_STR_EQ(buf, "sounds good let me know");
+    SC_ASSERT_EQ(len, 23u);
+}
+
+static void quirks_no_periods_preserves_ellipsis(void) {
+    char buf[] = "idk... maybe";
+    const char *quirks[] = {"no_periods"};
+    size_t len = sc_conversation_apply_typing_quirks(buf, strlen(buf), quirks, 1);
+    SC_ASSERT_TRUE(len >= 10u);
+    SC_ASSERT_TRUE(strstr(buf, "idk") != NULL);
+    SC_ASSERT_TRUE(strstr(buf, "maybe") != NULL);
+    (void)len;
+}
+
+static void quirks_no_commas_strips(void) {
+    char buf[] = "yeah, I think so, maybe";
+    const char *quirks[] = {"no_commas"};
+    size_t len = sc_conversation_apply_typing_quirks(buf, strlen(buf), quirks, 1);
+    SC_ASSERT_STR_EQ(buf, "yeah I think so maybe");
+    SC_ASSERT_EQ(len, 21u);
+}
+
+static void quirks_no_apostrophes_strips(void) {
+    char buf[] = "don't can't won't";
+    const char *quirks[] = {"no_apostrophes"};
+    size_t len = sc_conversation_apply_typing_quirks(buf, strlen(buf), quirks, 1);
+    SC_ASSERT_STR_EQ(buf, "dont cant wont");
+    SC_ASSERT_EQ(len, 14u);
+}
+
+static void quirks_multiple_combined(void) {
+    char buf[] = "Hey, I Don't Know.";
+    const char *quirks[] = {"lowercase", "no_periods", "no_commas"};
+    size_t len = sc_conversation_apply_typing_quirks(buf, strlen(buf), quirks, 3);
+    SC_ASSERT_NOT_NULL(strstr(buf, "hey"));
+    SC_ASSERT_TRUE(len > 0);
+    SC_ASSERT_TRUE(len < 18);
+}
+
+static void quirks_null_input_noop(void) {
+    size_t len = sc_conversation_apply_typing_quirks(NULL, 0, NULL, 0);
+    SC_ASSERT_EQ(len, 0u);
+}
+
+static void quirks_empty_quirks_noop(void) {
+    char buf[] = "Hello World.";
+    size_t len = sc_conversation_apply_typing_quirks(buf, strlen(buf), NULL, 0);
+    SC_ASSERT_STR_EQ(buf, "Hello World.");
+    SC_ASSERT_EQ(len, 12u);
+}
+
 /* ── Test suite registration ─────────────────────────────────────────── */
 
 void run_conversation_tests(void) {
@@ -471,4 +536,14 @@ void run_conversation_tests(void) {
     /* Honesty guardrail */
     SC_RUN_TEST(honesty_detects_action_query);
     SC_RUN_TEST(honesty_null_for_normal_message);
+
+    /* Typing quirk post-processing */
+    SC_RUN_TEST(quirks_lowercase_applies);
+    SC_RUN_TEST(quirks_no_periods_strips_sentence_end);
+    SC_RUN_TEST(quirks_no_periods_preserves_ellipsis);
+    SC_RUN_TEST(quirks_no_commas_strips);
+    SC_RUN_TEST(quirks_no_apostrophes_strips);
+    SC_RUN_TEST(quirks_multiple_combined);
+    SC_RUN_TEST(quirks_null_input_noop);
+    SC_RUN_TEST(quirks_empty_quirks_noop);
 }

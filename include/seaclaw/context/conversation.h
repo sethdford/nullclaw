@@ -101,6 +101,15 @@ char *sc_conversation_analyze_style(sc_allocator_t *alloc,
                                     const sc_channel_history_entry_t *entries, size_t count,
                                     size_t *out_len);
 
+/* ── Typing quirk post-processing ─────────────────────────────────────── */
+
+/* Apply typing quirks to a response as deterministic post-processing.
+ * Supported quirks: "lowercase", "no_periods", "no_commas",
+ * "no_apostrophes", "double_space_to_newline".
+ * Modifies the buffer in-place. Returns the new length (may shrink). */
+size_t sc_conversation_apply_typing_quirks(char *buf, size_t len, const char *const *quirks,
+                                           size_t quirks_count);
+
 /* ── Response action classification ───────────────────────────────────── */
 
 typedef enum sc_response_action {
