@@ -86,9 +86,8 @@ static bool bus_callback(sc_bus_event_type_t type, const sc_bus_event_t *ev, voi
     if (err == SC_OK && payload_str && event_name) {
         sc_control_send_event(bridge->proto, event_name, payload_str);
 #ifdef SC_HAS_PUSH
-        if (bridge->push &&
-            (type == SC_BUS_MESSAGE_SENT || type == SC_BUS_ERROR ||
-             type == SC_BUS_CRON_COMPLETED)) {
+        if (bridge->push && (type == SC_BUS_MESSAGE_SENT || type == SC_BUS_ERROR ||
+                             type == SC_BUS_CRON_COMPLETED)) {
             const char *title;
             if (type == SC_BUS_CRON_COMPLETED) {
                 title = (msg_text && strstr(msg_text, "failed")) ? "Automation Failed"
