@@ -1654,6 +1654,40 @@ describe("sc-stat-card", () => {
     expect(shadow?.textContent).toContain("Tests");
     el.remove();
   });
+
+  it("should render prefix when set with valueStr", async () => {
+    const el = document.createElement("sc-stat-card") as HTMLElement & {
+      valueStr: string;
+      label: string;
+      prefix: string;
+      updateComplete: Promise<boolean>;
+    };
+    el.valueStr = "100";
+    el.label = "Cost";
+    el.prefix = "$";
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.shadowRoot?.textContent).toContain("$");
+    expect(el.shadowRoot?.textContent).toContain("100");
+    el.remove();
+  });
+
+  it("should render suffix when set with valueStr", async () => {
+    const el = document.createElement("sc-stat-card") as HTMLElement & {
+      valueStr: string;
+      label: string;
+      suffix: string;
+      updateComplete: Promise<boolean>;
+    };
+    el.valueStr = "5";
+    el.label = "Duration";
+    el.suffix = "s";
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.shadowRoot?.textContent).toContain("5");
+    expect(el.shadowRoot?.textContent).toContain("s");
+    el.remove();
+  });
 });
 
 describe("sc-stats-row", () => {
@@ -1701,6 +1735,21 @@ describe("sc-section-header", () => {
     expect(el.shadowRoot?.textContent).toContain("Overview");
     el.remove();
   });
+
+  it("should render description when set", async () => {
+    const el = document.createElement("sc-section-header") as HTMLElement & {
+      heading: string;
+      description: string;
+      updateComplete: Promise<boolean>;
+    };
+    el.heading = "Settings";
+    el.description = "Configure your preferences";
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.shadowRoot?.textContent).toContain("Settings");
+    expect(el.shadowRoot?.textContent).toContain("Configure your preferences");
+    el.remove();
+  });
 });
 
 describe("sc-metric-row", () => {
@@ -1725,6 +1774,24 @@ describe("sc-metric-row", () => {
     expect(el.shadowRoot?.textContent).toContain("23%");
     el.remove();
   });
+
+  it("should render multiple items from array", async () => {
+    const el = document.createElement("sc-metric-row") as HTMLElement & {
+      items: Array<{ label: string; value: string; accent?: string }>;
+      updateComplete: Promise<boolean>;
+    };
+    el.items = [
+      { label: "A", value: "1" },
+      { label: "B", value: "2" },
+      { label: "C", value: "3", accent: "success" },
+    ];
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.shadowRoot?.textContent).toContain("A");
+    expect(el.shadowRoot?.textContent).toContain("B");
+    expect(el.shadowRoot?.textContent).toContain("C");
+    el.remove();
+  });
 });
 
 describe("sc-timeline", () => {
@@ -1746,6 +1813,24 @@ describe("sc-timeline", () => {
     document.body.appendChild(el);
     await el.updateComplete;
     expect(el.shadowRoot?.textContent).toContain("Test passed");
+    el.remove();
+  });
+
+  it("should render multiple items from array", async () => {
+    const el = document.createElement("sc-timeline") as HTMLElement & {
+      items: Array<{ time: string; message: string; status: string }>;
+      updateComplete: Promise<boolean>;
+    };
+    el.items = [
+      { time: "1m ago", message: "First", status: "success" },
+      { time: "2m ago", message: "Second", status: "error" },
+      { time: "3m ago", message: "Third", status: "info" },
+    ];
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.shadowRoot?.textContent).toContain("First");
+    expect(el.shadowRoot?.textContent).toContain("Second");
+    expect(el.shadowRoot?.textContent).toContain("Third");
     el.remove();
   });
 
@@ -1845,11 +1930,14 @@ describe("sc-page-hero", () => {
     const el = document.createElement("sc-page-hero") as HTMLElement & {
       updateComplete: Promise<boolean>;
     };
-    el.innerHTML = "<p>Hello</p>";
+    const p = document.createElement("p");
+    p.textContent = "Hello";
+    el.appendChild(p);
     document.body.appendChild(el);
     await el.updateComplete;
     const slot = el.shadowRoot?.querySelector("slot");
     expect(slot).toBeTruthy();
+    expect(el.querySelector("p")?.textContent).toBe("Hello");
     el.remove();
   });
 });
