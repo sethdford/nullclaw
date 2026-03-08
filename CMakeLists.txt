@@ -356,6 +356,7 @@ set(SC_CORE_SOURCES
     src/agent/task_list.c
     src/agent/profile.c
     src/agent/planner.c
+    src/agent/dag.c
     src/agent/undo.c
     src/agent/cli.c
     src/agent/tui.c
@@ -1397,6 +1398,7 @@ set(SC_TEST_SOURCES
     tests/test_deep_extract.c
     tests/test_commitment.c
     tests/test_pattern_radar.c
+    tests/test_dag.c
 )
 if(SC_ENABLE_PERSONA)
     list(APPEND SC_TEST_SOURCES tests/test_persona.c tests/test_circadian.c tests/test_relationship.c)

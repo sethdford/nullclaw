@@ -118,6 +118,7 @@ void run_consolidation_tests(void);
 void run_deep_extract_tests(void);
 void run_commitment_tests(void);
 void run_pattern_radar_tests(void);
+void run_dag_tests(void);
 
 int main(void) {
     printf("SeaClaw Test Suite\n");
@@ -237,6 +238,7 @@ int main(void) {
     run_deep_extract_tests();
     run_commitment_tests();
     run_pattern_radar_tests();
+    run_dag_tests();
 
     SC_TEST_REPORT();
     SC_TEST_EXIT();
