@@ -85,7 +85,7 @@ export class ChatController implements ReactiveController {
   loadEarlier(): void {
     this.loadingEarlier = true;
     this._requestUpdate();
-    (this.host as EventTarget).dispatchEvent(
+    (this.host as unknown as EventTarget).dispatchEvent(
       new CustomEvent("sc-load-earlier-request", { bubbles: true, composed: true }),
     );
     // Stub: gateway integration will clear loadingEarlier when done
