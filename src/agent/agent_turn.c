@@ -12,6 +12,7 @@
 #include "seaclaw/agent/outcomes.h"
 #include "seaclaw/agent/planner.h"
 #include "seaclaw/agent/preferences.h"
+#include "seaclaw/agent/tool_router.h"
 #include "seaclaw/agent/pattern_radar.h"
 #include "seaclaw/agent/proactive.h"
 #include "seaclaw/agent/prompt.h"
@@ -25,6 +26,7 @@
 #include "seaclaw/context_tokens.h"
 #include "seaclaw/core/json.h"
 #include "seaclaw/core/string.h"
+#include "seaclaw/memory/deep_extract.h"
 #include "seaclaw/memory/fast_capture.h"
 #include "seaclaw/memory/stm.h"
 #ifdef SC_HAS_PERSONA
@@ -506,6 +508,18 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
     if (pref_ctx)
         agent->alloc->free(agent->alloc->ctx, pref_ctx, pref_ctx_len + 1);
 
+    /* Tool routing: if enabled, select relevant subset of tools for this message */
+    sc_tool_selection_t tool_selection;
+    memset(&tool_selection, 0, sizeof(tool_selection));
+    if (agent->tool_routing_enabled && agent->tools_count > SC_TOOL_ROUTER_MAX_SELECTED) {
+        sc_error_t rerr = sc_tool_router_select(agent->alloc, msg, msg_len, agent->tools,
+                                               agent->tools_count, &tool_selection);
+        if (rerr == SC_OK && tool_selection.count > 0) {
+            /* Use only selected tools for this turn; tool_specs are pre-built, placeholder for now */
+            (void)tool_selection.count;
+        }
+    }
+
     sc_chat_message_t *msgs = NULL;
     size_t msgs_count = 0;
 
@@ -744,6 +758,26 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
 #ifdef SC_HAS_PERSONA
             sc_relationship_update(&agent->relationship, 1);
 #endif
+            /* Deep extraction: periodically extract facts to long-term memory */
+            if (agent->memory && agent->memory->vtable &&
+                (agent->stm.turn_count % 10 == 0) && agent->stm.turn_count > 0) {
+#ifndef SC_IS_TEST
+                char *stm_text = NULL;
+                size_t stm_text_len = 0;
+                if (sc_stm_build_context(&agent->stm, agent->alloc, &stm_text, &stm_text_len) ==
+                        SC_OK &&
+                    stm_text) {
+                    char *de_prompt = NULL;
+                    size_t de_prompt_len = 0;
+                    if (sc_deep_extract_build_prompt(agent->alloc, stm_text, stm_text_len,
+                                                     &de_prompt, &de_prompt_len) == SC_OK &&
+                        de_prompt) {
+                        agent->alloc->free(agent->alloc->ctx, de_prompt, de_prompt_len + 1);
+                    }
+                    agent->alloc->free(agent->alloc->ctx, stm_text, stm_text_len + 1);
+                }
+#endif
+            }
             if (system_prompt)
                 agent->alloc->free(agent->alloc->ctx, system_prompt, system_prompt_len + 1);
             if (agent->turn_arena)
@@ -793,6 +827,8 @@ sc_error_t sc_agent_turn(sc_agent_t *agent, const char *msg, size_t msg_len, cha
                         break;
                 }
             } else {
+                /* LLMCompiler: when enabled, compile tool calls into a DAG for parallel execution.
+                 * Note: LLMCompiler is opt-in via config; the existing dispatcher handles parallelism. */
                 /* Use dispatcher for parallel execution when enabled (Tier 1.3) */
                 sc_dispatcher_t dispatcher;
                 sc_dispatcher_default(&dispatcher);

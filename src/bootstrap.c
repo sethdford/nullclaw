@@ -542,6 +542,8 @@ sc_error_t sc_app_bootstrap(sc_app_ctx_t *ctx, sc_allocator_t *alloc, const char
             .pressure_warn = bi->cfg.agent.context_pressure_warn,
             .pressure_compact = bi->cfg.agent.context_pressure_compact,
             .compact_target = bi->cfg.agent.context_compact_target,
+            .llm_compiler_enabled = bi->cfg.agent.llm_compiler_enabled,
+            .tool_routing_enabled = bi->cfg.agent.tool_routing_enabled,
         };
         sc_observer_t *obs = bi->observer.vtable ? &bi->observer : NULL;
         err = sc_agent_from_config(

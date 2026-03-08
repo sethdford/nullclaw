@@ -67,6 +67,8 @@ typedef struct sc_agent_context_config {
     float pressure_warn;    /* warn at this ratio (default 0.85) */
     float pressure_compact; /* auto-compact at this ratio (default 0.95) */
     float compact_target;   /* compact until below this ratio (default 0.70) */
+    bool llm_compiler_enabled;
+    bool tool_routing_enabled;
 } sc_agent_context_config_t;
 
 /* Called when a tool needs user approval before execution.
@@ -183,6 +185,9 @@ struct sc_agent {
     sc_superhuman_emotional_ctx_t superhuman_emotional_ctx;
     sc_superhuman_silence_ctx_t superhuman_silence_ctx;
 
+    bool llm_compiler_enabled;
+    bool tool_routing_enabled;
+
 #ifdef SC_HAS_PERSONA
     sc_relationship_state_t relationship; /* session-based warmth adaptation */
 #endif
@@ -266,5 +271,8 @@ sc_error_t sc_agent_execute_plan(sc_agent_t *agent, const char *plan_json, size_
 /* Switch persona mid-conversation. name=NULL or name_len=0 clears the persona. */
 sc_error_t sc_agent_set_persona(sc_agent_t *agent, const char *name, size_t name_len);
 #endif
+
+/* Run memory consolidation (merge similar entries, decay old). */
+sc_error_t sc_agent_consolidate_memory(sc_agent_t *agent);
 
 #endif /* SC_AGENT_H */

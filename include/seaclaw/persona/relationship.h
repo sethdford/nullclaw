@@ -19,6 +19,7 @@ typedef struct sc_relationship_state {
     uint32_t total_turns;
 } sc_relationship_state_t;
 
+void sc_relationship_new_session(sc_relationship_state_t *state);
 void sc_relationship_update(sc_relationship_state_t *state, uint32_t turn_count);
 sc_error_t sc_relationship_build_prompt(sc_allocator_t *alloc,
                                          const sc_relationship_state_t *state,

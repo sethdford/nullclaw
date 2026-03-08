@@ -6,7 +6,7 @@
 static void relationship_new_stage(void) {
     sc_relationship_state_t state = {0};
     SC_ASSERT_EQ(state.stage, SC_REL_NEW);
-    sc_relationship_update(&state, 1);
+    sc_relationship_new_session(&state);
     SC_ASSERT_EQ(state.stage, SC_REL_NEW);
     SC_ASSERT_EQ(state.session_count, 1u);
 }
@@ -14,7 +14,7 @@ static void relationship_new_stage(void) {
 static void relationship_familiar_after_5(void) {
     sc_relationship_state_t state = {0};
     for (int i = 0; i < 5; i++)
-        sc_relationship_update(&state, 1);
+        sc_relationship_new_session(&state);
     SC_ASSERT_EQ(state.stage, SC_REL_FAMILIAR);
     SC_ASSERT_EQ(state.session_count, 5u);
 }
@@ -22,7 +22,7 @@ static void relationship_familiar_after_5(void) {
 static void relationship_trusted_after_20(void) {
     sc_relationship_state_t state = {0};
     for (int i = 0; i < 20; i++)
-        sc_relationship_update(&state, 1);
+        sc_relationship_new_session(&state);
     SC_ASSERT_EQ(state.stage, SC_REL_TRUSTED);
     SC_ASSERT_EQ(state.session_count, 20u);
 }
@@ -30,9 +30,22 @@ static void relationship_trusted_after_20(void) {
 static void relationship_deep_after_50(void) {
     sc_relationship_state_t state = {0};
     for (int i = 0; i < 50; i++)
-        sc_relationship_update(&state, 1);
+        sc_relationship_new_session(&state);
     SC_ASSERT_EQ(state.stage, SC_REL_DEEP);
     SC_ASSERT_EQ(state.session_count, 50u);
+}
+
+static void relationship_update_increments_turns_not_sessions(void) {
+    sc_relationship_state_t state = {0};
+    sc_relationship_new_session(&state);
+    SC_ASSERT_EQ(state.session_count, 1u);
+    SC_ASSERT_EQ(state.total_turns, 0u);
+    sc_relationship_update(&state, 1);
+    SC_ASSERT_EQ(state.session_count, 1u);
+    SC_ASSERT_EQ(state.total_turns, 1u);
+    sc_relationship_update(&state, 3);
+    SC_ASSERT_EQ(state.session_count, 1u);
+    SC_ASSERT_EQ(state.total_turns, 4u);
 }
 
 static void relationship_build_prompt_contains_stage(void) {
@@ -55,5 +68,6 @@ void run_relationship_tests(void) {
     SC_RUN_TEST(relationship_familiar_after_5);
     SC_RUN_TEST(relationship_trusted_after_20);
     SC_RUN_TEST(relationship_deep_after_50);
+    SC_RUN_TEST(relationship_update_increments_turns_not_sessions);
     SC_RUN_TEST(relationship_build_prompt_contains_stage);
 }

@@ -19,12 +19,10 @@ static const char *STAGE_GUIDANCE[] = {
     "Celebrate growth.",
 };
 
-void sc_relationship_update(sc_relationship_state_t *state, uint32_t turn_count) {
+void sc_relationship_new_session(sc_relationship_state_t *state) {
     if (!state)
         return;
     state->session_count++;
-    state->total_turns += turn_count;
-
     if (state->session_count >= 50)
         state->stage = SC_REL_DEEP;
     else if (state->session_count >= 20)
@@ -33,6 +31,12 @@ void sc_relationship_update(sc_relationship_state_t *state, uint32_t turn_count)
         state->stage = SC_REL_FAMILIAR;
     else
         state->stage = SC_REL_NEW;
+}
+
+void sc_relationship_update(sc_relationship_state_t *state, uint32_t turn_count) {
+    if (!state)
+        return;
+    state->total_turns += turn_count;
 }
 
 sc_error_t sc_relationship_build_prompt(sc_allocator_t *alloc,

@@ -1,5 +1,7 @@
 #include "seaclaw/agent.h"
 #include "seaclaw/agent/awareness.h"
+#include "seaclaw/memory/consolidation.h"
+#include "seaclaw/memory/promotion.h"
 #include "seaclaw/agent/commitment_store.h"
 #include "seaclaw/agent/pattern_radar.h"
 #include "seaclaw/agent/superhuman.h"
@@ -164,6 +166,8 @@ sc_error_t sc_agent_from_config(
             out->context_pressure_compact = ctx_cfg->pressure_compact;
         if (ctx_cfg->compact_target > 0.0f)
             out->context_compact_target = ctx_cfg->compact_target;
+        out->llm_compiler_enabled = ctx_cfg->llm_compiler_enabled;
+        out->tool_routing_enabled = ctx_cfg->tool_routing_enabled;
     }
 
     out->tools_count = tools_count;
@@ -281,6 +285,7 @@ sc_error_t sc_agent_from_config(
 
 #ifdef SC_HAS_PERSONA
     memset(&out->relationship, 0, sizeof(out->relationship));
+    sc_relationship_new_session(&out->relationship);
 #endif
 
     if (memory && memory->vtable) {
@@ -484,6 +489,11 @@ void sc_agent_deinit(sc_agent_t *agent) {
         agent->alloc->free(agent->alloc->ctx, agent->persona_prompt, agent->persona_prompt_len + 1);
         agent->persona_prompt = NULL;
     }
+    /* Promote important STM entities to persistent memory before cleanup */
+    if (agent->memory && agent->memory->vtable) {
+        sc_promotion_config_t promo_config = SC_PROMOTION_DEFAULTS;
+        (void)sc_promotion_run(agent->alloc, &agent->stm, agent->memory, &promo_config);
+    }
     sc_stm_deinit(&agent->stm);
     sc_pattern_radar_deinit(&agent->radar);
     if (agent->commitment_store) {
@@ -509,6 +519,13 @@ void sc_agent_deinit(sc_agent_t *agent) {
         sc_undo_stack_destroy(agent->undo_stack);
         agent->undo_stack = NULL;
     }
+}
+
+sc_error_t sc_agent_consolidate_memory(sc_agent_t *agent) {
+    if (!agent || !agent->memory || !agent->memory->vtable)
+        return SC_ERR_INVALID_ARGUMENT;
+    sc_consolidation_config_t config = SC_CONSOLIDATION_DEFAULTS;
+    return sc_memory_consolidate(agent->alloc, agent->memory, &config);
 }
 
 sc_error_t sc_agent_internal_ensure_history_cap(sc_agent_t *agent, size_t need) {

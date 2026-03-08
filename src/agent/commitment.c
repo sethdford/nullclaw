@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 static size_t sc_commitment_id_counter;
 
@@ -14,6 +15,16 @@ static const char *REMINDER_PATTERNS[] = {"remind me ", "don't let me forget ", 
                                          NULL};
 static const char *GOAL_PATTERNS[] = {"I want to ", "my goal is ", "I hope to ", NULL};
 static const char *NEGATION_PREFIXES[] = {"not ", "n't ", "never ", NULL};
+
+static void fill_timestamp(char *buf, size_t buf_size) {
+    time_t now = time(NULL);
+    struct tm *utc = gmtime(&now);
+    if (utc) {
+        strftime(buf, buf_size, "%Y-%m-%dT%H:%M:%SZ", utc);
+    } else {
+        snprintf(buf, buf_size, "2026-01-01T00:00:00Z");
+    }
+}
 
 static bool clause_starts_with_negation(const char *text, size_t text_len, size_t clause_start) {
     if (clause_start >= text_len)
@@ -70,8 +81,9 @@ static sc_error_t add_commitment(sc_allocator_t *alloc, sc_commitment_detect_res
         return SC_ERR_OUT_OF_MEMORY;
     }
 
-    const char *created_at = "2026-01-01T00:00:00Z";
-    char *created_at_dup = sc_strndup(alloc, created_at, strlen(created_at));
+    char ts_buf[32];
+    fill_timestamp(ts_buf, sizeof(ts_buf));
+    char *created_at_dup = sc_strndup(alloc, ts_buf, strlen(ts_buf));
     if (!created_at_dup) {
         alloc->free(alloc->ctx, id, (size_t)n + 1);
         alloc->free(alloc->ctx, summary, summary_len + 1);
@@ -80,7 +92,7 @@ static sc_error_t add_commitment(sc_allocator_t *alloc, sc_commitment_detect_res
 
     char *owner = role && role_len > 0 ? sc_strndup(alloc, role, role_len) : sc_strndup(alloc, "user", 4);
     if (!owner) {
-        alloc->free(alloc->ctx, created_at_dup, strlen(created_at) + 1);
+        alloc->free(alloc->ctx, created_at_dup, strlen(created_at_dup) + 1);
         alloc->free(alloc->ctx, id, (size_t)n + 1);
         alloc->free(alloc->ctx, summary, summary_len + 1);
         return SC_ERR_OUT_OF_MEMORY;
@@ -89,7 +101,7 @@ static sc_error_t add_commitment(sc_allocator_t *alloc, sc_commitment_detect_res
     char *statement = sc_strndup(alloc, text + pattern_start, clause_end - pattern_start);
     if (!statement) {
         alloc->free(alloc->ctx, owner, (role && role_len > 0 ? role_len : 4) + 1);
-        alloc->free(alloc->ctx, created_at_dup, strlen(created_at) + 1);
+        alloc->free(alloc->ctx, created_at_dup, strlen(created_at_dup) + 1);
         alloc->free(alloc->ctx, id, (size_t)n + 1);
         alloc->free(alloc->ctx, summary, summary_len + 1);
         return SC_ERR_OUT_OF_MEMORY;
