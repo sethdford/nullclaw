@@ -224,8 +224,9 @@ sc_error_t sc_ws_connect(sc_allocator_t *alloc, const char *url, sc_ws_client_t 
         return SC_ERR_INVALID_ARGUMENT;
 
     if (!use_tls) {
-        fprintf(stderr, "[websocket] warning: connecting via ws:// (unencrypted). Prefer wss:// for "
-                        "production.\n");
+        fprintf(stderr,
+                "[websocket] warning: connecting via ws:// (unencrypted). Prefer wss:// for "
+                "production.\n");
     }
 
     char port_str[8];
@@ -283,7 +284,8 @@ sc_error_t sc_ws_connect(sc_allocator_t *alloc, const char *url, sc_ws_client_t 
     FILE *f = fopen("/dev/urandom", "rb");
     if (f) {
         size_t r = fread(key_raw, 1, 16, f);
-        (void)r;
+        if (r < 16)
+            memset(key_raw + r, 0, 16 - r);
         fclose(f);
     } else
 #endif
@@ -452,7 +454,8 @@ sc_error_t sc_ws_send(sc_ws_client_t *ws, const char *data, size_t data_len) {
     FILE *f = fopen("/dev/urandom", "rb");
     if (f) {
         size_t r = fread(mask_key, 1, 4, f);
-        (void)r;
+        if (r < 4)
+            memset(mask_key + r, 0, 4 - r);
         fclose(f);
     } else
 #endif
